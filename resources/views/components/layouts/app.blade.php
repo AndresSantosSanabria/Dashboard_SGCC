@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ $title ?? 'Dashboard SGCC' }}</title>
-    @vite(['resources/css/app.css', 'resources/css/login.css', 'resources/css/Dashboard.css', 'resources/js/app.js'])
+    @vite(['resources/css/app.css', 'resources/css/login.css', 'resources/css/Dashboard.css', 'resources/css/contratosReport.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
 

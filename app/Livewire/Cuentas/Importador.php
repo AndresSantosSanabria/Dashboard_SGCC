@@ -13,29 +13,51 @@ class Importador extends Component
 
     public $archivo; // Esta variable se vincula con wire:model="archivo"
     public $mensaje = '';
+    public $tipoMensaje = ''; // 'success', 'error', 'warning'
+    public $resumenImportacion = null;
+    public $encabezados = [];
 
     /**
      * AQUÍ VA TU FUNCIÓN
      */
     public function importar()
     {
+        // Prevenir múltiples clics
+        if (!empty($this->mensaje)) {
+            return;
+        }
+
         $this->validate([
             'archivo' => 'required|mimes:xlsx,xls|max:10240'
         ]);
 
         try {
-            // Se procesa el archivo usando la clase CuentasImport
-            Excel::import(new CuentasImport, $this->archivo->getRealPath());
-            
-            $this->mensaje = 'Importación exitosa';
-            $this->archivo = null;
+            $import = new CuentasImport();
+            Excel::import($import, $this->archivo->getRealPath());
+            $resumen = $import->getResumen();
+            $this->resumenImportacion = $resumen;
+            $this->encabezados = $import->encabezadosEncontrados ?? [];
 
-            // Eventos para el frontend
-            $this->dispatch('cuentas-actualizadas'); // Para refrescar la tabla de abajo
-            $this->dispatch('close-modal-import');  // Para cerrar el modal de Alpine.js
-            
+            // Cerrar modal y refrescar tabla si hubo al menos un registro exitoso
+            if ($resumen['exitosas'] > 0) {
+                $this->tipoMensaje = $resumen['fallidas'] === 0 ? 'success' : 'warning';
+                $this->mensaje = $resumen['fallidas'] === 0
+                    ? "✅ ¡IMPORTACIÓN EXITOSA! Se cargaron correctamente {$resumen['exitosas']} de {$resumen['total']} registros."
+                    : "⚠️ IMPORTACIÓN PARCIAL: Se cargaron {$resumen['exitosas']} de {$resumen['total']} registros. {$resumen['fallidas']} registros fallaron.";
+                    $this->dispatch('cuentas-actualizadas');
+                $this->dispatchBrowserEvent('close-modal-import');
+            } else if ($resumen['exitosas'] === 0 && $resumen['fallidas'] > 0) {
+                $this->tipoMensaje = 'error';
+                $this->mensaje = "❌ Error: No se pudo importar ningún registro. {$resumen['fallidas']} registros fallaron.";
+            } else {
+                $this->tipoMensaje = 'error';
+                $this->mensaje = '❌ Error: No se procesaron registros.';
+            }
+
+            $this->archivo = null;
         } catch (\Exception $e) {
-            $this->mensaje = 'Error: ' . $e->getMessage();
+            $this->tipoMensaje = 'error';
+            $this->mensaje = '❌ Error durante la importación: ' . $e->getMessage();
         }
     }
 

@@ -34,6 +34,10 @@
             <p style="color: var(--text-gray);">Has iniciado sesión correctamente. Aquí estará el contenido principal.
             </p>
         </div>
+        <div>
+                <livewire:contratos-report />
+            </div>
+           
     </main>
 
     <livewire:cuentas.importador />
