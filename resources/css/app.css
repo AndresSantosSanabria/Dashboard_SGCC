@@ -1,0 +1,6 @@
+@import "./styles.css";
+
+/* Alpine.js x-cloak directive */
+[x-cloak] {
+    display: none !important;
+}
