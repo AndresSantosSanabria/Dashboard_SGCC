@@ -1,0 +1,186 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Paginacion
+ *  - Version: 4.0.0
+ */
+
+/* Fuente iconografica */
+@font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* WorkSans-Regular */
+@font-face {
+  font-family: 'WorkSans-Regular';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+/* WorkSans-Medium */
+@font-face {
+  font-family: 'WorkSans-Medium';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Medium.ttf');
+}
+
+.pagination-container-govco {
+  margin: 8px;
+  line-height: normal !important;
+  box-sizing: content-box !important;
+}
+
+.nav-pagination-govco {
+  color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  display: flex;
+  height: auto !important;
+  box-sizing: content-box !important;
+}
+
+.pagination-govco {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-govco ul {
+  background: #fff;
+  display: flex;
+  padding-left: 0px;
+}
+
+.pagination-govco ul li {
+  list-style: none;
+  line-height: 2.5rem;
+  text-align: center;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: WorkSans-Regular;
+  font-size: 14px;
+}
+
+.pagination-govco ul li a {
+  padding: 0;
+}
+
+.pagination-govco ul li.page-item-govco {
+  margin: 0 0.5rem;
+}
+
+.pagination-govco ul li.number-govco,
+.pagination-govco ul li.dots-govco {
+  margin: 0 0rem;
+}
+
+.pagination-govco ul li.number-govco a,
+.pagination-govco ul li.dots-govco a {
+  text-decoration: none;
+  font-family: WorkSans-Medium;
+  font-size: 16px;
+  color: #0B457F;
+  display: block;
+  height: 2.5rem;
+  width: 2.5rem;
+}
+
+.pagination-govco ul li.page-item-govco.prev-page-govco a,
+.next-page-govco a {
+  color: #3366CC;
+  text-decoration: underline;
+}
+
+.prev-page-icon-govco, .next-page-icon-govco{
+  display: none;
+  height: 16px;
+}
+
+.prev-page-icon-govco::before, .next-page-icon-govco::before {
+  font-family: "govco-font";
+  font-size: 16px;
+}
+
+.prev-page-icon-govco::before{
+    content: "\e811";
+}
+
+.next-page-icon-govco::before{
+    content: "\e812";
+}
+
+.pagination-govco ul li.page-item-govco.prev-page-govco a:visited,
+.next-page-govco a:visited {
+  color: #3366CC;
+}
+
+.pagination-govco ul li.page-item-govco.disabled-govco a {
+  pointer-events: none;
+  color: #BABABA !important;
+  opacity: 1;
+}
+
+.pagination-govco ul li.dots-govco {
+  cursor: default;
+}
+
+.pagination-govco ul li.active-govco {
+  background: #3366cc;
+  border-radius: 4px;
+}
+
+.pagination-govco ul li.active-govco a {
+  color: #fff;
+}
+
+.pagination-govco ul li.number-govco:not(.active-govco) a:hover,
+.pagination-govco ul li.number-govco:not(.active-govco) a.hover {
+  background: #e6effd;
+  border-radius: 4px;
+}
+
+.pagination-govco ul li.dots-govco a:hover,
+.pagination-govco ul li.prev-page-govco a:hover,
+.pagination-govco ul li.next-page-govco a:hover {
+  background: transparent;
+}
+
+.pagination-govco ul li.prev-page-govco a:hover,
+.pagination-govco ul li.next-page-govco a:hover,
+.pagination-govco ul li.prev-page-govco a:focus,
+.pagination-govco ul li.next-page-govco a:focus {
+  color: #004884;
+}
+
+.pagination-govco ul li.dots-govco a:hover {
+  color: #0B457F;
+  cursor: default;
+}
+
+.pagination-govco ul li.number-govco a:focus,
+.pagination-govco ul li.number-govco a.focus {
+  outline: none;
+  border: 1px solid black;
+}
+
+.pagination-govco ul li.number-govco:not(.active-govco) a:focus,
+.pagination-govco ul li.number-govco:not(.active-govco) a.focus {
+  background: #e6effd;
+}
+
+@media (max-width: 575px) {
+  .pagination-govco ul li.page-item-govco.prev-page-govco a,
+  .next-page-govco a {
+  text-decoration: none !important;
+  }
+
+  .prev-page-icon-govco, .next-page-icon-govco{
+    display: inline;
+  }
+
+  .prev-page-text-govco, .next-page-text-govco{
+    display: none;
+  }
+}

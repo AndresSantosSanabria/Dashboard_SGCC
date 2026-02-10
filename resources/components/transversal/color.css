@@ -1,0 +1,292 @@
+@charset "UTF-8";
+
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Color
+ *  - Version: 4.0.0
+ */
+
+/* WorkSans-Regular */
+@font-face {
+    font-family: 'WorkSans-Regular';
+    src: url('../assets/fonts/Montserrat/WorkSans-Regular.ttf');
+}
+
+.govcolor-blue-dark {
+    color: #004884;
+}
+
+.govcolor-marine {
+    color: #3366cc;
+}
+
+.govcolor-blue-light {
+    color: #c9e2ff;
+}
+
+.govcolor-black {
+    color: #000000;
+}
+
+.govcolor-tundora {
+    color: #4B4B4B;
+}
+
+.govcolor-dim-gray {
+    color: #737373;
+}
+
+.govcolor-silver {
+    color: #BABABA;
+}
+
+.govcolor-concrete {
+    color: #F2F2F2;
+}
+
+.govcolor-hawkes-blue {
+    color: #F6F8F9;
+}
+
+.govcolor-white {
+    color: #FFFFFF;
+}
+
+.govcolor-radical-red {
+    color: #F42F63;
+}
+
+.govcolor-shiraz {
+    color: #A80521;
+}
+
+.govcolor-orange {
+    color: #F3561F;
+}
+
+.govcolor-gold {
+    color: #FFAB00;
+}
+
+.govcolor-elf-green {
+    color: #068460;
+}
+
+.govcolor-dodger-blue {
+    color: #3772FF;
+}
+
+.govcolor-blue-capri {
+    color: #81ABFF;
+}
+
+.govcolor-blue-denim {
+    color: #4573D0;
+}
+
+.govcolor-blue-lake {
+    color: #5B8BFF;
+}
+
+.govcolor-blue-quilt {
+    color: #9DBEFF;
+}
+
+.govcolor-blue-ocean {
+    color: #5881D5;
+}
+
+.govcolor-blue-marlin {
+    color: #4A7EFF;
+}
+
+.govcolor-orange-v2 {
+    color: #FF6C00;
+}
+
+.govcolor-green {
+    color: #069169;
+}
+
+.govcolor-red-flag {
+    color: #D31F3F;
+}
+
+.govcolor-yellow {
+    color: #FAD118;
+}
+
+.govcolor-gray {
+    color: #f1f1f1;
+}
+
+.govco-bg-blue-dark {
+    background-color: #004884;
+}
+
+.govco-bg-marine {
+    background-color: #3366cc;
+}
+
+.govco-bg-blue-light {
+    background-color: #c9e2ff;
+}
+
+.govco-bg-black {
+    background-color: #000000;
+}
+
+.govco-bg-tundora {
+    background-color: #4B4B4B;
+}
+
+.govco-bg-dim-gray {
+    background-color: #737373;
+}
+
+.govco-bg-silver {
+    background-color: #BABABA;
+}
+
+.govco-bg-concrete {
+    background-color: #F2F2F2;
+}
+
+.govco-bg-hawkes-blue {
+    background-color: #F6F8F9;
+}
+
+.govco-bg-white {
+    background-color: #FFFFFF;
+}
+
+.govco-bg-radical-red {
+    background-color: #F42F63;
+}
+
+.govco-bg-shiraz {
+    background-color: #A80521;
+}
+
+.govco-bg-orange {
+    background-color: #F3561F;
+}
+
+.govco-bg-gold {
+    background-color: #FFAB00;
+}
+
+.govco-bg-elf-green {
+    background-color: #068460;
+}
+
+.govco-bg-dodger-blue {
+    background-color: #3772FF;
+}
+
+.govco-bg-blue-capri {
+    background-color: #81ABFF;
+}
+
+.govco-bg-blue-denim {
+    background-color: #4573D0;
+}
+
+.govco-bg-blue-lake {
+    background-color: #5B8BFF;
+}
+
+.govco-bg-blue-quilt {
+    background-color: #9DBEFF;
+}
+
+.govco-bg-blue-ocean {
+    background-color: #5881D5;
+}
+
+.govco-bg-blue-marlin {
+    background-color: #4A7EFF;
+}
+
+.govco-bg-orange-v2 {
+    background-color: #FF6C00;
+}
+
+.govco-bg-green {
+    background-color: #069169;
+}
+
+.govco-bg-red-flag {
+    background-color: #D31F3F;
+}
+
+.govco-bg-yellow {
+    background-color: #FAD118;
+}
+
+.govco-bg-gray {
+    background-color: #f1f1f1;
+}
+.content-color-info {
+    border-radius: 10px !important;
+}
+.content-color-info span {
+    font-size: 1rem !important;
+    font-weight: 400 !important;
+    text-align: center;
+    font-family: "WorkSans-Regular";
+    color: #000000;
+    display: block;
+}
+.govcolor-info-danger {
+    background-color: #A80521;
+    width: 100%;
+    height: 2.5rem;
+    border-radius: 10px !important;
+}
+.govcolor-info-warning {
+    background-color: #FFAB00;
+    width: 100%;
+    height: 2.5rem;
+    border-radius: 10px !important;
+}
+.govcolor-info-success {
+    background-color: #068460;
+    width: 100%;
+    height: 2.5rem;
+    border-radius: 10px !important;
+}
+
+
+.cards-palettes{
+    text-align: center!important;
+}
+.cards-palettes div {
+    margin: 1.1%;
+    flex: 0 0 auto;
+    width: 30.33333333%;
+    position: relative;
+    display: inline-block;
+    flex-direction: column;
+    min-width: 0;
+    word-wrap: break-word;
+    background-clip: border-box;
+    border: 1px solid rgba(0, 0, 0, .125);
+    border-radius: 0.25rem;
+}
+.cards-palettes div a {
+    display: block;
+    background-color: white;
+    flex: 1 1 auto;
+    padding: 1rem 1rem;
+    border-radius: 0.25rem;
+}
+.cards-palettes div:before {
+    display: block;
+    content: "";
+    height: 6rem;
+    padding: 0.5rem 1rem;
+    margin-bottom: 0;
+    border-radius: calc(0.25rem - 1px) calc(0.25rem - 1px) 0 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}

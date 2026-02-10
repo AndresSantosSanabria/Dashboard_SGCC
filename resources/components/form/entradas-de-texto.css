@@ -1,0 +1,208 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Entradas de texto
+ *  - Version: 4.0.0
+ */
+
+/* Fuente iconografica */
+@font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* WorkSans-Regular */
+@font-face {
+  font-family: 'WorkSans-Regular';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+body {
+  margin: 0;
+  padding: 0;
+}
+ 
+/* all */ 
+html {
+  font-size: 100%; /* 100% = 16px */
+}
+
+.entradas-de-texto-govco {
+  padding: 1rem 0;
+  font-size: 16px;
+  font-family: WorkSans-Regular;
+}
+
+.entradas-de-texto-govco label {
+  color: #4B4B4B;
+  display: block;
+  font-size: 16px;
+  margin-bottom: 0.625rem;
+  line-height: 1.375rem;
+}
+
+.entradas-de-texto-govco .container-input-texto-govco {
+  position: relative;
+}
+
+.entradas-de-texto-govco input {
+  outline: none;
+  background-color: #FFFFFF;
+  border: 0.094rem solid #737373;
+  border-radius: 0.313rem;
+  width: 100%;
+  padding: 0.5rem;
+  color: #4B4B4B;
+  font-size: 16px;
+  margin-bottom: 0.5rem;
+  display: inline;
+  height: auto;  
+  box-sizing: inherit;
+  line-height: 1.375rem;
+}
+
+.entradas-de-texto-govco input::placeholder {
+  color: #737373;
+}
+
+.entradas-de-texto-govco input:not(.success):not(.error):focus {
+  box-shadow: 0 0.25rem 0 #3366CC24;
+  border: 0.094rem solid #3366CC;
+}
+
+.entradas-de-texto-govco input:disabled {
+  background-color: #F2F2F2;
+  border: 0.094rem solid #BABABA;
+}
+
+.entradas-de-texto-govco input:disabled::placeholder, 
+.entradas-de-texto-govco.disabled-govco label, 
+.entradas-de-texto-govco.disabled-govco span {
+  color: #BABABA;
+}
+
+/* contador, nota, contraseña, Correo electronico, Teléfono, Validaciones */
+.entradas-de-texto-govco .alert-entradas-de-texto-govco {
+  display: block;
+}
+
+/* contador */
+.entradas-de-texto-govco .counter-entradas-de-texto-govco {
+  color: #737373;
+  float: right;
+}
+
+/* nota, contraseña */
+.entradas-de-texto-govco .info-entradas-de-texto-govco {
+  color: #737373;
+}
+
+/* contraseña, Correo electronico, Teléfono, Validaciones */
+.entradas-de-texto-govco .icon-entradas-de-texto-govco {
+  position: absolute;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;  
+  display: block;
+  background-size: 1.6rem;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;  
+  top: 50%;
+  transform: translateY(-65%);
+}
+
+.entradas-de-texto-govco .eye-slash-entradas-de-texto-govco {
+  right: 0.625rem;
+}
+
+.entradas-de-texto-govco .eye-entradas-de-texto-govco {
+  right: 0.625rem;
+}
+
+.entradas-de-texto-govco .icon-entradas-de-texto-govco::after {
+  font-family: "govco-font";
+}
+
+.entradas-de-texto-govco .eye-entradas-de-texto-govco::after {
+  content: "\e937";
+  color: #3366CC;
+  font-size: 21.3px;
+}
+
+.entradas-de-texto-govco .eye-slash-entradas-de-texto-govco::after {
+  content: "\e936";
+  color: #737373;
+  font-size: 19.2px;
+}
+
+/* contraseña, Correo electronico, Teléfono, Validaciones */
+.entradas-de-texto-govco input.success {
+  border: 0.094rem solid #068460!important;
+}
+
+.entradas-de-texto-govco input.success::placeholder, 
+.entradas-de-texto-govco input.success {
+  color: #077253;
+}
+
+.entradas-de-texto-govco .success-texto-govco {
+  color: #068460;
+}
+
+.entradas-de-texto-govco input.error {
+  border: 0.094rem solid #A80521!important;
+}
+
+.entradas-de-texto-govco input.error::placeholder, 
+.entradas-de-texto-govco .error-texto-govco, 
+.entradas-de-texto-govco input.error {
+  color: #A80521;
+}
+ 
+.entradas-de-texto-govco input.success ~ .success-icon-entradas-de-texto-govco, 
+.entradas-de-texto-govco input.error ~ .error-icon-entradas-de-texto-govco {
+  display: initial;
+}
+
+.entradas-de-texto-govco input::-ms-reveal {
+  display: none;
+}
+
+.entradas-de-texto-govco .success-icon-entradas-de-texto-govco,
+.entradas-de-texto-govco .error-icon-entradas-de-texto-govco {
+  right: 0.625rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  text-align: center;
+}
+
+.entradas-de-texto-govco .success-icon-entradas-de-texto-govco {
+  background-color: #068460;
+}
+
+.entradas-de-texto-govco .error-icon-entradas-de-texto-govco {
+  background-color: #A80521;
+}
+
+.entradas-de-texto-govco .success-icon-entradas-de-texto-govco::after,
+.entradas-de-texto-govco .error-icon-entradas-de-texto-govco::after {
+  color: #FFFFFF;
+  font-size: 14px;
+}
+
+.entradas-de-texto-govco .success-icon-entradas-de-texto-govco::after {
+  content: "\e8a7";
+}
+
+.entradas-de-texto-govco .error-icon-entradas-de-texto-govco::after {
+  content: "\e92f";
+}
+
+.entradas-de-texto-govco .none, 
+.entradas-de-texto-govco .success-icon-entradas-de-texto-govco, 
+.entradas-de-texto-govco .error-icon-entradas-de-texto-govco {
+  display: none;
+}

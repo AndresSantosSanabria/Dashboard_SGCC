@@ -1,0 +1,271 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Botones
+ *  - Version: 4.0.0
+ */
+
+/* Fuente iconografica */
+@font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* WorkSans-Regular */
+@font-face {
+  font-family: 'WorkSans-Medium';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Medium.ttf');
+}
+
+/* WorkSans-Regular */
+@font-face {
+  font-family: 'WorkSans-Bold';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Bold.ttf');
+}
+
+html {
+  font-size: 100%; /* 100% = 16px */
+}
+
+/* Botón de texto, simbólico, mixto */
+.btn-govco {
+  border-radius: 1.563rem;
+  font-family: WorkSans-Medium;
+  font-size: 16px;
+  line-height: 0.563rem;
+  padding: 0.75rem 1rem;
+  border-width: 0.125rem;
+  border-style: solid;
+}
+
+.btn-govco.fill-btn-govco:hover,
+.btn-govco.fill-btn-govco:focus-visible,
+.btn-govco.outline-btn-govco:hover,
+.btn-govco.outline-btn-govco:focus-visible,
+.btn-govco.fill-secundary-btn-govco:hover,
+.btn-govco.fill-secundary-btn-govco:focus-visible,
+.btn-govco.outline-secundary-btn-govco:hover,
+.btn-govco.outline-secundary-btn-govco:focus-visible {
+  background-color: #004884;
+  border-color: #004884;
+  color: #FFFFFF;
+}
+
+.btn-govco.fill-btn-govco:focus-visible,
+.btn-govco.outline-btn-govco:focus-visible,
+.btn-govco.fill-secundary-btn-govco:focus-visible,
+.btn-govco.outline-secundary-btn-govco:focus-visible {
+  outline: max(0.125rem, 0.125rem) solid #000000;
+  outline-offset: max(0.125rem, 0.188rem);
+}
+
+.btn-govco.fill-btn-govco,
+.btn-govco.outline-btn-govco {
+  border-color: #3366cc;
+}
+
+.btn-govco.fill-btn-govco, 
+.btn-govco.outline-secundary-btn-govco {
+  background-color: #3366CC;
+  color: #FFFFFF;
+}
+
+.btn-govco.outline-btn-govco,
+.btn-govco.fill-secundary-btn-govco,
+.btn-govco.outline-secundary-btn-govco:hover,
+.btn-govco.outline-secundary-btn-govco:focus-visible {
+  background-color: #FFFFFF;
+  color: #3366CC;
+}
+
+.btn-govco.fill-secundary-btn-govco:focus-visible,
+.btn-govco.outline-secundary-btn-govco:focus-visible {
+  outline-color: #FFFFFF;
+}
+
+.btn-govco:disabled {
+  background-color: #737373;
+  border-color: #737373;
+  color: #FFFFFF;
+  pointer-events: none;
+}
+
+.btn-govco.fill-secundary-btn-govco:hover,
+.btn-govco.fill-secundary-btn-govco:focus-visible,
+.btn-govco.fill-secundary-btn-govco:disabled,
+.btn-govco.fill-secundary-btn-govco,
+.btn-govco.outline-secundary-btn-govco:hover,
+.btn-govco.outline-secundary-btn-govco:focus-visible,
+.btn-govco.outline-secundary-btn-govco:disabled,
+.btn-govco.outline-secundary-btn-govco {
+  border-color: #FFFFFF;
+}
+
+/* Botón simbólico, mixto */
+.btn-govco.outline-btn-govco:disabled {
+  background-color: #FFFFFF;
+  border-color: #737373;
+  color: #737373;
+}
+
+.btn-govco.symbol-btn-govco {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-govco.symbol-btn-govco::before,
+.btn-govco.symbol-btn-govco::after {
+  font-family: "govco-font";
+  font-size: 24px;
+}
+
+.btn-govco.symbol-btn-govco.right-arrow-btn-govco:not(.mixed-btn-govco):not(.fill-mixed-btn-govco):before {
+  content: "\ebf0";
+}
+
+.btn-govco.symbol-btn-govco.left-arrow-btn-govco:not(.mixed-btn-govco):not(.fill-mixed-btn-govco)::before {
+  content: "\ebef";
+}
+
+.btn-govco.symbol-btn-govco.fill-btn-govco,
+.btn-govco.symbol-btn-govco.outline-btn-govco:hover,
+.btn-govco.symbol-btn-govco.outline-btn-govco:focus-visible,
+.btn-govco.symbol-btn-govco.fill-secundary-btn-govco:hover,
+.btn-govco.symbol-btn-govco.fill-secundary-btn-govco:focus-visible ,
+.btn-govco.symbol-btn-govco.outline-secundary-btn-govco,
+.btn-govco.symbol-btn-govco.fill-secundary-btn-govco:disabled {
+  color: #FFFFFF;
+}
+
+.btn-govco.symbol-btn-govco.outline-btn-govco,
+.btn-govco.symbol-btn-govco.fill-secundary-btn-govco,
+.btn-govco.symbol-btn-govco.outline-secundary-btn-govco:hover,
+.btn-govco.symbol-btn-govco.outline-secundary-btn-govco:focus-visible {
+  color: #3366CC;
+}
+
+.btn-govco.symbol-btn-govco.outline-btn-govco:disabled {
+  color: #737373;
+}
+
+/* Botón mixto */
+.btn-govco.symbol-btn-govco.mixed-btn-govco.right-arrow-btn-govco[icon-position="right"]::after,
+.btn-govco.symbol-btn-govco.fill-mixed-btn-govco.right-arrow-btn-govco[icon-position="right"]::after {
+  content: "\ebf0";
+}
+
+.btn-govco.symbol-btn-govco.mixed-btn-govco.right-arrow-btn-govco[icon-position="left"]::before,
+.btn-govco.symbol-btn-govco.fill-mixed-btn-govco.right-arrow-btn-govco[icon-position="left"]::before {
+  content: "\ebf0";
+}
+
+.btn-govco.symbol-btn-govco.mixed-btn-govco.left-arrow-btn-govco[icon-position="right"]::after,
+.btn-govco.symbol-btn-govco.fill-mixed-btn-govco.left-arrow-btn-govco[icon-position="right"]::after {
+  content: "\ebef";
+}
+
+.btn-govco.symbol-btn-govco.mixed-btn-govco.left-arrow-btn-govco[icon-position="left"]::before,
+.btn-govco.symbol-btn-govco.fill-mixed-btn-govco.left-arrow-btn-govco[icon-position="left"]::before {
+  content: "\ebef";
+}
+
+.btn-govco.no-fill-btn-govco span.sub-btn-govco {
+  text-decoration: underline;
+}
+
+.btn-govco.no-fill-btn-govco[icon-position="left"] span {
+  justify-content: left;
+  margin-left: 0.625rem;
+}
+
+.btn-govco.no-fill-btn-govco[icon-position="right"] span {
+  justify-content: right;
+  margin-right: 0.625rem;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco,
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco {
+  border: 0;
+  background-color: transparent;
+  font-size: 15px;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco {
+  color: #3366CC;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco {
+  border: 0;
+  background-color: transparent;
+  color: #3366CC;
+  font-size: 15px;
+}
+
+.btn-govco.mixed-btn-govco span,
+.btn-govco.fill-mixed-btn-govco span {
+	width: 70%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco::before, 
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco::before {
+  font-size: 20px;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco {
+  color: #3366CC;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco:hover,
+.btn-govco.mixed-btn-govco.no-fill-btn-govco:focus-visible {
+  color: #004884;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco:focus-visible {
+  outline: max(0.125rem, 0.125rem) solid #000000;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco:focus-visible,
+.btn-govco.mixed-btn-govco.no-fill-btn-govco:hover {
+  color: #004884;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco:disabled {
+  color: #737373;
+}
+
+.btn-govco.mixed-btn-govco.no-fill-btn-govco:disabled {
+  color: #737373;
+}
+
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco {
+  color: #FFFFFF;
+}
+
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco {
+  color: #FFFFFF;
+}
+
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco:hover,
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco:focus-visible {
+  font-family: WorkSans-Bold;
+}
+
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco:focus-visible {
+  outline: max(0.125rem, 0.125rem) solid #FFFFFF;
+}
+
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco:disabled {
+  color: #BABABA;
+  font-family: WorkSans-Medium;
+}
+
+.btn-govco.fill-mixed-btn-govco.no-fill-btn-govco:disabled {
+  color: #BABABA;
+}

@@ -1,0 +1,937 @@
+/* Fuente iconografica */
+@font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Montserrat-Medium */
+@font-face {
+  font-family: 'Montserrat-Medium';
+  src: url('../assets/fonts/Montserrat/Montserrat-Medium.ttf');
+}
+
+/* Montserrat-SemiBold */
+@font-face {
+  font-family: 'Montserrat-SemiBold';
+  src: url('../assets/fonts/Montserrat/Montserrat-SemiBold.ttf');
+}
+
+/* WorkSans-SemiBold */
+@font-face {
+  font-family: 'WorkSans-SemiBold';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-SemiBold.ttf');
+}
+
+/* WorkSans-Regular */
+@font-face {
+  font-family: 'WorkSans-Regular';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+/* WorkSans-Medium */
+@font-face {
+  font-family: 'WorkSans-Medium';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Medium.ttf');
+}
+
+/* WorkSans-Bold */
+@font-face {
+  font-family: 'WorkSans-Bold';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Bold.ttf');
+}
+
+/* all */
+html {
+  font-size: 100%;
+}
+
+.container-example-linea-avance-govco {
+  margin: 1.25rem 2.5rem;
+}
+
+.linea-avance-govco {
+  position: relative;
+}
+
+.linea-avance-govco p {
+  line-height: 24px;
+  margin: 0;
+}
+
+.linea-avance-govco .progress {
+  background-color: #E8E8E8;
+  display: flex;
+  margin: 0;
+}
+
+.linea-avance-govco .progress .progress-bar {
+  background-color: #3366CC;
+}
+
+.row {
+  margin-bottom: 0;
+  margin-right: calc(var(--bs-gutter-x) * -.5);
+  margin-left: calc(var(--bs-gutter-x) * -.5);
+}
+
+.linea-avance-govco .header-linea-avance-govco span.title-linea-avance-govco {
+  font-size: 15px;
+  font-family: WorkSans-Regular;
+  width: 6.25rem;
+  color: #4B4B4B;
+}
+
+.linea-avance-govco .active-linea-avance-govco .header-linea-avance-govco span.title-linea-avance-govco {
+  font-family: WorkSans-SemiBold;
+  color: #3366CC;
+}
+
+.linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco {
+  border: 0.063rem solid #004884;
+  background-color: #E8E8E8;
+  border-radius: 50%;
+  color: #004884;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  float: left;
+}
+
+.linea-avance-govco .active-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco {
+  border: 0.063rem solid #3366CC;
+  background-color: #3366CC;
+  color: #FFFFFF;
+}
+
+.linea-avance-govco .body-linea-avance-govco {
+  width: 100%;
+}
+
+/* Línea de avance horizontal */
+/* Línea de avance vertical */
+.linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco,
+.linea-avance-govco.v-linea-avance-govco .item-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco {
+  width: 1.5rem;
+  height: 1.5rem;
+  font-family: Montserrat-Medium;
+  font-size: 14px;
+  background-color: #FFFFFF;
+  margin-right: 0.5rem;
+}
+
+.linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco.active-linea-avance-govco .indicator-linea-avance-govco,
+.linea-avance-govco.v-linea-avance-govco .active-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco {
+  background-color: #3366CC;
+}
+
+.linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco.inactive-linea-avance-govco .indicator-linea-avance-govco,
+.linea-avance-govco.v-linea-avance-govco .inactive-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco {
+  border: 0.063rem solid #4B4B4B;
+  background-color: #4B4B4B;
+  color: #FFFFFF;
+}
+
+.linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco span.title-linea-avance-govco,
+.linea-avance-govco.v-linea-avance-govco .header-linea-avance-govco span.title-linea-avance-govco {
+  color: #004884;
+}
+
+.linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco.active-linea-avance-govco span.title-linea-avance-govco,
+.linea-avance-govco.v-linea-avance-govco .active-linea-avance-govco .header-linea-avance-govco span.title-linea-avance-govco {
+  color: #3366CC;
+}
+
+.linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco.inactive-linea-avance-govco span.title-linea-avance-govco,
+.linea-avance-govco.v-linea-avance-govco .inactive-linea-avance-govco .header-linea-avance-govco span.title-linea-avance-govco {
+  color: #4B4B4B;
+}
+
+
+/* Línea de avance horizontal */
+.linea-avance-govco.h-linea-avance-govco .items-header-linea-avance-govco {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 0.813rem;
+}
+
+.linea-avance-govco.h-linea-avance-govco .progress {
+  width: 100%;
+  height: 0.188rem;
+}
+
+.linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco.active-linea-avance-govco .indicator-linea-avance-govco {
+  border: 0.063rem solid #3366CC;
+  background-color: #3366CC;
+  color: #FFFFFF;
+}
+
+.linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco.active-linea-avance-govco span.title-linea-avance-govco {
+  font-family: WorkSans-SemiBold;
+}
+
+.linea-avance-govco.h-linea-avance-govco .body-linea-avance-govco {
+  display: none;
+}
+
+.linea-avance-govco.h-linea-avance-govco .body-linea-avance-govco.active-linea-avance-govco {
+  display: block;
+  margin-top: 1.5rem;
+}
+
+.linea-avance-govco.h-linea-avance-govco .contents-example-linea-avance-govco {
+  background-color: #BABABA;
+  height: 16.813rem;
+  max-width: 29.375rem;
+  margin: 0 auto;
+  display: flex;
+  justify-content: end;
+  align-items: end;
+}
+
+.linea-avance-govco.h-linea-avance-govco .contents-example-linea-avance-govco button {
+  margin-right: 0.938rem;
+  margin-bottom: 1rem;
+}
+
+/* Línea de avance vertical */
+.linea-avance-govco.v-linea-avance-govco .progress {
+  height: 100%;
+  width: 0.188rem;
+  position: absolute;
+}
+
+.linea-avance-govco.v-linea-avance-govco .progress-bar {
+  width: 100%;
+}
+
+.linea-avance-govco.v-linea-avance-govco .item-linea-avance-govco {
+  padding-left: 1rem;
+}
+
+.linea-avance-govco.v-linea-avance-govco .item-linea-avance-govco:not(.active-linea-avance-govco):not(:last-child) .header-linea-avance-govco {
+  margin-bottom: 2.5rem;
+}
+
+.linea-avance-govco.v-linea-avance-govco .body-linea-avance-govco {
+  margin-top: 2.5rem;
+  margin-bottom: 1.25rem;
+  display: none;
+}
+
+.linea-avance-govco.v-linea-avance-govco .active-linea-avance-govco .body-linea-avance-govco {
+  display: block;
+}
+
+.linea-avance-govco.v-linea-avance-govco .contents-example-linea-avance-govco {
+  background-color: #BABABA;
+  height: 16.813rem;
+  max-width: 29.5rem;
+  display: flex;
+  justify-content: end;
+  align-items: end;
+}
+
+.linea-avance-govco.v-linea-avance-govco .contents-example-linea-avance-govco button {
+  margin-right: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Línea de avance de interacción horizontal */
+/* Línea de avance de interacción vertical */
+.linea-avance-govco.ih-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco,
+.linea-avance-govco.iv-linea-avance-govco .item-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco {
+  width: 2.813rem;
+  height: 2.813rem;
+  font-size: 28px;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .body-linea-avance-govco .contents-linea-avance-govco,
+.linea-avance-govco.iv-linea-avance-govco .body-linea-avance-govco .contents-linea-avance-govco {
+  border: 0.125rem solid #E6EFFD;
+  background-color: #FFFFFF;
+  border-radius: 0.313rem;
+}
+
+
+.linea-avance-govco.ih-linea-avance-govco .active-linea-avance-govco .indicator-linea-avance-govco,
+.linea-avance-govco.ih-linea-avance-govco .checked-linea-avance-govco .indicator-linea-avance-govco,
+.linea-avance-govco.iv-linea-avance-govco .checked-linea-avance-govco .indicator-linea-avance-govco {
+  background-color: #3366CC;
+  border-color: #3366CC;
+  color: #FFFFFF;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .checked-linea-avance-govco .indicator-linea-avance-govco span,
+.linea-avance-govco.iv-linea-avance-govco .checked-linea-avance-govco .indicator-linea-avance-govco span {
+  display: none;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .active-linea-avance-govco span.title-linea-avance-govco,
+.linea-avance-govco.ih-linea-avance-govco .checked-linea-avance-govco span.title-linea-avance-govco,
+.linea-avance-govco.iv-linea-avance-govco .checked-linea-avance-govco span.title-linea-avance-govco {
+  font-family: WorkSans-SemiBold;
+  color: #3366CC;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .checked-linea-avance-govco .indicator-linea-avance-govco::before,
+.linea-avance-govco.iv-linea-avance-govco .checked-linea-avance-govco .indicator-linea-avance-govco::before {
+  color: #FFFFFF;
+  content: '\e8a7';
+  font-family: "govco-font";
+  color: #FFFF;
+  font-size: 1.6rem;
+  visibility: visible;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .header-linea-avance-govco:not(.active-linea-avance-govco):not(.checked-linea-avance-govco) .indicator-linea-avance-govco:hover,
+.linea-avance-govco.iv-linea-avance-govco .item-linea-avance-govco:not(.active-linea-avance-govco):not(.checked-linea-avance-govco) .indicator-linea-avance-govco:hover {
+  background-color: #E6EFFD;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .header-linea-avance-govco:not(.active-linea-avance-govco):not(.checked-linea-avance-govco) .indicator-linea-avance-govco:hover~span,
+.linea-avance-govco.iv-linea-avance-govco .item-linea-avance-govco:not(.active-linea-avance-govco):not(.checked-linea-avance-govco) .indicator-linea-avance-govco:hover~span {
+  font-family: WorkSans-Medium;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .indicator-linea-avance-govco:focus-visible,
+.linea-avance-govco.iv-linea-avance-govco .indicator-linea-avance-govco:focus-visible {
+  outline: 2px solid #000 !important;
+  border: 1px solid #004884;
+  outline-offset: 4px;
+  outline-style: auto;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco,
+.linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco {
+  padding: 1.5rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco h5,
+.linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco h5 {
+  color: #3366CC;
+  font-size: 20px;
+  font-family: Montserrat-SemiBold;
+  line-height: 24px;
+  margin-bottom: 1rem;
+  margin-top: 0rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco .entradas-de-texto-govco,
+.linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco .entradas-de-texto-govco {
+  padding: 0;
+  margin-bottom: 0.5rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco .desplegable-govco,
+.linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco .desplegable-govco {
+  width: 100% !important;
+  margin-bottom: 1rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco .btn-govco,
+.linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco .btn-govco {
+  right: 0;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco p,
+.linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco p {
+  color: #4B4B4B;
+  font-size: 16px;
+  font-family: WorkSans-Regular;
+  margin-bottom: 1rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco img,
+.linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco img {
+  width: 100%;
+  max-width: 34.5rem;
+  display: block;
+  margin: 0 auto;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco .radio-seleccion-govco,
+.linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco .radio-seleccion-govco {
+  display: inline-block;
+  margin-right: 1.813rem;
+}
+
+/* Línea de avance de interacción horizontal */
+.linea-avance-govco.ih-linea-avance-govco {
+  padding-right: 1.875rem;
+  padding-left: 1.875rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .items-header-linea-avance-govco {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 5rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .progress {
+  width: calc(100% - 3.75rem);
+  height: 0.188rem;
+  position: absolute;
+  margin-top: 1.375rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .header-linea-avance-govco {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  z-index: 1;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco {
+  font-family: Montserrat-Medium;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .header-linea-avance-govco span.title-linea-avance-govco {
+  position: absolute;
+  top: 3.563rem;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .body-linea-avance-govco {
+  padding-left: 0.938rem;
+  padding-right: 0.25rem;
+  display: none;
+}
+
+.linea-avance-govco.ih-linea-avance-govco .body-linea-avance-govco.active-linea-avance-govco {
+  display: block;
+}
+
+/* Línea de avance de interacción vertical */
+.linea-avance-govco.iv-linea-avance-govco .progress {
+  height: 100%;
+  position: absolute;
+  width: 0.188rem;
+  margin-left: 1.438rem;
+}
+
+.linea-avance-govco.iv-linea-avance-govco .progress-bar {
+  width: 100%;
+}
+
+.linea-avance-govco.iv-linea-avance-govco .item-linea-avance-govco {
+  z-index: 1;
+  position: relative;
+}
+
+.linea-avance-govco.iv-linea-avance-govco .header-linea-avance-govco {
+  display: flex;
+  align-items: center;
+}
+
+.linea-avance-govco.iv-linea-avance-govco .item-linea-avance-govco:not(.active-linea-avance-govco):not(:last-child) .header-linea-avance-govco {
+  margin-bottom: 4.5rem;
+}
+
+.linea-avance-govco.iv-linea-avance-govco .header-linea-avance-govco .indicator-linea-avance-govco {
+  margin-right: 1.5rem;
+  font-family: Montserrat-SemiBold;
+}
+
+.linea-avance-govco.iv-linea-avance-govco .body-linea-avance-govco {
+  padding-left: 4.5rem;
+  padding-top: 1.25rem;
+  display: none;
+}
+
+.linea-avance-govco.iv-linea-avance-govco .active-linea-avance-govco .body-linea-avance-govco {
+  display: block;
+}
+
+.linea-avance-govco.iv-linea-avance-govco .item-linea-avance-govco:not(:last-child) .body-linea-avance-govco {
+  padding-bottom: 2.188rem;
+}
+
+
+
+@media only screen and (max-width: 800px) {
+
+  /* Línea de avance horizontal */
+  .linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco:not(:first-child):not(:last-child) {
+    align-items: center;
+  }
+
+  .linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco:last-child {
+    align-items: end;
+  }
+
+  .linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco .title-linea-avance-govco {
+    width: auto;
+  }
+
+  .linea-avance-govco.h-linea-avance-govco .header-linea-avance-govco:not(.active-linea-avance-govco) .title-linea-avance-govco {
+    visibility: hidden;
+  }
+
+  /* Línea de avance de interacción horizontal */
+  .ih-linea-avance-govco .header-linea-avance-govco:not(.movil-linea-avance-govco) {
+    display: none;
+  }
+
+  .linea-avance-govco.ih-linea-avance-govco .body-linea-avance-govco {
+    padding: 0;
+  }
+
+  /* Línea de avance de interacción vertical */
+  .linea-avance-govco.iv-linea-avance-govco .body-linea-avance-govco {
+    padding-left: 2.063rem;
+  }
+
+  /* Línea de avance de interacción horizontal */
+  /* Línea de avance de interacción vertical */
+  .linea-avance-govco.ih-linea-avance-govco .contents-example-linea-avance-govco,
+  .linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco {
+    padding: 1.5rem 1rem 1rem 1rem;
+  }
+
+  .linea-avance-govco.iv-linea-avance-govco .contents-example-linea-avance-govco h5 {
+    font-size: 18px;
+  }
+
+}
+
+
+/* Botones */
+.btn-govco {
+  border-radius: 1.563rem;
+  font-family: WorkSans-Medium;
+  font-size: 16px;
+  line-height: 0.563rem;
+  padding: 0.75rem 1rem;
+  border-width: 0.125rem;
+  border-style: solid;
+}
+
+.btn-govco.fill-btn-govco:hover,
+.btn-govco.fill-btn-govco:focus-visible,
+.btn-govco.outline-btn-govco:hover,
+.btn-govco.outline-btn-govco:focus-visible,
+.btn-govco.fill-secundary-btn-govco:hover,
+.btn-govco.fill-secundary-btn-govco:focus-visible,
+.btn-govco.outline-secundary-btn-govco:hover,
+.btn-govco.outline-secundary-btn-govco:focus-visible {
+  background-color: #004884;
+  border-color: #004884;
+  color: #FFFFFF;
+}
+
+.btn-govco.fill-btn-govco:focus-visible,
+.btn-govco.outline-btn-govco:focus-visible,
+.btn-govco.fill-secundary-btn-govco:focus-visible,
+.btn-govco.outline-secundary-btn-govco:focus-visible {
+  outline: max(0.125rem, 0.125rem) solid #000000;
+  outline-offset: max(0.125rem, 0.188rem);
+}
+
+.btn-govco.fill-btn-govco,
+.btn-govco.outline-btn-govco {
+  border-color: #3366cc;
+}
+
+.btn-govco.fill-btn-govco,
+.btn-govco.outline-secundary-btn-govco {
+  background-color: #3366CC;
+  color: #FFFFFF;
+}
+
+.btn-govco.outline-btn-govco,
+.btn-govco.fill-secundary-btn-govco,
+.btn-govco.outline-secundary-btn-govco:hover,
+.btn-govco.outline-secundary-btn-govco:focus-visible {
+  background-color: #FFFFFF;
+  color: #3366CC;
+}
+
+.btn-govco.fill-secundary-btn-govco:focus-visible,
+.btn-govco.outline-secundary-btn-govco:focus-visible {
+  outline-color: #FFFFFF;
+}
+
+.btn-govco:disabled {
+  background-color: #737373;
+  border-color: #737373;
+  color: #FFFFFF;
+  pointer-events: none;
+}
+
+.btn-govco.fill-secundary-btn-govco:hover,
+.btn-govco.fill-secundary-btn-govco:focus-visible,
+.btn-govco.fill-secundary-btn-govco:disabled,
+.btn-govco.fill-secundary-btn-govco,
+.btn-govco.outline-secundary-btn-govco:hover,
+.btn-govco.outline-secundary-btn-govco:focus-visible,
+.btn-govco.outline-secundary-btn-govco:disabled,
+.btn-govco.outline-secundary-btn-govco {
+  border-color: #FFFFFF;
+}
+
+
+/* Entradas de texto */
+.entradas-de-texto-govco {
+  padding: 1rem 0;
+  font-size: 16px;
+  font-family: WorkSans-Regular;
+}
+
+.entradas-de-texto-govco label {
+  color: #4B4B4B;
+  display: block;
+  font-size: 16px;
+  margin-bottom: 0.625rem;
+  line-height: 1.375rem;
+}
+
+.entradas-de-texto-govco .container-input-texto-govco {
+  position: relative;
+}
+
+.entradas-de-texto-govco input {
+  outline: none !important;
+  background-color: #FFFFFF !important;
+  ;
+  border: 0.094rem solid #737373 !important;
+  ;
+  border-radius: 0.313rem !important;
+  ;
+  width: 100% !important;
+  ;
+  padding: 0.5rem !important;
+  ;
+  color: #4B4B4B;
+  font-size: 16px !important;
+  ;
+  margin-bottom: 0.5rem !important;
+  ;
+  display: inline;
+  height: auto !important;
+  ;
+  box-sizing: inherit !important;
+  ;
+  line-height: 1.375rem;
+}
+
+.entradas-de-texto-govco input::placeholder {
+  color: #737373;
+}
+
+.entradas-de-texto-govco input:not(.success):not(.error):focus {
+  box-shadow: 0 0.25rem 0 #3366CC24;
+  border: 0.094rem solid #3366CC;
+}
+
+.entradas-de-texto-govco input:disabled {
+  background-color: #F2F2F2;
+  border: 0.094rem solid #BABABA;
+}
+
+.entradas-de-texto-govco input:disabled::placeholder,
+.entradas-de-texto-govco.disabled-govco label,
+.entradas-de-texto-govco.disabled-govco span {
+  color: #BABABA;
+}
+
+/* Desplegables */
+.label-desplegable-govco {
+  text-align: left;
+  font-family: WorkSans-Regular;
+  font-size: 16px;
+  letter-spacing: 0;
+  color: #4B4B4B;
+  line-height: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.desplegable-govco {
+  position: relative;
+  text-align: left;
+  font-family: WorkSans-Regular;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.desplegable-govco .govco-chevron-left:before {
+  content: '\e8b6';
+}
+
+.desplegable-govco .govco-chevron-right:before {
+  content: '\e8b7';
+}
+
+.desplegable-govco select {
+  display: none;
+}
+
+.desplegable-govco .desplegable-selected-option {
+  border: 0.063rem solid #737373;
+  border-radius: 0.313rem;
+}
+
+.desplegable-govco button.desplegable-selected-option {
+  line-height: 1.5rem;
+}
+
+.desplegable-govco .desplegable-selected-option:hover {
+  border: 0.063rem solid #3366CC;
+  border-radius: 0.313rem;
+}
+
+.desplegable-govco .desplegable-selected-option:focus-visible {
+  outline: max(0.125rem, 0.15em) solid #000000;
+  outline-offset: max(0.125rem, 0.15em);
+}
+
+.desplegable-govco .desplegable-selected-option:after {
+  font-family: "govco-font";
+  font-size: 12px;
+  content: '\e8b5';
+  position: absolute;
+  margin-top: 0.188rem;
+  right: 0.75rem;
+  color: #3366cc;
+}
+
+.desplegable-govco .desplegable-selected-option:after:hover {
+  position: absolute;
+  content: "";
+  top: 1rem;
+  right: 0.625rem;
+  width: 0;
+  height: 0;
+  border: 0.313rem solid transparent;
+  border-color: #3366CC transparent transparent transparent;
+}
+
+.desplegable-govco:not(.desplegable-calendar-govco) .desplegable-selected-option.search-filter-selected-option.desplegable-arrow-active:not(.error-desplegable-govco):after {
+  content: '\e8b8';
+}
+
+.desplegable-govco .desplegable-selected-option.desplegable-arrow-active {
+  border: 0.063rem solid #3366CC;
+  box-shadow: 0 0.25rem 0 #3366CC24;
+}
+
+.desplegable-govco .desplegable-items li,
+.desplegable-govco .desplegable-selected-option {
+  font-family: WorkSans-Regular;
+  font-size: 16px;
+  color: #4B4B4B;
+  padding: 0.438rem 3.8rem 0.438rem 1rem;
+  cursor: pointer;
+  user-select: none;
+  width: 100%;
+  height: 100%;
+  background-color: #FFFFFF;
+  text-align: left;
+  display: flex;
+  align-items: center;
+}
+
+.desplegable-govco .desplegable-items li {
+  height: 2.5rem;
+}
+
+.desplegable-govco .desplegable-selected-option[value="0"] {
+  color: #737373;
+}
+
+.desplegable-govco .desplegable-selected-option.disabled-desplegable-govco,
+.desplegable-govco .desplegable-selected-option:disabled {
+  border-color: #BABABA;
+  background-color: #F2F2F2;
+  color: #BABABA;
+  pointer-events: none;
+}
+
+.desplegable-govco .desplegable-selected-option.disabled-desplegable-govco input::placeholder,
+.desplegable-govco .desplegable-selected-option.disabled-desplegable-govco input {
+  color: #BABABA;
+  pointer-events: none;
+}
+
+.desplegable-govco .desplegable-selected-option.disabled-desplegable-govco::after,
+.desplegable-govco .desplegable-selected-option:disabled::after {
+  color: #BABABA;
+}
+
+.desplegable-govco .desplegable-selected-option.error-desplegable-govco,
+.desplegable-govco .desplegable-selected-option.search-filter-selected-option.error-desplegable-govco {
+  border-color: #A80521;
+  color: #A80521;
+}
+
+.desplegable-govco .desplegable-selected-option.search-filter-selected-option.error-desplegable-govco::after {
+  font-size: 14px;
+  color: #FFFFFF;
+  content: "\e92f";
+  background-color: #A80521;
+  width: 1.5rem;
+  height: 1.5rem;
+  text-align: center;
+  padding-top: 0.125rem;
+  border-radius: 50%;
+  margin-top: 0;
+}
+
+.desplegable-govco .desplegable-selected-option.error-desplegable-govco::after,
+.desplegable-govco .desplegable-selected-option.search-filter-selected-option.error-desplegable-govco input::placeholder,
+.desplegable-govco .desplegable-selected-option.search-filter-selected-option.error-desplegable-govco input {
+  color: #A80521;
+}
+
+.label-desplegable-govco.disabled-desplegable-govco~.alert-desplegable-govco,
+.label-desplegable-govco.disabled-desplegable-govco {
+  color: #BABABA;
+}
+
+.desplegable-govco .desplegable-items {
+  box-shadow: 0 0.188rem 0.375rem #00000029;
+  position: absolute;
+  outline: 0.063rem solid #3366CC;
+  border-radius: 0.125rem;
+  background-color: white;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1;
+  margin: 0.063rem;
+  margin-top: 0.25rem;
+  max-height: 12.5rem;
+  overflow-y: auto;
+  list-style: none;
+  padding: 0;
+}
+
+.desplegable-govco .desplegable-items::-webkit-scrollbar {
+  width: 0.519rem;
+  background: #004884 0% 0% no-repeat padding-box;
+  border-radius: 0.75rem;
+}
+
+.desplegable-govco .desplegable-items::-webkit-scrollbar-thumb {
+  border-radius: 0.75rem;
+  box-shadow: 0 0.188rem 0.375rem #00000029;
+  background-color: #FFFFFF;
+  border: 0.063rem solid #000;
+}
+
+.desplegable-govco .desplegable-items li:hover,
+.desplegable-govco .desplegable-items li:focus-visible {
+  background-color: #E6EFFD;
+}
+
+.desplegable-govco .desplegable-items li:focus-visible {
+  outline: max(0.125rem, 0.15em) solid #000000;
+}
+
+.desplegable-govco .desplegable-items li.same-as-selected {
+  background-color: #3366CC;
+  color: #FFFFFF;
+}
+
+.desplegable-govco .desplegable-hide {
+  display: none;
+}
+
+.desplegable-govco~.alert-desplegable-govco {
+  color: #4B4B4B;
+  font-family: WorkSans-Regular;
+  font-size: 16px;
+  line-height: 1.375rem;
+  margin-top: 1rem;
+  display: block;
+}
+
+.desplegable-govco~.alert-desplegable-govco.error-desplegable-govco {
+  color: #A80521;
+}
+
+/* radio button */
+.radio-seleccion-govco {
+  margin-bottom: 0.125rem;
+}
+
+.radio-seleccion-govco input[type="radio"]+label {
+  color: #4B4B4B;
+  font-size: 16px;
+  font-family: WorkSans-Regular;
+  margin: 0;
+  line-height: 1.375rem;
+  cursor: pointer;
+}
+
+.radio-seleccion-govco input[type="radio"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background-color: #fff;
+  margin: 0;
+  font: inherit;
+  color: #3366CC;
+  width: 1.15em;
+  height: 1.15em;
+  border: 0.1667rem solid #3366cc;
+  border-radius: 50%;
+  transform: translateY(-0.075em);
+  display: inline-grid;
+  place-content: center;
+  float: left;
+  margin-right: 0.5em;
+  margin-top: 0.25em;
+  position: relative !important;
+  opacity: 1 !important;
+}
+
+.radio-seleccion-govco input[type="radio"]:hover {
+  border: 0.15em solid #004884;
+}
+
+.radio-seleccion-govco input[type="radio"]:disabled {
+  border: 0.15em solid #737373;
+}
+
+.radio-seleccion-govco input[type="radio"]:disabled+label {
+  color: #737373;
+}
+
+.radio-seleccion-govco input[type="radio"]::before {
+  content: "";
+  width: 0.65em;
+  height: 0.65em;
+  border-radius: 50%;
+  transform: scale(0);
+  transition: 120ms transform ease-in-out;
+  box-shadow: inset 1em 1em #3366CC;
+}
+
+.radio-seleccion-govco input[type="radio"]:hover::before {
+  box-shadow: inset 1em 1em #004884;
+}
+
+.radio-seleccion-govco input[type="radio"]:disabled::before {
+  box-shadow: inset 1em 1em #737373;
+}
+
+.radio-seleccion-govco input[type="radio"]:checked::before {
+  transform: scale(1);
+}
+
+.radio-seleccion-govco input[type="radio"]:focus-visible {
+  outline: max(0.125rem, 0.15em) solid #000000;
+  outline-offset: max(0.125rem, 0.15em);
+}
+
+.radio-seleccion-govco input[type="radio"]:not(:checked),
+.radio-seleccion-govco input[type="radio"]:checked {
+  pointer-events: all !important;
+  cursor: pointer;
+}

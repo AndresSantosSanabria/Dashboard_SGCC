@@ -1,0 +1,147 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Buscador
+ *  - Version: 4.0.0
+ */
+ @font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+ /* WorkSans-SemiBold */
+@font-face {
+  font-family: "WorkSans-SemiBold";
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-SemiBold.ttf');
+}
+
+.btn-descripcion-emergente-govco {
+  background-color: #3366CC;
+  border: #3366CC;
+  color: #fff;
+  border-radius: 11px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-descripcion-emergente-govco::before {
+  font-family: "govco-font";
+  content: "\eab0";
+  text-align: center;
+  font-size: 25px;
+}
+
+.descripcion-emergente-govco {
+  position: relative;
+}
+
+.descripcion-emergente-govco .tiptext {
+    visibility:hidden;
+    background-color: #000000B3!important;
+    color: #fff;
+    border-radius: 4px;
+    width: 215px;
+    height: 40px;
+    position: absolute;
+    font-size: 14px;
+    font-family: WorkSans-SemiBold !important;
+    z-index: 1;
+    padding-top: 10px;
+    padding-bottom: 12px;
+    padding-left: 28px;
+    padding-right: 28px;
+}
+
+.descripcion-emergente-govco .tiptext::after {
+    content: "";
+    position: absolute;
+    border-width: 5px;
+    border-style: solid;
+}
+
+.descripcion-emergente-govco:hover .tiptext {
+    visibility: visible;
+}
+
+.descripcion-emergente-govco.top .tiptext{
+  margin-left: -100px;
+  bottom: 150%;
+  left: 30%;
+}
+
+.descripcion-emergente-govco.top .tiptext::after{
+  margin-left: -5px;
+  top: 100%;
+  left: 50%;
+  border-color: #000000B3 transparent transparent transparent;
+}
+
+.btn-descripcion-emergente-govco:focus {
+  background-color: #3366CC;
+  border: #3366CC;
+  min-width: 40px;
+  height: 40px;
+  font-size: 25px;
+  outline: 2px  solid #000 !important;
+  border: 2px  solid #fff !important;
+  font-size: 14px;
+  font-family: WorkSans-SemiBold !important;
+  
+ }
+
+ .btn-descripcion-emergente-govco:focus::before {
+  font-family: "govco-font";
+  content: "\eab0";
+  font-size: 26px;
+  text-align: center;
+}
+
+.descripcion-emergente-govco:focus .tiptext {
+  visibility: visible;
+}
+
+.descripcion-emergente-govco:focus.top .tiptext{
+margin-left: -100px;
+bottom: 150%;
+left: 30%;
+}
+
+.descripcion-emergente-govco:focus.top .tiptext::after{
+margin-left: -5px;
+top: 100%;
+left: 50%;
+border-color: #000000B3 transparent transparent transparent;
+}
+
+.btn-descripcion-emergente-govco.disabled {
+  background-color: #737373 !important;
+  border: #737373 !important;
+  color: #fff !important;
+  border-radius: 11px !important;
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-descripcion-emergente-govco.disabled:hover {
+  outline: 0rem !important;
+ }
+
+.btn-descripcion-emergente-govco.disabled:focus {
+  border: 0rem !important;
+  outline: 0rem !important;
+ }
+
+.descripcion-emergente-govco.disabled:focus .tiptext {
+  visibility: hidden !important;
+}
+
+.descripcion-emergente-govco.disabled:hover .tiptext {
+  visibility: hidden !important;
+}
