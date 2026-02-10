@@ -1,0 +1,38 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Miga de pan
+ *  - Version: 4.0.0
+ */
+
+.breadcrumb-govco {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 0 0;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+.breadcrumb-item-govco {
+  padding: 0.3rem 0.4rem 0.3rem 0.8rem;
+}
+.breadcrumb-item-govco+.breadcrumb-item-govco::before {
+  float: left;
+  padding-right: 0.8rem;
+  color: #282C34;
+  content: var(--bs-breadcrumb-divider, ">");
+  font-weight: medium;
+}
+.breadcrumb-item-govco > a {
+  color: #3366CC;
+  text-decoration: underline;
+}
+.breadcrumb-item-govco.active {
+  color: #282C34;
+  font-weight: medium;
+}
+.breadcrumb-item-govco.invested {
+  background-color: #004884;
+}
+.breadcrumb-item-govco.invested, .breadcrumb-item-govco.invested > a, .breadcrumb-item-govco.invested+.breadcrumb-item-govco.invested::before {
+  color: #FFFFFF;
+}

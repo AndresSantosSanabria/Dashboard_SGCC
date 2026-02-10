@@ -1,0 +1,392 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Alerta Modal
+ *  - Version: 4.0.0
+ */
+/* Fuente iconografica */
+@font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Montserrat-SemiBold */
+@font-face {
+  font-family: "Montserrat-SemiBold";
+  src: url("../assets/fonts/Montserrat/Montserrat-SemiBold.ttf");
+}
+
+/* WorkSans-Medium */
+@font-face {
+  font-family: "WorkSans-Medium";
+  src: url("../assets/fonts/Work_Sans/static/WorkSans-Medium.ttf");
+}
+
+/* WorkSans-Regular */
+@font-face {
+  font-family: 'WorkSans-Regular';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+html {
+  font-size: 100%;
+}
+
+.modal-container-govco {
+  position: relative !important;
+  display: block !important;
+  z-index: 1 !important;
+  top: 0 !important;
+  left: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  outline: 0;
+}
+
+.modal-dialog-govco {
+  width: 100%;
+  position: relative;
+  pointer-events: none;
+}
+
+.modal-content-govco {
+  height: 100%;
+  box-shadow: 0px 3px 6px #00000029;
+  border: none !important;
+  border-radius: 0.313rem !important;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  pointer-events: auto;
+  background-color: #fff;
+  background-clip: padding-box;
+  outline: 0;
+}
+
+.close-btn-modal {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  color: #0d6efd;
+}
+
+.close-btn-modal:focus {
+  padding: 6px !important;
+  border: 1px solid #000 !important;
+  box-shadow: none;
+}
+
+.close-btn-modal:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.govco-times {
+  background-image: url(../assets/icons/times.svg);
+  min-width: 16px;
+  min-height: 16px;
+  display: inline-block;
+  background-repeat: no-repeat;
+  background-size: 1rem 1rem;
+}
+
+.modal-close-govco {
+  filter: brightness(0) saturate(100%) invert(34%) sepia(98%) saturate(639%) hue-rotate(189deg) brightness(92%) contrast(99%);
+  line-height: 0px;
+}
+
+.modal-close-govco::before {
+  margin-left: 0px !important;
+}
+
+.close-btn-modal:hover span {
+  filter: brightness(0) saturate(100%) invert(14%) sepia(81%) saturate(2933%) hue-rotate(193deg) brightness(98%) contrast(102%);
+}
+
+.modal-header-govco {
+  border-bottom: none !important;
+  padding: 2rem 2rem 0px 2rem !important;
+  justify-content: flex-end !important;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  border-top-left-radius: calc(0.3rem - 1px);
+  border-top-right-radius: calc(0.3rem - 1px);
+}
+
+.modal-body-govco {
+  margin: 0px 3.625rem auto 3.625rem !important;
+  padding: 0px !important;
+  padding-top: 14px !important;
+}
+
+.modal-title-govco {
+  font-family: Montserrat-SemiBold;
+  color: #004884;
+  font-size: 2rem;
+  margin-bottom: 1rem !important;
+  margin: 0px;
+  font-weight: normal;
+  line-height: 1.219;
+  width: fit-content;
+}
+
+.modal-subtitle-govco {
+  font-family: Montserrat-SemiBold;
+  color: #0b457f;
+  font-size: 1.125rem;
+  margin: 0px;
+  margin-bottom: 2rem !important;
+  font-weight: normal;
+  line-height: 1.222;
+  width: fit-content;
+}
+
+.modal-text-govco {
+  font-family: WorkSans-Regular;
+  width: 100%;
+  font-size: 14px;
+  color: #4B4B4B;
+  margin-bottom: 2rem;
+  padding-right: 1.25rem;
+  line-height: 1.452;
+}
+
+.modal-footer-govco {
+  margin: 0px 4.688rem auto 4.688rem;
+  padding-bottom: 3.5rem !important;
+  justify-content: flex-start !important;
+  border-top: none !important;
+  display: flex;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+  align-items: center;
+  border-bottom-right-radius: calc(0.3rem - 1px);
+  border-bottom-left-radius: calc(0.3rem - 1px);
+}
+
+.modal-buttons-govco {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.btn-modal-govco {
+  font-family: WorkSans-Medium;
+  display: block !important;
+  border-radius: 25px !important;
+  background-color: #3366cc !important;
+  border: 2px solid #3366cc !important;
+  padding-top: 11px !important;
+  padding-bottom: 11px !important;
+  padding-right: 48px !important;
+  padding-left: 48px !important;
+  font-size: 16px !important;
+  line-height: 8px !important;
+  letter-spacing: normal;
+  text-transform: none;
+  box-shadow: none;
+  height: 42px;
+  width: 165px;
+}
+
+.btn-modal-govco.btn-contorno {
+  border: 2px solid #3366cc !important;
+  background-color: transparent !important;
+  color: #3366cc !important;
+}
+
+.btn-modal-govco:hover {
+  background-color: #004884 !important;
+  border: 2px solid #004884 !important;
+}
+
+.btn-modal-govco:focus {
+  outline: 2px solid #000 !important;
+  outline-offset: max(0.2px, 2.4px);
+  background-color: #004884 !important;
+  box-shadow: none !important;
+  border: 2px solid #004884 !important;
+}
+
+.btn-modal-govco.btn-contorno:hover,
+.btn-modal-govco.btn-contorno:focus {
+  color: #ffffff !important;
+}
+
+
+.modal-header-alerts-govco {
+  padding-top: 1.375rem !important;
+}
+
+.center-elements-govco {
+  text-align: center;
+}
+
+.modal-icon {
+  margin-bottom: 3px;
+}
+
+.confirmation-govco,
+.success-govco,
+.error-govco,
+.warning-govco {
+  width: 100%;
+  margin-bottom: 1.875rem !important;
+}
+
+.confirmation-govco,
+.modal-confirmation-icon::after {
+  color: #3165c9;
+}
+
+.success-govco,
+.modal-success-icon::after {
+  color: #069169;
+}
+
+.error-govco,
+.modal-error-icon::after {
+  color: #a80521;
+}
+
+.warning-govco,
+.modal-warning-icon::after {
+  color: #ffab00;
+}
+
+.modal-text-center-govco {
+  margin-bottom: 2rem;
+  padding-right: 0px;
+  line-height: 1.143;
+}
+
+.modal-icon-govco::after {
+  font-family: "govco-font";
+  font-size: 70px;
+  line-height: 1.318;
+}
+
+.modal-confirmation-icon::after {
+  content: "\e8a4";
+}
+
+.modal-success-icon::after {
+  content: "\e8a4";
+}
+
+.modal-error-icon::after {
+  content: "\eb72";
+}
+
+.modal-warning-icon::after {
+  content: "\e92d";
+}
+
+@media(min-width:576px) {
+  .modal-dialog-govco {
+    max-width: 540px !important;
+  }
+}
+
+@media(max-width:480px) {
+
+  .modal-header-govco {
+    padding: 1rem 1rem 0px 1rem !important;
+  }
+
+  .close-btn-modal {
+    width: 8px;
+    height: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    color: #0d6efd;
+  }
+
+  .close-btn-modal:focus {
+    padding: 0px !important;
+    border: 1px solid #000 !important;
+  }
+
+  .govco-times {
+    min-width: 8px;
+    min-height: 8px;
+    background-size: 0.5rem 0.5rem;
+  }
+
+  .modal-close-govco::before {
+    font-size: 8px;
+  }
+
+  .modal-body-govco {
+    margin: 0px 1.5rem auto 1.5rem !important;
+    padding-top: 1rem !important;
+  }
+
+  .modal-title-govco {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem !important;
+    line-height: 1.208;
+  }
+
+  .modal-subtitle-govco {
+    font-size: 1rem;
+    margin-bottom: 1rem !important;
+    line-height: 1.188;
+  }
+
+  .modal-text-govco {
+    font-size: 0.75rem;
+    margin-bottom: 1.5rem !important;
+    padding-right: 0 !important;
+    line-height: 1.604;
+  }
+
+  .modal-footer-govco {
+    margin: 0px 1.5rem auto 1.5rem;
+    padding-bottom: 3.5rem !important;
+  }
+
+  .modal-buttons-govco {
+    display: block;
+    width: 100%;
+  }
+
+  .btn-modal-govco {
+    width: 100%;
+    margin-bottom: 1rem !important;
+  }
+
+  .btn-contorno {
+    margin-bottom: 0 !important;
+  }
+
+  .confirmation-govco,
+  .success-govco,
+  .error-govco,
+  .warning-govco {
+    margin-bottom: 1rem !important;
+  }
+
+  .modal-icon-govco::after {
+    font-size: 48px;
+  }
+
+  .modal-header-alerts-govco {
+    padding-top: 0 !important;
+  }
+
+  .modal-icon {
+    margin-bottom: 6px;
+  }
+}

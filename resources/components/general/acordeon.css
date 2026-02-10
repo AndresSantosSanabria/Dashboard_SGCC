@@ -1,0 +1,152 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Acordeón
+ *  - Version: 4.0.0
+ */
+
+/* Fuente iconografica */
+@font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Montserrat-SemiBold */
+@font-face {
+  font-family: 'Montserrat-SemiBold';
+  src: url('../assets/fonts/Montserrat/Montserrat-SemiBold.ttf');
+}
+
+/* Montserrat-Bold */
+@font-face {
+  font-family: 'Montserrat-Bold';
+  src: url('../assets/fonts/Montserrat/Montserrat-Bold.ttf');
+}
+
+/* WorkSans-Regular */
+@font-face {
+  font-family: 'WorkSans-Regular';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+html {
+  font-size: 100%; /* 100% = 16px */
+}
+
+.accordion-govco .accordion-header {
+  line-height: 0;
+  margin: 0;
+}
+
+.accordion-govco .button-accordion-govco {
+  width: 100%;
+  text-align: left;
+  background-color: #ffffff;
+  border: 0;
+  min-height: 4.375rem;
+  padding: 0 1.5rem;
+  border-bottom: 0.125rem solid #E6EFFD;
+  display: flex;
+  align-items: center;
+}
+
+.accordion-govco .button-accordion-govco:focus {
+  background-color: #ffffff;
+}
+
+.accordion-govco .text-button-accordion-govco {
+  font-family: Montserrat-SemiBold;
+  color: #000000;
+  font-size: 18px;
+  line-height: 1rem;
+}
+
+.accordion-govco .button-accordion-govco::after {
+  font-family: "govco-font";
+  line-height: 0;
+  font-size: 26px;
+  color: #004884;
+  margin-left: auto;
+}
+
+.accordion-govco .button-accordion-govco::after {
+  content: "\e813";
+}
+
+.accordion-govco .button-accordion-govco.collapsed::after {
+  content: "\e814";
+}
+
+.accordion-govco .item-accordion-govco {
+  background-color: #ffffff;
+}
+
+.accordion-govco .body-accordion-govco {
+  padding: 1.875rem 1.5rem 1.875rem 1.5rem;
+  background-color: #F6F8F9;
+}
+
+.accordion-govco .title-one-accordion-govco {
+  color: #004884;
+  font-size: 18px;
+  font-family: Montserrat-SemiBold;
+  display: block;
+}
+
+.accordion-govco .title-two-accordion-govco {
+  color: #000000;
+  font-size: 16px;
+  font-family: Montserrat-Bold;
+  margin-left: 0.875rem;
+  margin-top: 1.875rem;
+  display: block;
+}
+
+.accordion-govco .text-one-accordion-govco {
+  color: #000000;
+  font-size: 16px;
+  font-family: WorkSans-Regular;
+  margin-left: 0.875rem;
+  margin-top: 0.938rem;
+  margin-bottom: 0;
+  display: block;
+  line-height: 1.5rem;
+}
+
+.accordion-govco .button-accordion-govco:disabled {
+  background-color: #737373;
+}
+
+.accordion-govco .button-accordion-govco:disabled::after{
+  color: #FFFFFF;
+}
+
+.accordion-govco .button-accordion-govco:disabled > * {
+  pointer-events:none;
+  color: #FFFFFF;
+}
+
+.accordion-govco .button-accordion-govco:focus-visible {
+  outline: 0.125rem solid black;
+}
+
+/* style icon or number */
+.accordion-govco .icon-button-accordion-govco {
+  font-family: Montserrat-Bold;
+  font-size: 20px;
+  color: #FFFFFF;
+  background-color: #004884;
+  border-radius: 3.125rem;
+  min-width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.625rem;
+}
+
+.accordion-govco .button-accordion-govco:disabled .icon-button-accordion-govco {
+  background-color: #FFFFFF;
+  color: #737373;
+}

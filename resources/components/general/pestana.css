@@ -1,0 +1,301 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Pestanas
+ *  - Version: 4.0.0
+ */
+
+ /* -------------------- pestana horizontal -------------- */
+
+/* Montserrat-Medium */
+@font-face {
+  font-family: 'Montserrat-Medium';
+  src: url('../assets/fonts/Montserrat/Montserrat-Medium.ttf');
+}
+
+@font-face {
+  font-family: 'Montserrat-Bold';
+  src: url('../assets/fonts/Montserrat/Montserrat-Bold.ttf');
+}
+
+.container-navbar-pestana-govco {
+  position: absolute;
+  background-color: #fff!important;
+  width: 100%;
+  height: 4rem;
+  padding-top: 30px;
+  padding-bottom: 25px;
+  padding-left: 200px;
+  padding-right: 16.5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.container-navbar-pestana-govco .navbar-pestana-govco ul li {
+  background-color: #F6F8F9; 
+  width:  13.375rem;
+  height: 4rem;
+}
+
+.container-navbar-pestana-govco .navbar-expand-lg {
+  box-shadow: none;
+}
+
+.container-navbar-pestana-govco .navbar-pestana-govco ul li hr{
+  position:initial;
+  max-width: 75rem;
+  height: 0;
+  margin: 0rem ;
+  border-bottom: 0px;
+}
+
+.navbar-pestana-govco ul li a{ 
+  white-space: normal;
+  color: #004884;
+  width: 13.375rem;
+  height: 4rem;
+  font-size: 1rem;
+  text-align:center;
+  line-height: normal!important;
+  font-family:Montserrat-Medium !important;
+  border: 2px solid #E8EFFC;  
+  padding-top: 1.375rem;
+  padding-bottom: 1.438rem;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  opacity: 1;
+}
+
+.navbar-pestana-govco ul li a p { line-height:1;}
+
+.navbar-pestana-govco .navbar-nav {
+  flex-direction: row;
+}
+ 
+.navbar-pestana-govco ul li a:hover {
+  background-color: #004884 ;
+  color: #FFFFFF ;
+}
+
+.navbar-pestana-govco ul li a:focus-visible{
+  position: relative;
+  background-color: #FFFFFF;
+  color: #004884!important;
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+.navbar-pestana-govco ul li a:focus{
+ 
+  background-color: #FFFF!important;
+  color: #004884!important;
+}
+
+.navbar-pestana-govco .nav-link{
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+}
+
+.clase-uno{
+  background-color: transparent !important; 
+  height: 0px !important;
+}
+
+.clase-dos{
+  position: relative;
+  height: 0.25rem !important;
+  width: 13.37rem !important;
+  border: #004884 !important;
+  color: #004884 !important;
+  background-color:#004884 !important;
+  background: #004884 !important;
+  opacity: 1;
+  margin-top: -4px!important;
+}
+  
+.navbar-pestana-govco ul li a.disabled {
+  background-color: #F2F2F2;
+  color: #BABABA!important;
+}
+
+.container-navbar-pestana-govco .navbar-expand-lg{
+  background-color: #fff;
+  color: #FFFFFF;
+  width: 67rem;
+  height: 3.8rem;
+  opacity: 1;
+}
+
+@media only screen and (max-width: 990px) {
+ 
+  #pestania3{
+    display: none;
+  }
+
+  #pestania4{
+    display: none;
+  }
+
+  #pestania5{
+    display: none;
+  }
+
+}
+
+/* ---------------------- fin pestana horizontal ----------------- */
+/*--------------------------- pestana vertical -------------------- */
+
+/* Fuente iconografica */
+@font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Montserrat-Medium */
+@font-face {
+  font-family: 'Montserrat-Medium';
+  src: url('../assets/fonts/Montserrat/Montserrat-Medium.ttf');
+}
+
+@font-face {
+  font-family: 'Montserrat-Bold';
+  src: url('../assets/fonts/Montserrat/Montserrat-Bold.ttf');
+}
+
+.container-navbar-pestana-vertical-govco {
+  width: 0px;
+  height: 0px;
+}
+
+.container-navbar-pestana-vertical-govco .navbar-pestana-vertical-govco ul {
+  margin: 0;
+  padding: 0;
+}
+
+.container-navbar-pestana-vertical-govco .navbar-pestana-vertical-govco  ul li {
+  background-color: #F6F8F9 !important;
+  width: 290px;
+  height: 56px;
+}
+  
+.navbar-pestana-vertical-govco ul li a { 
+  white-space: normal;
+  color: #004884;
+  width: 290px;
+  height: 56px;
+  font-size: 16px;
+  line-height: normal!important;
+  text-align:left;
+  list-style:none;
+  font-family:Montserrat-Medium !important;
+  border: 2px solid #E8EFFC;
+  padding-top: 19px !important;
+  padding-bottom: 18px !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+}
+
+.navbar-pestana-vertical-govco ul li a .row{ 
+  margin-left: 0px !important;
+  margin-right: 0px !important;
+  margin-top: 0px !important;
+  margin-bottom: 0px !important;
+}
+
+.navbar-pestana-vertical-govco ul li a p { line-height:1.5;}
+
+.navbar-pestana-vertical-govco ul li a .icon_right::after {
+  content: "\e8b7";
+  font-family: "govco-font";
+  color: #004884;
+  opacity: 1;
+  height: 14px;
+  width:8px; 
+  margin-left: 170px;
+}
+
+.navbar-pestana-vertical-govco ul li a .icon_left::after {
+  content: "\e8b6";
+  font-family: "govco-font";
+  line-height: 0;
+  color: #004884;
+  opacity: 1;
+  height: 14px;
+  width:8px;
+  margin-left: 170px;
+}
+
+.navbar-pestana-vertical-govco ul li a:hover {
+  background-color: #004884;
+  color: #FFFFFF;
+}
+
+.navbar-pestana-vertical-govco ul li a:hover .icon_right::after {
+  color: #FFFFFF;
+}
+
+.navbar-pestana-govco-vertical-hover ul li a::after {
+  font-family: "govco-font";
+  font-size: 16px;
+  color: #fff;
+  margin-left: 180px;
+}
+
+.navbar-pestana-govco-vertical-hover ul li a p::after {
+  line-height:1;
+}
+
+.navbar-pestana-vertical-govco ul li a:focus-visible{
+  background-color: #FFFFFF;
+  color: #004884!important;
+  outline: 2px solid #000;
+  outline-offset: 2px;
+}
+
+.navbar-pestana-vertical-govco ul li a:focus{
+  position: relative;
+  background-color: #FFFFFF;
+  color: #004884!important;
+}
+
+.navbar-pestana-vertical-govco ul li a.disabled {
+  background-color: #F2F2F2;
+  color: #BABABA!important;
+}
+
+.navbar-pestana-vertical-govco ul li a.disabled .icon_right::after {
+  color: #BABABA!important;
+}
+
+.navbar-pestana-vertical-govco  .nav-link{
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+  padding-top: 0px !important;
+  padding-bottom: 0px !important;
+}
+
+.campo-texto-pestana-govco{
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  padding-top: 19px !important;
+  padding-bottom: 18px !important;
+}
+
+.linea-vertical-govco{
+  border-left: 0px solid #F6F8F9 !important;
+  height: 0px !important; 
+  margin-top: -2px !important;
+  margin-left: -2px !important; 
+}
+
+.linea-vertical-govco-activa{
+  border-left: 0.313rem solid #004884 !important;
+  height: 56px !important;
+  margin-top: -2px !important;
+  margin-left: -2px !important; 
+}
+
+
+/*-------------------------- fin pestana vertical -------------------------------*/

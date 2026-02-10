@@ -1,0 +1,339 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Carrusel
+ *  - Version: 4.0.0
+ */
+
+/* Fuente iconografica */
+@font-face {
+  font-family: "govco-font";
+  src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* WorkSans-Regular */
+@font-face {
+  font-family: 'WorkSans-Regular';
+  src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+/* Montserrat-SemiBold */
+@font-face {
+  font-family: 'Montserrat-SemiBold';
+  src: url('../assets/fonts/Montserrat/Montserrat-SemiBold.ttf');
+}
+
+/* Montserrat-Regular */
+@font-face {
+  font-family: 'Montserrat-Regular';
+  src: url('../assets/fonts/Montserrat/Montserrat-Regular.ttf');
+}
+
+html {
+  font-size: 100%; /* 100% = 16px */
+}
+
+.carrusel-govco {
+  height: auto;
+  overflow: initial;
+}
+
+.carrusel-govco.carousel-fade .carousel-inner {
+  overflow: initial;
+}
+
+.carrusel-govco .carousel-indicators {
+  margin-right: 20%;
+  margin-left: 20%;
+  margin-bottom: 1.5rem;
+  z-index: 1;
+}
+
+.carrusel-govco .carousel-indicators button {
+  border-radius: 50%;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin: 0.25rem;
+  box-shadow: 0 0.188rem 0.25rem #00000029;
+  background-color: #FFFFFF;
+  border: 0;
+}
+
+.carrusel-govco .carousel-indicators button:not(.active) {
+  opacity: 1;
+  background-color: rgba(255,255,255,.4);
+}
+
+.carrusel-govco .carousel-indicators button:focus-visible {
+  outline: max(0.125rem, 0.063em) solid #000000;
+  outline-offset: max(0.125rem, 0.063rem);
+}
+
+.carrusel-govco .carousel-inner .carousel-item {
+  position: relative;
+  visibility: initial;
+  width: 100%;
+  height: auto;
+}
+
+.carrusel-govco .carousel-inner .carousel-item > a {
+  display: block;
+}
+
+.carrusel-govco .carousel-inner .carousel-item > a:focus-visible {
+  outline-offset: 0.25rem;
+  outline: 0.125rem solid #000000;
+}
+
+.carrusel-govco .carousel-inner .carousel-item img {
+  min-height: 19.813rem;
+  width: 100%;
+}
+
+.carrusel-govco .carousel-inner .carousel-item:not(.multiple-carrusel-govco) .carousel-caption {
+  top: 35%;
+  bottom: 22%;
+  padding: 0.2rem;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  left: 17%;
+  right: 17%;
+  overflow: hidden;
+}
+
+.carrusel-govco .carousel-inner .carousel-caption a:focus-visible {
+  outline: 0.125rem solid #000000;
+}
+
+.carrusel-govco .carousel-inner .carousel-caption a {
+  text-decoration: none;
+  height: auto;
+  max-height: 100%;
+}
+
+.carrusel-govco .carousel-inner .carousel-caption h5,
+.carrusel-govco .carousel-inner .carousel-caption p {
+  color: #FFFFFF;
+  max-width: 45.625rem;
+  display: block;
+  margin: 0.6rem;
+}
+
+.carrusel-govco .carousel-inner .carousel-caption h5 {
+  font-size: 2rem;
+  font-family: Montserrat-SemiBold;
+}
+
+.carrusel-govco .carousel-inner .carousel-caption p {
+  font-size: 1.313rem;
+  font-family: Montserrat-Regular;
+}
+
+.carrusel-govco .control-start-pause {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  margin-left: 7%;
+  margin-bottom: 1.5rem;
+  line-height: 0;
+  z-index: 1;
+}
+
+.carrusel-govco .control-start-pause button {
+  background-color: inherit;
+  border: 0;
+  color: #FFFFFF;
+  font-size: 0.875rem;
+  font-family: WorkSans-Regular;
+  cursor: pointer;
+  line-height: 1rem;
+  padding: 0.11rem 0.2rem;
+}
+
+.carrusel-govco .control-start-pause button:not(.active) {
+  display: none;
+}
+
+.carrusel-govco .control-start-pause button::before {
+  font-family: "govco-font";
+  font-size: 1rem;
+}
+
+.carrusel-govco .control-start-pause button.start::before {
+  content: "\ea95";
+}
+
+.carrusel-govco .control-start-pause button.pause::before {
+  content: "\ea75";
+}
+
+.carrusel-govco .control-start-pause button:focus-visible {
+  outline: 0.125rem solid #000000;
+}
+
+.carrusel-govco .control-start-pause button:hover {
+  color: #0B457F;
+}
+
+.carrusel-govco .control-start-pause button span {
+  margin-left: 0.5rem;
+}
+
+.carrusel-govco .carousel-control-prev,
+.carrusel-govco .carousel-control-next {
+  top: 40%;
+  bottom: 40%;
+  opacity: 1;
+}
+
+.carrusel-govco .carousel-control-next:focus-visible,
+.carrusel-govco .carousel-control-prev:focus-visible {
+  outline: none;
+}
+
+.carrusel-govco .carousel-control-prev-icon,
+.carrusel-govco .carousel-control-next-icon {
+  background-image: none;
+  width: auto;
+  height: auto;
+}
+
+.carrusel-govco .carousel-control-prev-icon::after,
+.carrusel-govco .carousel-control-next-icon::after {
+  font-family: "govco-font";
+  font-size: 2.625rem;
+  color: #FFFFFF;
+}
+
+.carrusel-govco .carousel-control-prev-icon::after {
+  content: '\e811';
+}
+
+.carrusel-govco .carousel-control-next-icon::after {
+  content: '\e812';
+}
+
+.carrusel-govco .carousel-control-prev:hover .carousel-control-prev-icon::after,
+.carrusel-govco .carousel-control-next:hover .carousel-control-next-icon::after {
+  color: #0B457F;
+}
+
+.carrusel-govco > button:focus {
+  background-color: transparent;
+}
+
+.carrusel-govco .carousel-control-prev:focus-visible .carousel-control-prev-icon::after,
+.carrusel-govco .carousel-control-next:focus-visible .carousel-control-next-icon::after {
+  border: 0.125rem solid #000000;
+}
+
+/* multiple */
+.carrusel-govco .carousel-inner .carousel-item.multiple-carrusel-govco {
+  display: flex;
+  background-color: #069169;
+}
+
+.carrusel-govco .carousel-inner .carousel-item.multiple-carrusel-govco .carousel-caption {
+  width: 40%;
+  position: relative;
+  left: initial;
+  right: initial;
+  bottom: initial;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  padding-left: 10%;
+  padding-right: 1.5%;
+  text-align: left;
+}
+
+.carrusel-govco .carousel-inner .carousel-item.multiple-carrusel-govco .carousel-caption p {
+  font-size: 1.125rem;
+  text-decoration: underline;
+  font-family: Montserrat-SemiBold;
+  margin: 0.1rem;
+}
+
+.carrusel-govco .carousel-inner .carousel-item.multiple-carrusel-govco > a {
+  width: 100%;
+}
+
+.carrusel-govco .carousel-inner .carousel-item.multiple-carrusel-govco > a:focus-visible {
+  outline-offset: 0.125rem;
+}
+
+/* Responsive */
+.responsive-carrusel-govco .carousel-indicators,
+.responsive-carrusel-govco .control-start-pause {
+  margin-bottom: 1rem;
+}
+
+.responsive-carrusel-govco .carousel-indicators button {
+  width: 0.5rem;
+  height: 0.5rem;
+  margin: 0.125rem;
+}
+
+.responsive-carrusel-govco .carousel-control-prev-icon::after,
+.responsive-carrusel-govco .carousel-control-next-icon::after {
+  font-size:  2rem;
+}
+
+.responsive-carrusel-govco .carousel-inner .carousel-item img {
+  min-height: 13.5rem;
+}
+
+.responsive-carrusel-govco .carousel-inner .carousel-caption {
+  left: 15%;
+  right: 15%;  
+}
+
+.responsive-carrusel-govco .carousel-inner .carousel-item:not(.multiple-carrusel-govco) .carousel-caption {
+  top: 20%;
+  bottom: 21%;
+}
+
+.responsive-carrusel-govco .carousel-inner .carousel-caption h5 {
+  font-size: 1.25rem;
+  color: #FFFFFF;
+  font-family: Montserrat-SemiBold;
+}
+
+.responsive-carrusel-govco .carousel-inner .carousel-caption p {
+  font-size: 1.125rem;
+}
+
+.responsive-carrusel-govco .control-start-pause button span {
+  margin-left: 0.25rem;
+}
+
+/* multiple Responsive */
+.responsive-carrusel-govco .carousel-inner .carousel-item.multiple-carrusel-govco {
+  flex-direction: column;
+}
+
+.responsive-carrusel-govco .carousel-inner .carousel-item.multiple-carrusel-govco .carousel-caption {
+  height: 12.063rem;
+  width: 92%;
+  align-items: initial;
+  left: 4%;
+  right: 4%;
+  padding: 0;
+  padding-bottom: 3.375rem;
+  padding-top: 1.625rem;
+}
+
+.responsive-carrusel-govco .carousel-inner .carousel-item.multiple-carrusel-govco .carousel-caption p {
+  height: 100%;
+  overflow: hidden;
+  margin: 0.2rem;
+}
+
+.responsive-carrusel-govco.multiple-carrusel-govco .carousel-control-prev,
+.responsive-carrusel-govco.multiple-carrusel-govco .carousel-control-next {
+  top: 30%;
+  bottom: 50%;
+}

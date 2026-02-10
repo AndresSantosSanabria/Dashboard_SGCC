@@ -1,0 +1,3345 @@
+/* Fuente iconografica */
+@font-face {
+    font-family: "govco-font";
+    src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Montserrat-Medium */
+@font-face {
+    font-family: 'Montserrat-Medium';
+    src: url('../assets/fonts/Montserrat/Montserrat-Medium.ttf');
+}
+
+@font-face {
+    font-family: 'WorkSans-SemiBold';
+    src: url('../assets/fonts/Work_Sans/static/WorkSans-SemiBold.ttf');
+}
+
+@font-face {
+    font-family: 'WorkSans-Regular';
+    src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+@font-face {
+    font-family: 'WorkSans-Medium';
+    src: url('../assets/fonts/Work_Sans/static/WorkSans-Medium.ttf');
+}
+
+html {
+    font-size: 100%;
+}
+
+body {
+    align-items: center;
+    text-align: center;
+    padding-top: 20px;
+}
+
+.row {
+    margin-right: calc(var(--bs-gutter-x) * -.5) !important;
+    margin-left: calc(var(--bs-gutter-x) * -.5) !important;
+    margin-bottom: 0 !important;
+}
+
+.container-btn-linea-activar-govco {
+    text-align: right;
+    padding-right: 20px;
+}
+
+.container-btn1-linea-activar-govco {
+    padding-top: 23px;
+}
+
+.container-btn3-linea-activar-govco {
+    padding-top: 43px;
+}
+
+.container-btn4-linea-activar-govco {
+    padding-top: 61px;
+}
+
+.container-btn5-linea-activar-govco {
+    padding-top: 30px;
+}
+
+.btn-linea-activar-govco {
+    border-radius: 25px !important;
+    background-color: #3366CC !important;
+    border: 2px solid #3366CC !important;
+    color: #FFFFFF;
+    width: 165px;
+    height: 42px;
+    padding-top: 11px !important;
+    padding-bottom: 12px !important;
+    padding-right: 16px !important;
+    padding-left: 16px !important;
+    line-height: 0.5rem !important;
+    font-family: "WorkSans-Medium" !important;
+    font-size: 16px !important;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.btn-linea-activar-govco:hover {
+    border-radius: 25px !important;
+    background-color: #004884 !important;
+    border: 2px solid #004884 !important;
+    color: #FFFFFF;
+    width: 165px;
+    height: 42px;
+    padding-top: 11px !important;
+    padding-bottom: 12px !important;
+    padding-right: 16px !important;
+    padding-left: 16px !important;
+    line-height: 0.5rem !important;
+    font-family: "WorkSans-Medium" !important;
+    font-size: 16px !important;
+    text-align: center;
+}
+
+.btn-linea-activar-govco:focus-visible {
+    outline: 2px solid #000 !important;
+    outline-offset: 3px;
+    outline-style: auto;
+}
+
+.linea-link-label-govco {
+    font-family: "WorkSans-Medium";
+    font-size: 16px;
+    text-align: Center;
+}
+
+.campo-valor-linea-desplegable-govco {
+    width: 100%;
+    height: 2.5rem;
+    border: 1.5px solid #737373;
+    color: #737373;
+    background-color: #FFFF;
+    border-radius: 5px;
+    font-family: "WorkSans-Regular";
+    font-size: 16px;
+    text-align: right;
+    padding: 1px 4px;
+    margin-bottom: 0;
+}
+
+.campo-valor-linea-desplegable-govco::after {
+    font-family: "govco-font";
+    content: "\e814";
+    width: 10px;
+    height: 6px;
+    color: #3366CC;
+    opacity: 1;
+    margin-left: 175px;
+    padding-right: 8px;
+}
+
+.campo-valor-linea-desplegable-govco:focus,
+.campo-valor-linea-desplegable-govco:focus-visible {
+    background-color: transparent;
+}
+
+.campo-valor-linea-desplegable-dos-govco {
+    width: 100%;
+    height: 2.5rem;
+    border: 1.5px solid #737373;
+    color: #737373;
+    background-color: #FFFF;
+    border-radius: 5px;
+    font-family: "WorkSans-Regular";
+    font-size: 16px;
+    text-align: right;
+    padding: 1px 4px;
+    margin-bottom: 0;
+}
+
+.campo-valor-linea-desplegable-dos-govco::after {
+    font-family: "govco-font";
+    content: "\e814";
+    width: 10px;
+    height: 6px;
+    background-color: #FFFF;
+    color: #3366CC;
+    opacity: 1;
+    margin-left: 460px;
+}
+
+.campo-valor-linea-desplegable-tres-govco {
+    width: 100%;
+    height: 2.5rem;
+    border: 1.5px solid #737373;
+    color: #737373;
+    background-color: #FFFF;
+    border-radius: 5px;
+    font-family: "WorkSans-Regular";
+    font-size: 16px;
+    text-align: right;
+    padding: 1px 4px;
+    margin-bottom: 0;
+}
+
+.campo-valor-linea-desplegable-tres-govco::after {
+    font-family: "govco-font";
+    content: "\e814";
+    width: 10px;
+    height: 6px;
+    background-color: #FFFF;
+    color: #3366CC;
+    opacity: 1;
+    margin-left: 350px;
+}
+
+/* - - - - - - - - - - - - -  EJEMPLO HORIZONTAL - - - - - - - - - - - - - - */
+
+.container-principal-linea-govco {
+    width: 656px;
+    height: 327px;
+    background: #FFFFFF;
+    border-radius: 5px;
+    opacity: 1;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container-linea-avance-govco {
+    width: 656px;
+    height: 327px;
+    background-color: #fff;
+}
+
+.linea-avance-govco {
+    width: 41rem;
+    height: 1rem;
+    background-color: #FFFF;
+}
+
+.linea-avance-govco .progress {
+    height: 3px !important;
+    background-color: #e9ecef !important;
+    margin: 0px;
+}
+
+.progress-bar-activa-govco {
+    background-color: #3366CC !important;
+    width: 0%;
+    border: 3px solid var(---3366cc);
+    border: 3px solid #3366CC;
+    opacity: 1;
+}
+
+.container-indicador-govco {
+    width: 41rem;
+    height: 0rem;
+    padding-top: 0.225rem;
+    background-color: rgb(255, 255, 255);
+}
+
+.container-indicador-numero-principal-govco {
+    width: 41rem;
+    height: 2rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+}
+
+.container-indicador-letra-govco {
+    width: 8rem;
+    height: 2rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-right: 28px;
+}
+
+.container-indicador-letra-dos-govco {
+    width: 13rem;
+    height: 2rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-right: 28px;
+}
+
+.container-indicador-letra-tres-govco {
+    width: 15rem;
+    height: 2rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-right: 28px;
+}
+
+.container-indicador-letra-cuatro-govco {
+    width: 6rem;
+    height: 2rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+}
+
+.indicador-linea-avance-activo-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #3366CC;
+    border: 1px solid #3366CC;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.6px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-activo-govco .num-indicador-activo-govco {
+    color: #fff;
+    border: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.indicador-linea-avance-inactivo-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #fff;
+    border: 1px solid #004884;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.6px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-inactivo-govco .num-indicador-inactivo-govco {
+    color: #004884;
+    border: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.indicador-linea-avance-terminado-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #4B4B4B;
+    border: 1px solid #4B4B4B;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.6px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-terminado-govco .num-indicador-activo-govco {
+    color: #fff;
+    border: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.letra-indicador-activo {
+    color: #3366CC;
+    font-family: "WorkSans-SemiBold";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.letra-indicador-inactivo {
+    color: #004884;
+    font-family: "WorkSans-Regular";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.letra-indicador-terminado {
+    color: #4B4B4B;
+    font-family: "WorkSans-Regular";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.container-ejemplo-linea-govco {
+    background-color: #BABABA !important;
+    width: 470px;
+    height: 269px;
+    padding-right: 16px;
+    text-align: right;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 1.5rem;
+    padding-top: 211px;
+}
+
+/* ------------------------------- para moviles ---------------------------*/
+
+@media only screen and (max-width: 990px) {
+
+    .container-principal-linea-govco {
+        width: 297px;
+        height: 337px;
+        background: #FFFFFF;
+        border-radius: 5px;
+        opacity: 1;
+        margin-left: auto;
+        margin-right: auto;
+
+    }
+
+    .container-indicador-govco {
+        width: 25rem;
+        height: 0rem;
+        padding-top: 0.225rem;
+        background-color: rgb(255, 255, 255);
+    }
+
+    .container-linea-avance-govco {
+        width: 297px;
+        height: 337px;
+        background-color: #fff;
+    }
+
+    .linea-avance-govco {
+        width: 18.563rem;
+        height: 1rem;
+        background-color: #FFFF;
+    }
+
+    .linea-avance-govco .progress {
+        height: 3px !important;
+        background-color: #e9ecef !important;
+        margin: 0px;
+    }
+
+    .progress-bar-activa-govco {
+        background-color: #3366CC !important;
+        width: 0%;
+        border: 3px solid var(---3366cc);
+        border: 3px solid #3366CC;
+        opacity: 1;
+    }
+
+    .container-ejemplo-linea-govco {
+        background-color: #BABABA !important;
+        width: 297px;
+        height: 269px;
+        padding-right: 16px;
+        text-align: right;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 1.5rem;
+        padding-top: 211px;
+    }
+
+    .container-indicador-numero-principal-govco {
+        width: 18.563rem;
+        height: 2.75rem;
+        align-items: center;
+        background-color: #FFFF;
+    }
+
+    .container-indicador-letra-govco {
+        width: 4rem;
+        height: 2.75rem;
+        background-color: #FFFF;
+        display: block;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    .container-indicador-letra-dos-govco {
+        width: 10rem;
+        height: 2.75rem;
+        background-color: #FFFF;
+        display: block;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    .container-indicador-letra-dos-govco .indicador-linea-avance-inactivo-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #fff;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 40%;
+    }
+
+    .container-indicador-letra-dos-govco .indicador-linea-avance-activo-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 40%;
+    }
+
+    .container-indicador-letra-dos-govco .indicador-linea-avance-terminado-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #4B4B4B;
+        border: 1px solid #4B4B4B;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 40%;
+    }
+
+    .container-indicador-letra-tres-govco {
+        width: 10rem;
+        height: 2.75rem;
+        background-color: #FFFF;
+        display: block;
+        text-align: left;
+        overflow: inherit;
+    }
+
+    .container-indicador-letra-tres-govco .indicador-linea-avance-inactivo-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #fff;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 40%;
+    }
+
+    .container-indicador-letra-tres-govco .indicador-linea-avance-activo-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 40%;
+    }
+
+    .container-indicador-letra-tres-govco .indicador-linea-avance-terminado-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #4B4B4B;
+        border: 1px solid #4B4B4B;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 40%;
+    }
+
+    .container-indicador-letra-cuatro-govco {
+        width: 6rem;
+        height: 2.75rem;
+        background-color: #FFFF;
+        display: block;
+        text-align: left;
+        font-size: 14px;
+    }
+
+    .container-indicador-letra-cuatro-govco .indicador-linea-avance-inactivo-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #fff;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 60%;
+    }
+
+    .container-indicador-letra-cuatro-govco .indicador-linea-avance-activo-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 60%;
+    }
+
+    .container-indicador-letra-cuatro-govco .indicador-linea-avance-terminado-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #4B4B4B;
+        border: 1px solid #4B4B4B;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.6px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+        margin-left: 60%;
+    }
+
+    .letra-indicador-inactivo {
+        color: transparent;
+        font-family: "WorkSans-Regular";
+        font-size: 0px;
+        text-align: left;
+    }
+
+    .letra-indicador-activo {
+        color: #3366CC;
+        font-family: "WorkSans-SemiBold";
+        font-size: 0.813rem;
+        text-align: left;
+        padding-left: 0px;
+        white-space: nowrap;
+    }
+}
+
+/* - - - - - - - - - - - - - - - - - EJEMPLO VERTICAL - - - - - - - - - - - - - - - */
+
+.contenedor-linea-avance-vertical-govco {
+    width: 488px;
+    height: 505px;
+    background-color: #FFFF;
+    display: inline-block;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+}
+
+.contenedor-linea-avance-vertical-uno-govco {
+    width: 16px;
+    height: 505px;
+    background-color: #FFFF;
+    float: left;
+    position: relative;
+}
+
+.contenedor-linea-avance-vertical-dos-govco {
+    width: 472px;
+    height: 505px;
+    background-color: #FFFF;
+    float: left;
+    position: relative;
+    left: 2px;
+}
+
+.container-ejemplo-linea-vertical-govco {
+    background-color: #bababa !important;
+    width: 472px;
+    height: 269px;
+    padding-right: 16px;
+    text-align: right;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 1.5rem;
+    padding-top: 211px;
+}
+
+.container-indicador-numero-verticaluno-govco {
+    width: 17rem;
+    height: 1.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFFFF;
+    padding-top: 13px;
+    padding-bottom: 17px;
+}
+
+.container-indicador-numero-verticaldos-govco {
+    width: 17rem;
+    height: 1.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-top: 20px;
+    padding-bottom: 17px;
+}
+
+.container-indicador-numero-verticaltres-govco {
+    width: 17rem;
+    height: 1.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-top: 20px;
+    padding-bottom: 17px;
+}
+
+.container-indicador-numero-verticalcuatro-govco {
+    width: 17rem;
+    height: 1.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-top: 20px;
+    padding-bottom: 17px;
+}
+
+.letra-indicador-activo-vertical {
+    color: #3366CC;
+    font-family: "WorkSans-SemiBold";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.letra-indicador-inactivo-vertical {
+    color: #004884;
+    font-family: "WorkSans-Regular";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.letra-indicador-terminado-vertical {
+    color: #4B4B4B;
+    font-family: "WorkSans-Regular";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.linea-avance-vertical-govco {
+    width: 1rem !important;
+    height: 505px !important;
+}
+
+.linea-avance-vertical-govco .progress {
+    width: 3px !important;
+    height: 505px !important;
+    background-color: #e9ecef !important;
+    margin: 0px;
+}
+
+.progress-bar-activa-vertical-govco {
+    background-color: #3366CC !important;
+    height: 13%;
+    border: 3px solid var(---3366cc);
+    border: 3px solid #3366CC;
+    opacity: 1;
+}
+
+.indicador-linea-avance-activo-vertical-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #3366CC;
+    border: 1px solid #3366CC;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.4px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-activo-vertical-govco .num-indicador-activo-vertical-govco {
+    color: #fff;
+    border: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.indicador-linea-avance-inactivo-vertical-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #fff;
+    border: 1px solid #004884;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.4px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-inactivo-vertical-govco .num-indicador-inactivo-vertical-govco {
+    color: #004884;
+    border: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.indicador-linea-avance-terminado-vertical-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #4B4B4B;
+    border: 1px solid #4B4B4B;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.4px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-terminado-vertical-govco .num-indicador-activo-vertical-govco {
+    color: #fff;
+    border: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+#contlineaver2 {
+    display: none;
+}
+
+#contlineaver3 {
+    display: none;
+}
+
+#contlineaver4 {
+    display: none;
+}
+
+/* ------------------------------- para moviles ---------------------------*/
+
+@media only screen and (max-width: 990px) {
+
+    .contenedor-linea-avance-vertical-govco {
+        width: 296px;
+        height: 505px;
+        background-color: #FFFF;
+        display: inline-block;
+        margin-left: auto;
+        margin-right: auto;
+        position: relative;
+    }
+
+    .contenedor-linea-avance-vertical-uno-govco {
+        width: 16px;
+        height: 505px;
+        background-color: #FFFF;
+        float: left;
+        position: relative;
+    }
+
+    .contenedor-linea-avance-vertical-dos-govco {
+        width: 280px;
+        height: 505px;
+        background-color: #FFFF;
+        float: left;
+        position: relative;
+        left: 2px;
+    }
+
+    .container-ejemplo-linea-vertical-govco {
+        background-color: #bababa !important;
+        width: 264px;
+        height: 269px;
+        padding-right: 16px;
+        text-align: right;
+        margin-left: auto;
+        margin-right: auto;
+        margin-top: 1.5rem;
+        padding-top: 211px;
+    }
+
+    .container-indicador-numero-verticaluno-govco {
+        width: 17rem;
+        height: 1.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFFFF;
+        padding-top: 13px;
+        padding-bottom: 17px;
+    }
+
+    .container-indicador-numero-verticaldos-govco {
+        width: 17rem;
+        height: 1.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+        padding-top: 20px;
+        padding-bottom: 17px;
+    }
+
+    .container-indicador-numero-verticaltres-govco {
+        width: 17rem;
+        height: 1.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+        padding-top: 20px;
+        padding-bottom: 17px;
+    }
+
+    .container-indicador-numero-verticalcuatro-govco {
+        width: 17rem;
+        height: 1.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+        padding-top: 20px;
+        padding-bottom: 17px;
+    }
+
+    .letra-indicador-activo-vertical {
+        color: #3366CC;
+        font-family: "WorkSans-SemiBold";
+        font-size: 0.938rem;
+        padding-left: 0.5rem;
+    }
+
+    .letra-indicador-inactivo-vertical {
+        color: #004884;
+        font-family: "WorkSans-Regular";
+        font-size: 0.938rem;
+        padding-left: 0.5rem;
+    }
+
+    .letra-indicador-terminado-vertical {
+        color: #4B4B4B;
+        font-family: "WorkSans-Regular";
+        font-size: 0.938rem;
+        padding-left: 0.5rem;
+    }
+
+    .linea-avance-vertical-govco {
+        width: 1rem !important;
+        height: 505px !important;
+    }
+
+    .linea-avance-vertical-govco .progress {
+        width: 3px !important;
+        height: 505px !important;
+        background-color: #e9ecef !important;
+        margin: 0px;
+    }
+
+    .progress-bar-activa-vertical-govco {
+        background-color: #3366CC !important;
+        height: 13%;
+        border: 3px solid var(---3366cc);
+        border: 3px solid #3366CC;
+        opacity: 1;
+    }
+
+    .indicador-linea-avance-activo-vertical-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        align-items: center;
+        text-align: center;
+        font-size: 0.875rem;
+        padding-top: 0.4px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-activo-vertical-govco .num-indicador-activo-vertical-govco {
+        color: #fff;
+        border: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 0.875rem;
+    }
+
+    .indicador-linea-avance-inactivo-vertical-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #fff;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        align-items: center;
+        text-align: center;
+        font-size: 0.875rem;
+        padding-top: 0.4px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-inactivo-vertical-govco .num-indicador-inactivo-vertical-govco {
+        color: #004884;
+        border: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 0.875rem;
+    }
+
+    .indicador-linea-avance-terminado-vertical-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #4B4B4B;
+        border: 1px solid #4B4B4B;
+        opacity: 1;
+        border-radius: 50%;
+        align-items: center;
+        text-align: center;
+        font-size: 0.875rem;
+        padding-top: 0.4px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-terminado-vertical-govco .num-indicador-activo-vertical-govco {
+        color: #fff;
+        border: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 0.875rem;
+    }
+
+    #contlineaver2 {
+        display: none;
+    }
+
+    #contlineaver3 {
+        display: none;
+    }
+
+    #contlineaver4 {
+        display: none;
+    }
+}
+
+/* - - - - - - - - - - - - -  EJEMPLO INTERACCION HORIZONTAL - - - - - - - - - - - - - - */
+
+/* Montserrat-SemiBold */
+@font-face {
+    font-family: 'Montserrat-SemiBold';
+    src: url('../assets/fonts/Montserrat/Montserrat-SemiBold.ttf');
+}
+
+/* WorkSans-Regular */
+@font-face {
+    font-family: 'WorkSans-Regular';
+    src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+.container-principal-linea-interaccion-govco {
+    width: 40.688rem;
+    background: #FFFF;
+    border-radius: 5px;
+    opacity: 1;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container-indicador-numero-principal-interaccion-govco {
+    width: 40.688rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    margin-bottom: 1rem;
+}
+
+.container-indicador-numero-uno-interaccion-govco,
+.container-indicador-numero-dos-interaccion-govco,
+.container-indicador-numero-tres-interaccion-govco,
+.container-indicador-numero-cuatro-interaccion-govco {
+    z-index: 1;
+}
+
+.container-indicador-numero-uno-nombre-interaccion-govco,
+.container-indicador-numero-dos-nombre-interaccion-govco,
+.container-indicador-numero-tres-nombre-interaccion-govco,
+.container-indicador-numero-cuatro-nombre-interaccion-govco {
+    height: 2.5rem;
+    background-color: #FFF;
+    display: flex;
+    justify-content: center;
+}
+
+.linea-avance-interaccion-govco {
+    width: 8.563rem !important;
+    height: 0rem;
+    background-color: #FFFF;
+    align-items: center;
+}
+
+.linea-avance-interaccion-govco .progress {
+    height: 3px !important;
+    background-color: #e9ecef !important;
+}
+
+.progress-bar-activa-interaccion-govco {
+    background-color: #3366CC !important;
+    width: 0%;
+    border: 3px solid var(---3366cc);
+    border: 3px solid #3366CC;
+    opacity: 1;
+}
+
+.linea-avance-interaccion-inactivada-govco {
+    width: 11rem;
+    height: 0rem;
+    background-color: #FFFF;
+}
+
+.linea-avance-interaccion-inactivada-govco .progress {
+    height: 3px !important;
+    background-color: #e9ecef !important;
+}
+
+.progress-bar-activa-interaccion-inactivada-govco {
+    width: 0%;
+    opacity: 1;
+}
+
+.container-indicador-numero-principal-nombre-interaccion-govco {
+    width: 40.688rem;
+    display: flex;
+    background-color: #fff;
+    line-height: 22px;
+    margin-bottom: 24px;
+}
+
+.indicador-linea-avance-activo-interaccion-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    background-color: #3366CC;
+    border: 1px solid #3366CC;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-activo-interaccion-govco:focus-visible,
+.indicador-linea-avance-activo-interaccion-govco:focus {
+    outline: 2px solid #000 !important;
+    border: 1px solid #3366CC;
+    outline-offset: 4px;
+    outline-style: auto;
+    background-color: #3366cc !important;
+}
+
+.indicador-linea-avance-activo-interaccion-govco .num-indicador-activo-interaccion-govco {
+    color: #FFF;
+    border: none !important;
+    text-decoration: none !important;
+    font-family: "Montserrat-Medium";
+    font-size: 1.75rem;
+    line-height: 2.6256rem;
+}
+
+.container-indicador-numero-principal-interaccion-govco a:focus {
+    border: none;
+    outline: 0px;
+}
+
+.indicador-linea-avance-inactivo-interaccion-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    background-color: #E8E8E8;
+    border: 1px solid #004884;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-inactivo-interaccion-govco:hover {
+    width: 2.813rem;
+    height: 2.813rem;
+    background-color: #E6EFFD;
+    border: 1px solid #004884;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+}
+
+.indicador-linea-avance-inactivo-interaccion-govco:focus,
+.indicador-linea-avance-inactivo-interaccion-govco:focus-visible {
+    outline: 2px solid #000 !important;
+    outline-offset: 4px;
+    border: 1px solid #004884;
+    outline-style: auto;
+    background-color: #E8E8E8 !important;
+}
+
+.indicador-linea-avance-inactivo-interaccion-govco .num-indicador-inactivo-interaccion-govco {
+    width: 0.625rem;
+    height: 2.125rem;
+    color: #004884;
+    border: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 1.75rem;
+    line-height: 2.6256rem;
+}
+
+.indicador-linea-avance-terminado-interaccion-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    background-color: #fff;
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+}
+
+.indicador-linea-avance-terminado-interaccion-govco .num-indicador-terminado-interaccion-govco {
+    line-height: normal;
+    text-decoration: none;
+}
+
+.indicador-linea-avance-terminado-interaccion-govco .num-indicador-terminado-interaccion-govco::after {
+    content: '\e8a4';
+    font-family: "govco-font";
+    color: #3366cc;
+    font-size: 2.813rem;
+    line-height: 2.813rem;
+}
+
+.indicador-linea-avance-terminado-interaccion-govco:focus,
+.indicador-linea-avance-terminado-interaccion-govco:focus-visible {
+    outline: 2px solid #000 !important;
+    outline-offset: 4px;
+    border: 1px solid #3366CC;
+    outline-style: auto;
+    background-color: #fff;
+}
+
+.linea-avance-interaccion-nombre-govco {
+    width: 10.5rem;
+    height: 1rem;
+    background-color: #FFFF;
+}
+
+.linea-avance-interaccion-nombre-govco2 {
+    width: 12rem;
+}
+
+.linea-avance-interaccion-nombre-govco3 {
+    width: 8.8rem;
+}
+
+.letra-indicador-activo-interaccion {
+    color: #3366CC;
+    font-family: "WorkSans-SemiBold";
+    text-align: center;
+    font-size: 15px;
+}
+
+.letra-indicador-inactivo-interaccion {
+    color: #4B4B4B;
+    font-family: "WorkSans-Regular";
+    text-align: center;
+    font-size: 15px;
+}
+
+.letra-indicador-inactivo-interaccion-hover {
+    font-family: "WorkSans-Medium" !important;
+}
+
+.container-imagen-linea-interaccion {
+    width: 34.5rem;
+    background-color: #FFFF;
+    border-radius: 5px;
+}
+
+.container-informacion-principal-interaccion-govco {
+    width: 37.625rem;
+    align-items: flex-start;
+    background-color: #FFFF;
+    border: 2px solid #E6EFFD;
+    border-radius: 5px;
+    opacity: 1;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container-informacion-principal-campos-interaccion-govco {
+    width: 34.625rem;
+    text-align: left;
+    background-color: #FFF;
+    margin: 1.5rem auto 1rem auto;
+}
+
+.titulo-informacion-govco label {
+    text-align: left;
+    font-family: "Montserrat-SemiBold";
+    font-size: 1.25rem;
+    background-color: #FFFF;
+    color: #3366CC;
+    opacity: 1;
+    line-height: 28px;
+    margin-bottom: 0px !important;
+}
+
+.informacion-vertical-govco .label-form-govco,
+.informacion-vertical-govco .label-text-govco,
+.radio-seleccion-linea-label-govco {
+    text-align: left;
+    font-family: "WorkSans-Regular";
+    font-size: 1rem;
+    background-color: #FFFF;
+    color: #4B4B4B;
+    opacity: 1;
+    line-height: 1rem;
+    margin-bottom: 0px !important;
+}
+
+
+.informacion-vertical-govco .label-form-govco {
+    padding-bottom: 10px;
+    margin-bottom: 0px;
+    line-height: 1rem;
+}
+
+.margin-top-forms {
+    margin-top: 16px !important;
+}
+
+.informacion-vertical-govco .label-text-govco {
+    line-height: 1.5rem;
+}
+
+.image-linea-govco {
+    width: 34.5rem;
+    height: 12.688rem;
+}
+
+.campo-valor-linea-govco {
+    width: 100% !important;
+    height: 2.5rem !important;
+    border: 1.5px solid #737373 !important;
+    border-radius: 5px !important;
+    font-family: "WorkSans-Regular" !important;
+    font-size: 16px !important;
+    text-align: left !important;
+    padding-left: 10px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    line-height: 24px !important;
+}
+
+.campo-valor-linea-govco::placeholder {
+    color: #737373;
+}
+
+.radio-seleccion-linea-govco {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+    position: static !important;
+    opacity: initial !important;
+}
+
+#contactohorizontaldos {
+    display: none;
+}
+
+#contactohorizontaltres {
+    display: none;
+}
+
+#contactohorizontalcuatro {
+    display: none;
+}
+
+/* ------------------------------- para moviles ---------------------------*/
+
+@media only screen and (max-width: 990px) {
+
+    .container-principal-linea-interaccion-govco {
+        width: 18.5rem;
+        background: #FFFF;
+        border-radius: 5px;
+        opacity: 1;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .container-indicador-numero-principal-interaccion-govco {
+        width: 18.5rem;
+        height: 3.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+    }
+
+    .container-indicador-numero-uno-interaccion-govco,
+    .container-indicador-numero-dos-interaccion-govco,
+    .container-indicador-numero-tres-interaccion-govco,
+    .container-indicador-numero-cuatro-interaccion-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+        z-index: 1;
+    }
+
+    .linea-avance-interaccion-govco {
+        width: 5rem !important;
+        height: 0rem;
+        background-color: #FFFF;
+        align-items: center;
+    }
+
+    .linea-avance-interaccion-govco .progress {
+        height: 3px !important;
+        background-color: #e9ecef !important;
+    }
+
+    .progress-bar-activa-interaccion-govco {
+        background-color: #3366CC !important;
+        width: 0%;
+        border: 3px solid var(---3366cc);
+        border: 3px solid #3366CC;
+        opacity: 1;
+    }
+
+    .linea-avance-interaccion-inactivada-govco {
+        width: 5rem;
+        height: 0rem;
+        background-color: #FFFF;
+    }
+
+    .linea-avance-interaccion-inactivada-govco .progress {
+        height: 3px !important;
+        background-color: #e9ecef !important;
+    }
+
+    .progress-bar-activa-interaccion-inactivada-govco {
+        width: 0%;
+        opacity: 1;
+    }
+
+    .container-indicador-numero-principal-nombre-interaccion-govco {
+        width: 18.5rem;
+        height: 3rem;
+        position: relative;
+        display: flex;
+        background-color: #FFFF;
+        padding-top: 0px;
+    }
+
+    .linea-avance-interaccion-nombre-govco {
+        width: 40rem !important;
+        height: 1rem;
+        background-color: #FFF;
+    }
+
+    .container-indicador-numero-uno-nombre-interaccion-govco {
+        width: 14rem;
+        height: 2.5rem;
+        align-items: center;
+        background-color: #FFFF;
+    }
+
+    .container-indicador-numero-dos-nombre-interaccion-govco {
+        width: 15rem;
+        height: 2.5rem;
+        align-items: center;
+        background-color: #FFFF;
+    }
+
+    .container-indicador-numero-tres-nombre-interaccion-govco {
+        width: 15rem;
+        height: 2.5rem;
+        align-items: center;
+        background-color: #FFF;
+    }
+
+    .container-indicador-numero-cuatro-nombre-interaccion-govco {
+        width: 15rem;
+        height: 2.5rem;
+        background-color: #FFF;
+        text-align: center;
+    }
+
+    .indicador-linea-avance-activo-interaccion-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-activo-interaccion-govco .num-indicador-activo-interaccion-govco {
+        color: #fff;
+        border: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 1.75rem;
+        padding-right: 3px;
+        line-height: 2.6256rem;
+    }
+
+    .indicador-linea-avance-inactivo-interaccion-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        background-color: #E8E8E8;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+    }
+
+    .indicador-linea-avance-inactivo-interaccion-govco:focus,
+    .indicador-linea-avance-inactivo-interaccion-govco:focus-visible {
+        outline: 2px solid #000 !important;
+        border: 1px solid #004884;
+        outline-offset: 4px;
+        outline-style: auto;
+    }
+
+    .indicador-linea-avance-activo-interaccion-govco:focus,
+    .indicador-linea-avance-activo-interaccion-govco:focus-visible {
+        outline: 2px solid #000 !important;
+        border: 1px solid #3366CC;
+        outline-offset: 4px;
+        outline-style: auto;
+    }
+
+    .indicador-linea-avance-terminado-interaccion-govco:focus,
+    .indicador-linea-avance-terminado-interaccion-govco:focus-visible {
+        outline: 2px solid #000 !important;
+        border: 1px solid #3366CC;
+        outline-offset: 4px;
+        outline-style: auto;
+    }
+
+    .indicador-linea-avance-terminado-interaccion-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        background-color: #fff;
+        border: none;
+        border-radius: 50%;
+        padding: 0;
+    }
+
+    .indicador-linea-avance-terminado-interaccion-govco .num-indicador-terminado-interaccion-govco {
+        line-height: normal;
+        text-decoration: none;
+    }
+
+    .indicador-linea-avance-terminado-interaccion-govco .num-indicador-terminado-interaccion-govco::after {
+        content: '\e8a4';
+        font-family: "govco-font";
+        color: #3366cc;
+        font-size: 2.813rem;
+        line-height: 2.813rem;
+    }
+
+    .margin-top-forms {
+        margin-top: 8px !important;
+    }
+
+    .margin-top-step2 {
+        margin-top: 24px !important;
+    }
+
+    .container-btn-linea-activar-govco {
+        padding-right: 16px;
+    }
+
+    .container-btn1-linea-activar-govco {
+        padding-top: 0px;
+    }
+
+    .container-btn2-linea-activar-govco {
+        padding-top: 43px;
+    }
+
+    .container-btn2-linea-activar-govco-vr {
+        padding-top: 24px;
+    }
+
+    .btn-linea-activar-govco {
+        margin-bottom: 1rem;
+    }
+
+    .btn-linea-activar-govco-vr {
+        margin-bottom: 1.5rem;
+    }
+
+    .container-imagen-linea-interaccion {
+        width: 16.5rem;
+        background-color: #FFFF;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+    }
+
+    .container-imagen-linea-interaccion .image-linea-govco {
+        min-width: 100%;
+        min-height: 134px;
+        object-fit: cover;
+        object-position: center;
+    }
+
+    .letra-indicador-activo-interaccion {
+        color: #3366CC;
+        font-family: "WorkSans-SemiBold";
+        font-size: 0.938rem;
+        text-align: center;
+    }
+
+    .letra-indicador-inactivo-interaccion {
+        color: #4B4B4B;
+        font-family: "WorkSans-Regular";
+        font-size: 0.938rem;
+        text-align: center;
+    }
+
+    .letra-indicador-inactivo-interaccion-hover {
+        font-family: "WorkSans-Medium" !important;
+    }
+
+    .container-informacion-principal-interaccion-govco {
+        width: 18.5rem;
+        align-items: flex-start;
+        background-color: #FFFF;
+        border: 2px solid #E6EFFD;
+        border-radius: 5px;
+        opacity: 1;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .container-informacion-principal-campos-interaccion-govco {
+        width: 16.5rem;
+        text-align: left;
+        background-color: #FFFF;
+        border-radius: 5px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+
+    .titulo-informacion-govco label {
+        text-align: left;
+        font-family: "Montserrat-SemiBold";
+        font-size: 1.25rem;
+        line-height: 24px;
+        background-color: #FFFF;
+        color: #3366CC;
+        opacity: 1;
+    }
+
+    .informacion-vertical-govco .label-form-govco,
+    .radio-seleccion-linea-label-govco {
+        text-align: left;
+        font-family: "WorkSans-Regular";
+        font-size: 1rem;
+        background-color: #FFFF;
+        color: #4B4B4B;
+        font-size: 14px;
+        opacity: 1;
+        margin-bottom: 0px !important;
+    }
+
+    .campo-valor-linea-govco {
+        width: 100% !important;
+        border: 1.5px solid #737373 !important;
+        border-radius: 5px !important;
+        font-family: "WorkSans-Regular" !important;
+        font-size: 14px !important;
+        text-align: left !important;
+        padding-left: 10px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        line-height: 24px !important;
+    }
+
+    .campo-valor-linea-desplegable-govco {
+        width: 100%;
+        border: 1.5px solid #737373;
+        color: #737373;
+        background-color: #FFFF;
+        border-radius: 5px;
+        font-family: "WorkSans-Regular";
+        font-size: 14px;
+        text-align: right;
+    }
+
+    .campo-valor-linea-desplegable-govco::after {
+        font-family: "govco-font";
+        content: "\e814";
+        width: 10px;
+        height: 6px;
+        color: #3366CC;
+        opacity: 1;
+        margin-left: 190px;
+    }
+
+    .campo-valor-linea-desplegable-govco:focus,
+    .campo-valor-linea-desplegable-govco:focus-visible {
+        background-color: transparent;
+    }
+
+    .campo-valor-linea-desplegable-dos-govco {
+        width: 100%;
+        border: 1.5px solid #737373;
+        color: #737373;
+        background-color: #FFFF;
+        border-radius: 5px;
+        font-family: "WorkSans-Regular";
+        font-size: 14px;
+        text-align: right;
+    }
+
+    .campo-valor-linea-desplegable-dos-govco::after {
+        font-family: "govco-font";
+        content: "\e814";
+        width: 10px;
+        height: 6px;
+        background-color: #FFFF;
+        color: #3366CC;
+        opacity: 1;
+        margin-left: 190px;
+    }
+
+    .campo-valor-linea-desplegable-tres-govco {
+        width: 100%;
+        height: 2rem;
+        border: 0.125rem solid #737373;
+        color: #737373;
+        background-color: #FFFF;
+        border-radius: 5px;
+        font-family: "WorkSans-Regular";
+        font-size: 14px;
+        text-align: right;
+    }
+
+    .campo-valor-linea-desplegable-tres-govco::after {
+        font-family: "govco-font";
+        content: "\e814";
+        width: 10px;
+        height: 6px;
+        background-color: #FFFF;
+        color: #3366CC;
+        opacity: 1;
+        margin-left: 80px;
+    }
+
+    .spacing-numdoc {
+        margin-top: 8px !important;
+    }
+
+    #indicadorcontainerinthrzlinea3 {
+        display: none;
+    }
+
+    #indicadorcontainerinthrz4 {
+        display: none;
+    }
+
+    #letracontainerinthrz4 {
+        display: none;
+    }
+
+    #contactohorizontaldos {
+        display: none;
+    }
+
+    #contactohorizontaltres {
+        display: none;
+    }
+
+    #contactohorizontalcuatro {
+        display: none;
+    }
+
+    #espacioTitulo3 {
+        display: none;
+    }
+}
+
+/* - - - - - - - - - - - - -  EJEMPLO INTERACCION VERTICAL - - - - - - - - - - - - - - */
+
+
+.container-btn-linea-activar-ver-govco {
+    text-align: right;
+    padding-right: 20px;
+}
+
+.container-btn1-linea-activar-ver-govco {
+    padding-top: 10px;
+}
+
+.container-btn2-linea-activar-ver-govco {
+    padding-top: 15px;
+}
+
+.container-btn3-linea-activar-ver-govco {
+    padding-top: 25px;
+}
+
+.container-btn4-linea-activar-ver-govco {
+    padding-top: 10px;
+}
+
+/* Montserrat-SemiBold */
+@font-face {
+    font-family: 'Montserrat-SemiBold';
+    src: url('../assets/fonts/Montserrat/Montserrat-SemiBold.ttf');
+}
+
+/* WorkSans-Regular */
+@font-face {
+    font-family: 'WorkSans-Regular';
+    src: url('../assets/fonts/Work_Sans/static/WorkSans-Regular.ttf');
+}
+
+.contenedor-linea-avance-vertical-InteVer-govco {
+    background-color: #FFFF;
+    display: inline-block;
+    margin-left: auto;
+    margin-right: auto;
+    position: relative;
+}
+
+.contenedor-linea-avance-vertical-uno-InteVer-govco {
+    width: 3.1rem;
+    background-color: #FFF;
+    float: left;
+    position: relative;
+}
+
+.contenedor-linea-avance-vertical-dos-InteVer-govco {
+    width: 37.625rem;
+    float: left;
+    position: relative;
+    padding-left: 22px;
+}
+
+.container-ejemplo-linea-vertical-InteVer-govco {
+    width: 37.625rem;
+    height: 25.563rem;
+    border: 2px solid #E6EFFD;
+    border-radius: 5px;
+    opacity: 1;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container-ejemplo-linea-vertical-InteVer-adicionales-govco {
+    width: 37.625rem;
+    height: 22.3rem;
+    align-items: flex-start;
+    background-color: #FFFF;
+    border: 2px solid #E6EFFD;
+    border-radius: 5px;
+    opacity: 1;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container-indicador-numero-verticaluno-InteVer-govco {
+    width: 2.5rem;
+    height: 2.813rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    background-color: #FFFF;
+
+}
+
+.container-indicador-numero-verticaldos-InteVer-govco {
+    width: 4.8rem;
+    height: 2.813rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    background-color: #FFFF;
+}
+
+.container-indicador-numero-verticaltres-InteVer-govco {
+    width: 3.9rem;
+    height: 2.813rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    background-color: #FFFF;
+}
+
+.container-indicador-numero-verticalcuatro-InteVer-govco {
+    width: 5.1rem;
+    height: 2.813rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    text-align: center;
+    background-color: #FFFF;
+}
+
+.indicador-linea-avance-activo-vertical-InteVer-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #3366CC;
+    border: 1px solid #3366CC;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-activo-vertical-InteVer-govco .num-indicador-activo-vertical-InteVer-govco {
+    width: 18px;
+    height: 8px;
+    color: #fff;
+    border: none;
+    outline: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.indicador-linea-avance-inactivo-vertical-InteVer-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #fff;
+    border: 1px solid #004884;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-inactivo-vertical-InteVer-govco .num-indicador-inactivo-vertical-InteVer-govco {
+    width: 18px;
+    height: 8px;
+    color: #004884;
+    border: none;
+    outline: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.letra-indicador-activo-vertical-InteVer {
+    color: #3366CC;
+    font-family: "WorkSans-SemiBold";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.letra-indicador-inactivo-vertical-InteVer {
+    color: #004884;
+    font-family: "WorkSans-Regular";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.letra-indicador-terminado-vertical-InteVer {
+    color: #4B4B4B;
+    font-family: "WorkSans-Regular";
+    font-size: 0.938rem;
+    padding-left: 0.5rem;
+}
+
+.container-indicador-numero-uno-interaccion-InteVer-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+}
+
+.container-indicador-numero-dos-interaccion-InteVer-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+}
+
+.container-indicador-numero-tres-interaccion-InteVer-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+}
+
+.container-indicador-numero-cuatro-interaccion-InteVer-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+}
+
+.linea-avance-interaccion-InteVer-govco {
+    width: 4.5rem;
+    height: 100%;
+    background-color: #FFFF;
+    align-items: center;
+    padding-left: 1.25rem;
+}
+
+.linea-avance-interaccion-InteVer-govco .progress {
+    width: 3px !important;
+    height: 28.75rem !important;
+    background-color: #e9ecef !important;
+}
+
+.progress-bar-activa-interaccion-InteVer-govco {
+    background-color: #3366CC !important;
+    height: 15%;
+    border: 3px solid var(---3366cc);
+    border: 3px solid #3366CC;
+    opacity: 1;
+}
+
+.linea-avance-interaccion-inactivada-InteVer-govco {
+    width: 4.5rem;
+    height: 4.813rem;
+    background-color: #FFFF;
+    padding-left: 1.25rem;
+}
+
+.linea-avance-interaccion-inactivada-InteVer-govco .progress {
+    width: 3px !important;
+    height: 4.813rem;
+    background-color: #e9ecef !important;
+}
+
+.linea-avance-interaccion-inactivada-InteVer-adicional-govco {
+    width: 2rem;
+    height: 23.35rem;
+    background-color: #FFFF;
+    padding-left: 1.25rem;
+}
+
+.linea-avance-interaccion-inactivada-InteVer-adicional-govco .progress {
+    width: 3px !important;
+    height: 23.35rem;
+    background-color: #e9ecef !important;
+}
+
+.progress-bar-activa-interaccion-inactivada-InteVer-govco {
+    height: 0%;
+    opacity: 1;
+}
+
+.linea-avance-interaccion-finalizada-InteVer-govco {
+    width: 4.5rem;
+    height: 4.813rem;
+    background-color: #FFFF;
+    padding-left: 1.25rem;
+}
+
+.linea-avance-interaccion-finalizada-InteVer-govco .progress {
+    width: 3px !important;
+    height: 4.813rem;
+    background-color: #e9ecef !important;
+}
+
+.progress-bar-activa-interaccion-finalizada-InteVer-govco {
+    background-color: #3366CC !important;
+    height: 100%;
+    border: 3px solid var(---3366cc);
+    border: 3px solid #3366CC;
+    opacity: 1;
+}
+
+.container-letrainicial-InteVer {
+    width: 4.5rem;
+    height: 2.2rem;
+    background-color: #FFFF;
+    padding-left: 1.25rem;
+}
+
+.container-letrainicial-paso-3-InteVer {
+    height: 0.5rem !important;
+}
+
+.container-letrainactiva-InteVer {
+    width: 4.5rem;
+    height: 4.75rem;
+    background-color: #FFFF;
+    padding-left: 1.25rem;
+}
+
+.container-letrafinal-InteVer {
+    width: 4.5rem;
+    height: 4.9rem;
+    background-color: #FFFF;
+    padding-left: 1.25rem;
+}
+
+.container-indicador-numero-principal-nombre-interaccion-InteVer-govco {
+    width: 40.688rem;
+    height: 3rem;
+    position: relative;
+    display: flex;
+    align-items: baseline;
+    background-color: #FFFF;
+}
+
+.container-indicador-numero-uno-nombre-interaccion-InteVer-govco {
+    width: 2.063rem;
+    height: 2.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-top: 16px;
+}
+
+.container-indicador-numero-dos-nombre-interaccion-InteVer-govco {
+    width: 4.875rem;
+    height: 2.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-top: 16px;
+}
+
+.container-indicador-numero-tres-nombre-interaccion-InteVer-govco {
+    width: 4.875rem;
+    height: 2.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-top: 16px;
+}
+
+.container-indicador-numero-cuatro-nombre-interaccion-InteVer-govco {
+    width: 3.6rem;
+    height: 2.5rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: #FFFF;
+    padding-top: 16px;
+}
+
+.indicador-linea-avance-activo-interaccion-InteVer-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    background-color: #3366CC;
+    border: 1px solid #3366CC;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-activo-interaccion-InteVer-govco:focus-visible,
+.indicador-linea-avance-activo-interaccion-InteVer-govco:focus {
+    outline: 2px solid #000 !important;
+    border: 1px solid #3366CC;
+    outline-offset: 4px;
+    outline-style: auto;
+}
+
+.indicador-linea-avance-activo-interaccion-InteVer-govco .num-indicador-activo-interaccion-InteVer-govco {
+    width: 0.625rem;
+    height: 2.125rem;
+    color: #fff;
+    border: none !important;
+    text-decoration: none !important;
+    font-family: "Montserrat-Medium";
+    font-size: 1.75rem;
+    line-height: 2.6256rem;
+}
+
+.container-indicador-numero-uno-interaccion-InteVer-govco a:focus {
+    border: none;
+    outline: 0px;
+}
+
+.container-indicador-numero-dos-interaccion-InteVer-govco a:focus {
+    border: none;
+    outline: 0px;
+}
+
+.container-indicador-numero-tres-interaccion-InteVer-govco a:focus {
+    border: none;
+    outline: 0px;
+}
+
+.container-indicador-numero-cuatro-interaccion-InteVer-govco a:focus {
+    border: none;
+    outline: 0px;
+}
+
+.indicador-linea-avance-inactivo-interaccion-InteVer-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    background-color: #E8E8E8;
+    border: 1px solid #004884;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-inactivo-interaccion-InteVer-govco:hover {
+    width: 2.813rem;
+    height: 2.813rem;
+    background-color: #E6EFFD;
+    border: 1px solid #004884;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-inactivo-interaccion-InteVer-govco:focus,
+.indicador-linea-avance-inactivo-interaccion-InteVer-govco:focus-visible {
+    outline: 2px solid #000 !important;
+    outline-offset: 4px;
+    border: 1px solid #004884;
+    outline-style: auto;
+}
+
+.indicador-linea-avance-inactivo-interaccion-InteVer-govco .num-indicador-inactivo-interaccion-InteVer-govco {
+    width: 0.625rem;
+    height: 2.125rem;
+    color: #004884;
+    border: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 1.75rem;
+    line-height: 2.6256rem;
+}
+
+.indicador-linea-avance-terminado-interaccion-InteVer-govco {
+    width: 2.813rem;
+    height: 2.813rem;
+    background-color: #fff;
+    border: none;
+    border-radius: 50%;
+    padding: 0;
+}
+
+.indicador-linea-avance-terminado-interaccion-InteVer-govco:focus,
+.indicador-linea-avance-terminado-interaccion-InteVer-govc:focus-visible {
+    outline: 2px solid #000 !important;
+    border: 1px solid #3366CC;
+    outline-offset: 4px;
+    outline-style: auto;
+}
+
+.indicador-linea-avance-terminado-interaccion-InteVer-govco .num-indicador-terminado-interaccion-InteVer-govco {
+    line-height: normal;
+    text-decoration: none;
+}
+
+.indicador-linea-avance-terminado-interaccion-InteVer-govco .num-indicador-terminado-interaccion-InteVer-govco::after {
+    content: '\e8a4';
+    font-family: "govco-font";
+    color: #3366cc;
+    font-size: 2.813rem;
+    line-height: 2.813rem;
+}
+
+.linea-avance-interaccion-nombre-InteVer-govco {
+    width: 8.563rem;
+    height: 1rem;
+    background-color: #FFFF;
+}
+
+.letra-indicador-activo-interaccion-InteVer {
+    color: #3366CC;
+    font-family: "WorkSans-SemiBold";
+    font-size: 15px;
+    text-align: left;
+}
+
+.letra-indicador-inactivo-interaccion-InteVer {
+    color: #4B4B4B;
+    font-family: "WorkSans-Regular";
+    font-size: 15px;
+    text-align: left;
+}
+
+.letra-indicador-inactivo-interaccion-InteVer-hover {
+    font-family: "WorkSans-Medium" !important;
+}
+
+.indicador-linea-avance-activo-vertical-InteVer-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #3366CC;
+    border: 1px solid #3366CC;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-activo-vertical-InteVer-govco .num-indicador-activo-vertical-InteVer-govco {
+    width: 18px;
+    height: 8px;
+    color: #fff;
+    border: none;
+    outline: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.indicador-linea-avance-inactivo-vertical-InteVer-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #fff;
+    border: 1px solid #004884;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-inactivo-vertical-InteVer-govco .num-indicador-inactivo-vertical-InteVer-govco {
+    width: 18px;
+    height: 8px;
+    color: #004884;
+    border: none;
+    outline: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.indicador-linea-avance-terminado-vertical-InteVer-govco {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #4B4B4B;
+    border: 1px solid #4B4B4B;
+    opacity: 1;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    align-items: center;
+    text-align: center;
+    padding-top: 0.1px;
+    padding-bottom: 8px;
+    padding-left: 3px;
+    padding-right: 3px;
+}
+
+.indicador-linea-avance-terminado-vertical-InteVer-govco .num-indicador-activo-vertical-InteVer-govco {
+    width: 18px;
+    height: 8px;
+    color: #fff;
+    border: none;
+    outline: none;
+    text-decoration: none;
+    font-family: "Montserrat-Medium";
+    font-size: 0.875rem;
+}
+
+.margin-top-step2 {
+    margin-top: 16px;
+}
+
+#contlineaver2-InteVer {
+    display: none;
+}
+
+#contlineaver3-InteVer {
+    display: none;
+}
+
+#contlineaver4-InteVer {
+    display: none;
+}
+
+#indicadorcontainerinthrzlinea4-InteVer {
+    display: none;
+}
+
+.container-imagen-linea-interaccion-vert {
+    width: 34.5rem;
+    height: 12rem;
+    background-color: #FFFF;
+    border-radius: 5px;
+}
+
+.container-informacion-principal-interaccion-vert-govco {
+    width: 37.625rem;
+    align-items: flex-start;
+    background-color: #FFFF;
+    border: 2px solid #E6EFFD;
+    border-radius: 5px;
+    opacity: 1;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container-informacion-principal-campos-interaccion-vert-govco {
+    width: 34.625rem;
+    text-align: left;
+    background-color: #FFFF;
+    margin: 1.5rem auto 1rem auto;
+}
+
+.container-informacion-principal-interaccion-vert-adic-govco {
+    width: 37.625rem;
+    align-items: flex-start;
+    background-color: #FFFF;
+    border: 2px solid #E6EFFD;
+    border-radius: 5px;
+    opacity: 1;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.container-informacion-principal-campos-interaccion-vert-adic-govco {
+    width: 34.625rem;
+    text-align: left;
+    background-color: #FFFF;
+    margin: 1.5rem auto 1rem auto;
+}
+
+.titulo-informacion-vert-govco label {
+    text-align: left;
+    font-family: "Montserrat-SemiBold";
+    font-size: 1.25rem;
+    background-color: #FFFF;
+    color: #3366CC;
+    opacity: 1;
+    line-height: 30px;
+    margin-bottom: 0px !important;
+}
+
+.informacion-vertical-vert-govco .label-form-govco,
+.radio-seleccion-linea-label-govco {
+    text-align: left;
+    font-family: "WorkSans-Regular";
+    font-size: 1rem;
+    background-color: #FFFF;
+    color: #4B4B4B;
+    opacity: 1;
+    line-height: 1rem;
+    margin-bottom: 0px !important;
+}
+
+.informacion-vertical-vert-govco .informacion-vertical-vert-govco-parrafo {
+    text-align: left;
+    font-family: "WorkSans-Regular";
+    font-size: 1rem;
+    background-color: #FFFF;
+    color: #4B4B4B;
+    opacity: 1;
+    line-height: 24px;
+}
+
+.informacion-vertical-vert-govco .label-form-govco {
+    padding-bottom: 10px;
+    margin-bottom: 0px;
+}
+
+.campo-valor-linea-vert-govco {
+    width: 100% !important;
+    height: 2.5rem !important;
+    border: 1.5px solid #737373 !important;
+    border-radius: 5px !important;
+    font-family: "WorkSans-Regular" !important;
+    font-size: 16px !important;
+    text-align: left !important;
+    padding-left: 10px !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+    line-height: 24px !important;
+}
+
+.campo-valor-linea-vert-govco::placeholder {
+    color: #737373;
+}
+
+/* ---------------------------------  Movil para linea de avance vertical ------------- */
+
+@media only screen and (max-width: 990px) {
+
+    .container-btn-linea-activar-ver-govco {
+        text-align: right;
+        padding-right: 20px;
+    }
+
+    .container-btn1-linea-activar-ver-govco {
+        padding-top: 10px;
+    }
+
+    .container-btn2-linea-activar-ver-govco {
+        padding-top: 15px;
+    }
+
+    .container-btn3-linea-activar-ver-govco {
+        padding-top: 25px;
+    }
+
+    .container-btn4-linea-activar-ver-govco {
+        padding-top: 10px;
+    }
+
+    .contenedor-linea-avance-vertical-InteVer-govco {
+        width: 18.813rem;
+        height: 50.063rem;
+        background-color: #FFFF;
+        display: inline-block;
+        margin-left: auto;
+        margin-right: auto;
+        position: relative;
+    }
+
+    .contenedor-linea-avance-vertical-uno-InteVer-govco {
+        width: 3.1rem;
+        background-color: #FFFF;
+        display: block;
+    }
+
+    .contenedor-linea-avance-vertical-dos-InteVer-govco {
+        width: 16.813rem;
+        position: relative;
+        left: 3.1rem;
+        position: absolute;
+    }
+
+    .container-indicador-numero-verticaluno-InteVer-govco {
+        width: 2.5rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        text-align: left;
+        background-color: #FFFF;
+        padding-top: 13px;
+        padding-bottom: 17px;
+        margin-left: 1rem;
+    }
+
+    .container-indicador-numero-verticaldos-InteVer-govco {
+        width: 4.8rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        text-align: left;
+        background-color: #FFFF;
+        padding-top: 30px;
+        padding-bottom: 17px;
+        margin-left: 1rem;
+    }
+
+    .container-indicador-numero-verticaltres-InteVer-govco {
+        width: 3.9rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        text-align: left;
+        background-color: #FFFF;
+        padding-top: 30px;
+        padding-bottom: 17px;
+        margin-left: 1rem;
+    }
+
+    .container-indicador-numero-verticalcuatro-InteVer-govco {
+        width: 5.1rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        text-align: left;
+        background-color: #FFFF;
+        padding-top: 30px;
+        padding-bottom: 17px;
+        margin-left: 1rem;
+    }
+
+    .indicador-linea-avance-activo-vertical-InteVer-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-activo-vertical-InteVer-govco .num-indicador-activo-vertical-InteVer-govco {
+        width: 18px;
+        height: 8px;
+        color: #fff;
+        border: none;
+        outline: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 0.875rem;
+    }
+
+    .indicador-linea-avance-inactivo-vertical-InteVer-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #fff;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-inactivo-vertical-InteVer-govco .num-indicador-inactivo-vertical-InteVer-govco {
+        width: 18px;
+        height: 8px;
+        color: #004884;
+        border: none;
+        outline: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 0.875rem;
+    }
+
+    .letra-indicador-activo-vertical-InteVer {
+        color: #3366CC;
+        font-family: "WorkSans-SemiBold";
+        font-size: 0.938rem;
+        padding-left: 0.5rem;
+    }
+
+    .letra-indicador-inactivo-vertical-InteVer {
+        color: #004884;
+        font-family: "WorkSans-Regular";
+        font-size: 0.938rem;
+        padding-left: 0.5rem;
+    }
+
+    .letra-indicador-terminado-vertical-InteVer {
+        color: #4B4B4B;
+        font-family: "WorkSans-Regular";
+        font-size: 0.938rem;
+        padding-left: 0.5rem;
+    }
+
+    .container-indicador-numero-uno-interaccion-InteVer-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+    }
+
+    .container-indicador-numero-dos-interaccion-InteVer-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+    }
+
+    .container-indicador-numero-tres-interaccion-InteVer-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+    }
+
+    .container-indicador-numero-cuatro-interaccion-InteVer-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+    }
+
+    .linea-avance-interaccion-InteVer-govco {
+        width: 2rem;
+        height: 31.3rem;
+        background-color: #FFFF;
+        align-items: center;
+        padding-left: 1.25rem;
+    }
+
+    .linea-avance-interaccion-InteVer-govco .progress {
+        width: 3px !important;
+        height: 30.813rem !important;
+        background-color: #e9ecef !important;
+    }
+
+    .progress-bar-activa-interaccion-InteVer-govco {
+        background-color: #3366CC !important;
+        height: 15%;
+        border: 3px solid var(---3366cc);
+        border: 3px solid #3366CC;
+        opacity: 1;
+    }
+
+    .linea-avance-interaccion-inactivada-InteVer-govco {
+        width: 2rem;
+        height: 4.813rem;
+        background-color: #FFFF;
+        padding-left: 1.25rem;
+    }
+
+    .linea-avance-interaccion-inactivada-InteVer-govco .progress {
+        width: 3px !important;
+        height: 4.813rem;
+        background-color: #e9ecef !important;
+    }
+
+    .linea-avance-interaccion-inactivada-InteVer-adicional-govco {
+        width: 2rem;
+        height: 23.35rem;
+        background-color: #FFFF;
+        padding-left: 1.25rem;
+    }
+
+    .linea-avance-interaccion-inactivada-InteVer-adicional-govco .progress {
+        width: 3px !important;
+        height: 23.35rem;
+        background-color: #e9ecef !important;
+    }
+
+    .progress-bar-activa-interaccion-inactivada-InteVer-govco {
+        height: 0%;
+        opacity: 1;
+    }
+
+    .linea-avance-interaccion-finalizada-InteVer-govco {
+        width: 2rem;
+        height: 5.2rem;
+        background-color: #FFFF;
+        padding-left: 1.25rem;
+    }
+
+    .linea-avance-interaccion-finalizada-InteVer-govco .progress {
+        width: 3px !important;
+        height: 5.2rem;
+        background-color: #e9ecef !important;
+    }
+
+    .progress-bar-activa-interaccion-finalizada-InteVer-govco {
+        background-color: #3366CC !important;
+        height: 100%;
+        border: 3px solid #3366CC !important;
+        opacity: 1;
+    }
+
+    .container-letrainicial-InteVer {
+        width: 4.5rem;
+        height: 1rem;
+        background-color: #FFFF;
+        padding-left: 1.25rem;
+    }
+
+    .container-letrainactiva-InteVer {
+        width: 4.5rem;
+        height: 4.7rem;
+        background-color: #FFFF;
+        padding-left: 1.25rem;
+    }
+
+    .container-letrafinal-InteVer {
+        width: 4.5rem;
+        height: 5rem;
+        background-color: #FFFF;
+        padding-left: 1.25rem;
+    }
+
+    .container-indicador-numero-principal-nombre-interaccion-InteVer-govco {
+        width: 40.688rem;
+        height: 3rem;
+        position: relative;
+        display: flex;
+        align-items: baseline;
+        background-color: #FFFF;
+    }
+
+    .container-indicador-numero-uno-nombre-interaccion-InteVer-govco {
+        width: 2.063rem;
+        height: 2.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+        padding-top: 16px;
+    }
+
+    .container-indicador-numero-dos-nombre-interaccion-InteVer-govco {
+        width: 4.875rem;
+        height: 2.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+        padding-top: 16px;
+    }
+
+    .container-indicador-numero-tres-nombre-interaccion-InteVer-govco {
+        width: 4.875rem;
+        height: 2.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+        padding-top: 16px;
+    }
+
+    .container-indicador-numero-cuatro-nombre-interaccion-InteVer-govco {
+        width: 3.6rem;
+        height: 2.5rem;
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: #FFFF;
+        padding-top: 16px;
+    }
+
+    .indicador-linea-avance-activo-interaccion-InteVer-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-activo-interaccion-InteVer-govco .num-indicador-activo-interaccion-InteVer-govco {
+        width: 0.625rem;
+        height: 2.125rem;
+        color: #fff;
+        border: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 1.75rem;
+        line-height: 2.6256rem;
+    }
+
+    .indicador-linea-avance-inactivo-interaccion-InteVer-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        background-color: #E8E8E8;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-inactivo-interaccion-InteVer-govco:hover {
+        width: 2.813rem;
+        height: 2.813rem;
+        background-color: #E6EFFD;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-inactivo-interaccion-InteVer-govco .num-indicador-inactivo-interaccion-InteVer-govco {
+        width: 0.625rem;
+        height: 2.125rem;
+        color: #004884;
+        border: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 1.75rem;
+        line-height: 2.6256rem;
+    }
+
+    .indicador-linea-avance-terminado-interaccion-InteVer-govco {
+        width: 2.813rem;
+        height: 2.813rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-terminado-interaccion-InteVer-govco .num-indicador-terminado-interaccion-InteVer-govco {
+        background-color: #3366CC;
+        border-radius: 50%;
+        text-decoration: none;
+    }
+
+    .indicador-linea-avance-terminado-interaccion-InteVer-govco .num-indicador-terminado-interaccion-InteVer-govco::after {
+        content: '\e8a7';
+        font-family: "govco-font";
+        color: #FFFF;
+        font-size: 1.75rem;
+    }
+
+    .linea-avance-interaccion-nombre-InteVer-govco {
+        width: 8.563rem;
+        height: 1rem;
+        background-color: #FFFF;
+    }
+
+    .letra-indicador-activo-interaccion-InteVer {
+        color: #3366CC;
+        font-family: "WorkSans-SemiBold";
+        font-size: 15px;
+        text-align: left;
+    }
+
+    .letra-indicador-inactivo-interaccion-InteVer {
+        color: #4B4B4B;
+        font-family: "WorkSans-Regular";
+        font-size: 15px;
+        text-align: left;
+    }
+
+    .letra-indicador-inactivo-interaccion-InteVer-hover {
+        font-family: "WorkSans-Medium" !important;
+    }
+
+    .indicador-linea-avance-activo-vertical-InteVer-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #3366CC;
+        border: 1px solid #3366CC;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-activo-vertical-InteVer-govco .num-indicador-activo-vertical-InteVer-govco {
+        width: 18px;
+        height: 8px;
+        color: #fff;
+        border: none;
+        outline: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 0.875rem;
+    }
+
+    .indicador-linea-avance-inactivo-vertical-InteVer-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #fff;
+        border: 1px solid #004884;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-inactivo-vertical-InteVer-govco .num-indicador-inactivo-vertical-InteVer-govco {
+        width: 18px;
+        height: 8px;
+        color: #004884;
+        border: none;
+        outline: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 0.875rem;
+    }
+
+    .indicador-linea-avance-terminado-vertical-InteVer-govco {
+        width: 1.5rem;
+        height: 1.5rem;
+        background-color: #4B4B4B;
+        border: 1px solid #4B4B4B;
+        opacity: 1;
+        border-radius: 50%;
+        font-size: 0.875rem;
+        align-items: center;
+        text-align: center;
+        padding-top: 0.1px;
+        padding-bottom: 8px;
+        padding-left: 3px;
+        padding-right: 3px;
+    }
+
+    .indicador-linea-avance-terminado-vertical-InteVer-govco .num-indicador-activo-vertical-InteVer-govco {
+        width: 18px;
+        height: 8px;
+        color: #fff;
+        border: none;
+        outline: none;
+        text-decoration: none;
+        font-family: "Montserrat-Medium";
+        font-size: 0.875rem;
+    }
+
+    #contlineaver2-InteVer {
+        display: none;
+    }
+
+    #contlineaver3-InteVer {
+        display: none;
+    }
+
+    #contlineaver4-InteVer {
+        display: none;
+    }
+
+    #indicadorcontainerinthrzlinea4-InteVer {
+        display: none;
+    }
+
+    .container-informacion-principal-interaccion-vert-govco {
+        width: 16.813rem;
+        height: 29rem;
+        align-items: flex-start;
+        background-color: #FFFF;
+        border: 2px solid #E6EFFD;
+        border-radius: 5px;
+        opacity: 1;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .container-imagen-linea-interaccion-vert {
+        width: 14.813rem;
+        background-color: #FFFF;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+    }
+
+    .container-imagen-linea-interaccion-vert .image-linea-govco {
+        min-width: 100%;
+        min-height: 50px !important;
+        object-fit: cover;
+        object-position: center center;
+    }
+
+    .container-informacion-principal-campos-interaccion-vert-govco {
+        width: 14.813rem;
+        text-align: left;
+        background-color: #FFFF;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .titulo-informacion-vert-govco2 {
+        font-size: 1.125rem;
+    }
+
+    .container-informacion-principal-interaccion-vert-adic-govco {
+        width: 16.813rem;
+        align-items: flex-start;
+        background-color: #FFFF;
+        border: 2px solid #E6EFFD;
+        border-radius: 5px;
+        opacity: 1;
+        margin-left: auto;
+        margin-right: auto;
+        padding-top: 0px;
+    }
+
+    .container-informacion-principal-campos-interaccion-vert-adic-govco {
+        width: 14.813rem;
+        text-align: left;
+        background-color: #FFFF;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .titulo-informacion-govco-vert {
+        text-align: left;
+        font-family: "Montserrat-SemiBold";
+        font-size: 1rem;
+        color: #3366CC;
+        opacity: 1;
+    }
+
+    .informacion-vertical-vert-govco {
+        width: 14.813rem;
+        text-align: left;
+        font-family: "WorkSans-Regular";
+        font-size: 0.875rem;
+        color: #4B4B4B;
+        opacity: 1;
+    }
+
+    .informacion-vertical-vert-govco-parrafo {
+        font-size: 1rem;
+    }
+
+    .informacion-vertical-vert-adc-govco {
+        width: 14.813rem;
+        text-align: left;
+        font-family: "WorkSans-Regular";
+        font-size: 0.875rem;
+        text-align: justify;
+        color: #4B4B4B;
+        opacity: 1;
+    }
+
+    .campo-valor-linea-vert-govco {
+        width: 100% !important;
+        border: 1.5px solid #737373 !important;
+        border-radius: 5px !important;
+        font-family: "WorkSans-Regular" !important;
+        font-size: 14px !important;
+        text-align: left !important;
+        padding-left: 10px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+        margin-bottom: 0 !important;
+        box-sizing: border-box !important;
+        line-height: 24px !important;
+    }
+
+    .campo-valor-linea-vert-govco::placeholder {
+        color: #737373;
+    }
+
+    .campo-valor-linea-desplegable-govco {
+        width: 100%;
+        border: 1.5px solid #737373;
+        color: #737373;
+        background-color: #FFFF;
+        border-radius: 5px;
+        font-family: "WorkSans-Regular";
+        font-size: 14px;
+        text-align: left;
+    }
+
+    .campo-valor-linea-desplegable-govco::after {
+        font-family: "govco-font";
+        content: "\e814";
+        width: 10px;
+        height: 6px;
+        color: #3366CC;
+        opacity: 1;
+        margin-left: 155px !important;
+    }
+
+    .campo-valor-linea-desplegable-dos-govco {
+        width: 100%;
+        border: 1.5px solid #737373;
+        color: #737373;
+        background-color: #FFFF;
+        border-radius: 5px;
+        font-family: "WorkSans-Regular";
+        font-size: 14px;
+        text-align: left;
+    }
+
+    .campo-valor-linea-desplegable-dos-govco::after {
+        font-family: "govco-font";
+        content: "\e814";
+        width: 10px;
+        height: 6px;
+        background-color: #FFFF;
+        color: #3366CC;
+        opacity: 1;
+        margin-left: 155px;
+    }
+
+    .campo-valor-linea-desplegable-tres-govco {
+        width: 100%;
+        height: 2rem;
+        border: 0.125rem solid #737373;
+        color: #737373;
+        background-color: #FFFF;
+        border-radius: 5px;
+        font-family: "WorkSans-Regular";
+        font-size: 12px;
+        text-align: left;
+    }
+}

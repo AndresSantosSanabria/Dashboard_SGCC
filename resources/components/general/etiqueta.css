@@ -1,0 +1,135 @@
+/**
+ * Gov.co (https://www.gov.co) - Gobierno de Colombia
+ *  - Componente: Etiqueta
+ *  - Version: 4.0.0
+ */
+
+ /* Fuente iconografica */
+ @font-face {
+    font-family: "govco-font";
+    src: url("../assets/icons/fonts/govco-font-icons.ttf") format("truetype");
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+   /* Montserrat-SemiBold */
+  @font-face {
+    font-family: 'Montserrat-SemiBold';
+    src: url('../assets/fonts/Montserrat/Montserrat-SemiBold.ttf');
+  }
+
+  /* Montserrat-SemiBold */
+    @font-face {
+    font-family:'WorkSans-Medium';
+    src: url('../assets/fonts/Work_Sans/static/WorkSans-Medium.ttf');
+  }
+  
+  .etiqueta-govco {
+      background-color: #F2F2F2 !important;
+      border-radius: 14px !important;
+      color: #000000 !important;
+      text-align: left;
+      font-size: 14px;
+      font-family: WorkSans-Medium !important;
+      width: 150px;
+      height: 28px;
+      padding-top: 6px;
+      padding-bottom: 6px;
+      padding-left: 10px;
+      padding-right: 10px;
+  }
+  
+  .etiqueta-govco.completado {
+      background-color: #CDE6DF !important;
+      border-radius: 14px;
+      color: #0D684B !important;
+  }
+  
+  .etiqueta-govco.error {
+      background-color: #EECDD2 !important;
+      border-radius:14px;
+      color: #B30937 !important;
+  }
+  
+  .etiqueta-govco.pendiente {
+      background-color: #FFEECC !important;
+      border-radius: 14px;
+      color: #8B5D13 !important;
+  }
+  
+  .etiqueta-govco-filtro {
+      background-color: #E6EFFD !important;
+      border: solid #E6EFFD !important;
+      border-radius: 20px !important;
+      color: #004884 !important;
+      text-align: left;
+      font-size: 14px;
+      font-family: WorkSans-Medium !important;
+      text-decoration: none;
+      width: 169px;
+      height: 40px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      padding-left: 16px;
+      padding-right: 10px;
+  }
+  
+  .etiqueta-govco-filtro::after {
+      font-family: "govco-font";
+      color: #004884;
+  }
+  
+  .etiqueta-govco-filtro::after {
+      content: "\eb72";
+  }
+  
+  .campo-etiqueta-govco {
+      width: 200px;
+      height: 40px;
+      background: white;
+      display:block
+  }
+  
+  .etiqueta-govco-filtro:hover {
+      background-color: #3366CC !important;
+      border:solid #3366CC !important;
+      border-radius: 20px;
+      color: #fff !important;
+      text-align: left;
+      font-size: 14px;
+      font-family: WorkSans-Medium !important;
+      width: 169px;
+      height: 40px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      padding-left: 16px;
+      padding-right: 10px;
+  }
+  
+  .etiqueta-govco-filtro:hover::after {
+      font-family: "govco-font";
+      color: #fff;
+  }
+  
+  .etiqueta-govco-filtro:focus {
+      background-color: #3366CC !important; 
+      border-radius: 20px;
+      color: #fff !important;
+      text-align: left;
+      font-size: 14px;
+      font-family: WorkSans-Medium !important;
+      width: 169px;
+      height: 40px;
+      padding-top: 12px;
+      padding-bottom: 12px;
+      padding-left: 16px;
+      padding-right: 10px;
+      outline: 2px solid #000 !important;
+      border: 2px solid #fff !important;
+      box-shadow: none !important; 
+  }
+  
+  .etiqueta-govco-filtro:focus::after {
+      font-family: "govco-font";
+      color: #fff;
+  }
