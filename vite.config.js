@@ -5,7 +5,17 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js', 'resources/css/all.css', 'resources/css/sidebar.css'],
+            input: [
+                'resources/css/app.css', 
+                'resources/js/app.js', 
+                'resources/css/sidebar.css',
+                'resources/css/snackbar.css',
+                'resources/views/dashboard/dashboard.css',
+                'resources/views/dashboard/dashboard.js',
+                'resources/views/workflow/workflow.css',
+                'resources/views/workflow/workflow.js',
+                'resources/views/login/login.css',
+            ],
             refresh: true,
         }),
         viteStaticCopy({

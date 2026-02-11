@@ -46,6 +46,19 @@ class CuentaCobroController extends Controller
         if (!$id) throw new \Exception("Estado con código '$code' no encontrado en la base de datos.");
         return $this->statesCache[$code] = $id;
     }
+
+    private function getNextInvoiceNumber($contratoId)
+    {
+        // Obtener el máximo número de factura radicado para este contrato
+        // Convertimos a entero para asegurar orden numérico correcto
+        $maxInvoice = CuentaCobro::where('contrato_id', $contratoId)
+            ->whereNotNull('ultima_factura_hacienda')
+            ->where('ultima_factura_hacienda', '!=', 'N/A')
+            ->selectRaw('MAX(CAST(ultima_factura_hacienda AS UNSIGNED)) as max_num')
+            ->value('max_num');
+
+        return ($maxInvoice ?? 0) + 1;
+    }
     public function index(Request $request)
     {
         $query = CuentaCobro::query()->with([
@@ -140,11 +153,11 @@ class CuentaCobroController extends Controller
             ->groupBy('bloque.codigo');
 
         if ($request->ajax()) {
-            return response(view('partials.cuentas_table', compact('cuentas'))->render())
+            return response(view('dashboard.componentes.cuentas_table', compact('cuentas'))->render())
                 ->header('X-Total-Count', $cuentas->total());
         }
 
-        return view('dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados'));
+        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados'));
     }
 
     public function importExcel(Request $request)
@@ -311,7 +324,8 @@ class CuentaCobroController extends Controller
                             'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? $data['FECHA RADICACION'] ?? null) ?? now(),
                             'numero_pagos_totales' => $pagosTotales,
                             'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? 0,
-                            'porcentaje_cuentas' => $data['PORCENTAJE DE CUENTAS'] ?? $data['% EJECUCIÓN'] ?? 0,
+
+                            'porcentaje_cuentas' => ($pagosTotales > 0) ? (($pagosTotales / $numeroCuenta) * 100) : 0,
                             'radicado_por' => $data['RADICADO POR'] ?? Auth::user()->user ?? 'SISTEMA',
                             'bloque_actual_id' => $bloqueId,
                             'estado_actual_id' => $estadoId,
@@ -493,21 +507,32 @@ class CuentaCobroController extends Controller
 
                 $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($data['RADICADA EN HACIENDA'] ?? '') === 'SI'));
 
+                // Calcular siguiente número de factura si está radicada en hacienda
+                $ultimaFacturaHacienda = $data['ULTIMA FACTURA RADICADA HACIENDA'] ?? $data['RADICADA EN HACIENDA'] ?? null;
+                $estadoRadicada = $data['RADICADA EN HACIENDA'] ?? '';
+
+                if ($estadoRadicada === 'SI' || $estadoRadicada === 'Radicada' || $estaFinalizada) {
+                    if (empty($ultimaFacturaHacienda) || $ultimaFacturaHacienda === 'SI' || $ultimaFacturaHacienda === 'Radicada' || $ultimaFacturaHacienda === 'N/A') {
+                        $ultimaFacturaHacienda = $this->getNextInvoiceNumber($contrato->id);
+                    }
+                }
+
                 $cuenta = CuentaCobro::create([
                     'contrato_id' => $contrato->id,
                     'numero_cuenta' => $numeroCuenta,
                     'valor_cobro' => $valorRP / $pagosTotales,
                     'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? now(),
                     'numero_pagos_totales' => $pagosTotales,
-                    'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
-                    'porcentaje_cuentas' => $data['PORCENTAJE DE CUENTAS'] ?? 0,
+                    'numero_facturas_radicadas' => $ultimaFacturaHacienda ?? $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
+
+                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($pagosTotales / $numeroCuenta) * 100) : 0,
                     'radicado_por' => $data['RADICADO POR'] ?? Auth::user()->user ?? 'SISTEMA',
                     'bloque_actual_id' => $bloqueId,
                     'estado_actual_id' => $estadoId,
                     'responsable_actual_id' => Auth::id(),
                     'finalizada' => $estaFinalizada,
                     'observaciones' => $data['OBSERVACIONES'] ?? null,
-                    'ultima_factura_hacienda' => $data['ULTIMA FACTURA RADICADA HACIENDA'] ?? $data['RADICADA EN HACIENDA'] ?? null,
+                    'ultima_factura_hacienda' => $ultimaFacturaHacienda,
                     'fecha_radicacion_hacienda' => $this->parseDate($data['FECHA DE RADICACIÓN'] ?? null),
                     'observacion_hacienda' => $data['OBSERVACIÓN DEVOLUCIÓN HACIENDA'] ?? null,
                 ]);
@@ -531,6 +556,187 @@ class CuentaCobroController extends Controller
         } catch (\Exception $e) {
             Log::error('Error en carga manual: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => "Error: " . $e->getMessage()], 500);
+        }
+    }
+
+    public function edit($id)
+    {
+        try {
+            $cuenta = CuentaCobro::with([
+                'contrato.contratista',
+                'contrato.supervisor',
+                'contrato.registrosPresupuestales',
+                'planillasSeguridadSocial' => fn($q) => $q->where('es_ultima', true),
+                'contrato.contratista.seguridadSocialVigente.entidadSalud',
+                'contrato.contratista.seguridadSocialVigente.entidadPension',
+                'contrato.contratista.seguridadSocialVigente.entidadArl',
+                'estadosBloques.bloque',
+                'estadosBloques.estadoActual'
+            ])->findOrFail($id);
+
+            // Preparar datos para el formulario
+            $data = [
+                'NUMERO DE CONTRATO' => $cuenta->contrato->numero_contrato,
+                'CONTRATISTA' => $cuenta->contrato->contratista->razon_social,
+                'CEDULA' => $cuenta->contrato->contratista->nit,
+                'RP' => $cuenta->contrato->registrosPresupuestales->first()?->numero_rp,
+                'FECHA RP' => $cuenta->contrato->registrosPresupuestales->first()?->fecha_rp?->format('Y-m-d'),
+                'VALOR RP' => $cuenta->contrato->registrosPresupuestales->first()?->valor_rp,
+                'FECHA DE INICIO' => $cuenta->contrato->fecha_inicio?->format('Y-m-d'),
+                'FECHA DE TERMINACIÓN' => $cuenta->contrato->fecha_fin?->format('Y-m-d'),
+                'SUPERVISOR' => $cuenta->contrato->supervisor->nombres, // Asumiendo que solo se guardan nombres en este campo simple
+                'NUMERO DE CUENTA EN PROCESO DE CUENTAS' => $cuenta->numero_cuenta,
+                'NUMERO DE PAGOS TOTALES' => $cuenta->numero_pagos_totales,
+                'N° DE FACTURAS RADICADA HACIENDA' => $cuenta->numero_facturas_radicadas,
+                'PORCENTAJE DE CUENTAS' => $cuenta->porcentaje_cuentas,
+                'ENTIDAD SALUD' => $cuenta->contrato->contratista->seguridadSocialVigente?->entidadSalud?->nombre,
+                'ENTIDAD PENSIÓN' => $cuenta->contrato->contratista->seguridadSocialVigente?->entidadPension?->nombre,
+                'ENTIDAD ARL' => $cuenta->contrato->contratista->seguridadSocialVigente?->entidadArl?->nombre,
+                'PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA' => $cuenta->planillasSeguridadSocial->first()?->mes_planilla,
+                'RADICADO POR' => $cuenta->radicado_por,
+                'FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES' => $cuenta->fecha_radicacion?->format('Y-m-d'),
+                'OBSERVACIONES' => $cuenta->observaciones,
+
+                // Campos adicionales (Bloques)
+                'ESTADO TRAS PRIMERA REVISIÓN' => $cuenta->estadosBloques->where('bloque.codigo', 'REV1')->first()?->estadoActual?->nombre,
+                'FECHA DEVUELTA DE REVISIÓN O ENVIADA A SAP' => $cuenta->estadosBloques->where('bloque.codigo', 'REV1')->first()?->fecha_completado_bloque?->format('Y-m-d'),
+                'RESPONSABLE_REV' => $cuenta->estadosBloques->where('bloque.codigo', 'REV1')->first()?->responsable?->primer_nombre, // Ojo con esto si es manual
+
+                'ENVIADA A INGRESO MERCANCIA SAP' => $cuenta->estadosBloques->where('bloque.codigo', 'SAP')->first()?->estadoActual?->nombre,
+
+                'FECHA DE ENVIO A FACTURACIÓN O DEVUELTA A CORRECIONES' => $cuenta->estadosBloques->where('bloque.codigo', 'FAC')->first()?->fecha_ingreso_bloque?->format('Y-m-d'),
+                'EN FACTURACIÓN' => $cuenta->estadosBloques->where('bloque.codigo', 'FAC')->first()?->estadoActual?->nombre,
+                'RESPONSABLE_FAC' => $cuenta->estadosBloques->where('bloque.codigo', 'FAC')->first()?->responsable?->primer_nombre,
+                'FECHA EN QUE SE GENERA FACURACIÓN' => $cuenta->estadosBloques->where('bloque.codigo', 'FAC')->first()?->fecha_completado_bloque?->format('Y-m-d'),
+
+                'FIRMA SECRETARIO' => $cuenta->estadosBloques->where('bloque.codigo', 'FIR')->first()?->estadoActual?->nombre,
+                'FECHA EN QUE SE DEJAN PARA FIRMA DEL SECRETARIO' => $cuenta->estadosBloques->where('bloque.codigo', 'FIR')->first()?->fecha_completado_bloque?->format('Y-m-d'),
+
+                'RADICADA EN HACIENDA' => $cuenta->estadosBloques->where('bloque.codigo', 'HAC')->first()?->estadoActual?->nombre,
+                'FECHA DE RADICACIÓN' => $cuenta->fecha_radicacion_hacienda?->format('Y-m-d'),
+                'ULTIMA FACTURA RADICADA HACIENDA' => $cuenta->ultima_factura_hacienda,
+                'OBSERVACIÓN DEVOLUCIÓN HACIENDA' => $cuenta->observacion_hacienda,
+                'DIFERENCIA CUENTAS TOTALES - VS CUENTAS RADICADAS' => $cuenta->diferencia_cuentas,
+            ];
+
+            return response()->json(['success' => true, 'data' => $data]);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Error al cargar datos: ' . $e->getMessage()], 500);
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        try {
+            $cuenta = CuentaCobro::findOrFail($id);
+
+            // Normalizar keys
+            $data = [];
+            foreach ($request->all() as $key => $value) {
+                $normalizedKey = str_replace('_', ' ', strtoupper($key));
+                $data[$normalizedKey] = $value;
+            }
+
+            DB::transaction(function () use ($data, $cuenta) {
+                // 1. Actualizar Contrato (SOLO CAMPOS PERMITIDOS, NO EL NUMERO DE CONTRATO)
+                // El usuario pidió NO modificar el número de contrato.
+                $contrato = $cuenta->contrato;
+                $contrato->update([
+                    'fecha_inicio' => $this->parseDate($data['FECHA DE INICIO'] ?? null),
+                    'fecha_fin' => $this->parseDate($data['FECHA DE TERMINACIÓN'] ?? null),
+                    'monto_total' => $this->parseAmount($data['VALOR RP'] ?? 0),
+                ]);
+
+                // 2. Actualizar Contratista
+                if (!empty($data['CONTRATISTA'])) {
+                    $contrato->contratista->update(['razon_social' => $data['CONTRATISTA']]);
+                }
+                // (Nota: Si cambia la cédula, debería buscar/crear otro contratista, pero por simplicidad de edición asumimos actualización de datos del mismo)
+                if (!empty($data['CEDULA'])) {
+                    $contrato->contratista->update(['nit' => $data['CEDULA']]);
+                }
+
+                // 3. Supervisor
+                if (!empty($data['SUPERVISOR'])) {
+                    $supervisor = Supervisor::firstOrCreate(
+                        ['nombres' => $data['SUPERVISOR'], 'apellidos' => ''],
+                        ['cargo' => 'SUPERVISOR']
+                    );
+                    $contrato->update(['supervisor_id' => $supervisor->id]);
+                }
+
+                // 4. RP
+                if ($rp = $contrato->registrosPresupuestales->first()) {
+                    $rp->update([
+                        'numero_rp' => $data['RP'] ?? $rp->numero_rp,
+                        'fecha_rp' => $this->parseDate($data['FECHA RP'] ?? null),
+                        'valor_rp' => $this->parseAmount($data['VALOR RP'] ?? 0),
+                    ]);
+                }
+
+                // 5. Seguridad Social
+                $this->crearSeguridadSocial($data, $contrato->contratista);
+
+                // 6. Cuenta de Cobro
+                $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
+                $pagosTotales = (int)($data['NUMERO DE PAGOS TOTALES'] ?? 12);
+                if ($pagosTotales <= 0) $pagosTotales = 12;
+
+                $cuenta->update([
+                    'numero_cuenta' => $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta,
+                    'valor_cobro' => $valorRP / $pagosTotales,
+                    'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion,
+                    'numero_pagos_totales' => $pagosTotales,
+                    'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
+
+                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($pagosTotales / ($data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta)) * 100) : 0,
+                    'radicado_por' => $data['RADICADO POR'] ?? $cuenta->radicado_por,
+                    'observaciones' => $data['OBSERVACIONES'] ?? null,
+                    'ultima_factura_hacienda' => $data['ULTIMA FACTURA RADICADA HACIENDA'] ?? null,
+                    'fecha_radicacion_hacienda' => $this->parseDate($data['FECHA DE RADICACIÓN'] ?? null),
+                    'observacion_hacienda' => $data['OBSERVACIÓN DEVOLUCIÓN HACIENDA'] ?? null,
+                    'diferencia_cuentas' => $data['DIFERENCIA CUENTAS TOTALES - VS CUENTAS RADICADAS'] ?? 0,
+                ]);
+
+                // Lógica especial para actualizar ultima_factura_hacienda si cambia estado a Radicada
+                $estadoRadicada = $data['RADICADA EN HACIENDA'] ?? '';
+                Log::info("Checking Radicada State: '$estadoRadicada'");
+
+                if (strtoupper($estadoRadicada) === 'RADICADA' || strtoupper($estadoRadicada) === 'SI') {
+                    // Verificar si ya tiene número asignado o si tiene un placeholder, asignar el siguiente
+                    $currentFactura = $cuenta->ultima_factura_hacienda;
+                    Log::info("Current Factura: '$currentFactura'");
+
+                    if (empty($currentFactura) || $currentFactura === 'N/A' || $currentFactura === 'SI' || $currentFactura === 'Radicada') {
+                        $nextNum = $this->getNextInvoiceNumber($cuenta->contrato_id);
+                        Log::info("Generating Next Num: $nextNum");
+
+                        $cuenta->update([
+                            'ultima_factura_hacienda' => $nextNum,
+                            'numero_facturas_radicadas' => $nextNum
+                        ]);
+                    } else {
+                        Log::info("Skipping generation: Current factura is present and valid.");
+                    }
+                }
+
+                // 7. Bloques Históricos (Actualizar estados si cambiaron)
+                $this->procesarBloquesHistoricos($cuenta, $data);
+
+                // 8. Planilla (Si cambia)
+                $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? null;
+                if ($mesPlanilla) {
+                    PlanillaSeguridadSocial::updateOrCreate(
+                        ['cuenta_cobro_id' => $cuenta->id, 'es_ultima' => true],
+                        ['mes_planilla' => strtoupper($mesPlanilla)]
+                    );
+                }
+            });
+
+            return response()->json(['success' => true, 'message' => 'Registro actualizado correctamente.']);
+        } catch (\Exception $e) {
+            Log::error('Error actualizando registro: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 

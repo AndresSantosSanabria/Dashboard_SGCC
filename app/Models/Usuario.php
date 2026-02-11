@@ -83,10 +83,45 @@ class Usuario extends Authenticatable
     public function getNombreCompletoAttribute()
     {
         return trim(
-            $this->primer_nombre . ' ' . 
-            $this->segundo_nombre . ' ' . 
-            $this->primer_apellido . ' ' . 
-            $this->segundo_apellido
+            $this->primer_nombre . ' ' .
+                $this->segundo_nombre . ' ' .
+                $this->primer_apellido . ' ' .
+                $this->segundo_apellido
         );
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->rol && $this->rol->esAdmin();
+    }
+
+    public function puedeSerResponsableSap(): bool
+    {
+        return $this->rol && $this->rol->puedeSerResponsableSap();
+    }
+
+    public function puedeSerResponsableFac(): bool
+    {
+        return $this->rol && $this->rol->puedeSerResponsableFac();
+    }
+
+    // Scopes for filtering users
+    public function scopeActivos($query)
+    {
+        return $query->where('es_activo', true);
+    }
+
+    public function scopeResponsablesSap($query)
+    {
+        return $query->whereHas('rol', function ($q) {
+            $q->where('permisos->responsable_sap', true);
+        })->where('es_activo', true);
+    }
+
+    public function scopeResponsablesFac($query)
+    {
+        return $query->whereHas('rol', function ($q) {
+            $q->where('permisos->responsable_facturacion', true);
+        })->where('es_activo', true);
     }
 }

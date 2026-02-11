@@ -38,7 +38,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
 
             // 3. Crear Estados por Bloque
             echo "🏷️  Creando estados...\n";
-            
+
             // Estructura de estados 
             $estadosPorBloque = [
                 1 => [
@@ -69,7 +69,8 @@ class UpdateWorkflowStatesSeeder extends Seeder
                     ['nombre' => 'devuelta', 'codigo' => 'HAC_DEV', 'tipo' => 'DEVUELTO'],
                 ],
                 6 => [
-                    ['nombre' => 'OK', 'codigo' => 'FIN_OK', 'tipo' => 'APROBADO', 'es_inicial' => 1, 'es_final' => 1],
+                    ['nombre' => 'Por Confirmar', 'codigo' => 'FIN_PEND', 'tipo' => 'INICIAL', 'es_inicial' => 1, 'es_final' => 0],
+                    ['nombre' => 'Finalizada', 'codigo' => 'FIN_OK', 'tipo' => 'APROBADO', 'es_inicial' => 0, 'es_final' => 1],
                 ],
             ];
 
@@ -151,7 +152,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
                     ->where('bloque_id', $origen->bloque_id + 1)
                     ->where('es_inicial', true)
                     ->first();
-                
+
                 if ($inicialSiguiente) {
                     $this->insertTransition($origen, $inicialSiguiente, 'PASAR_BLOQUE');
                 }
@@ -176,7 +177,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
                     ->where('bloque_id', 5)
                     ->where('tipo', 'DEVUELTO')
                     ->first();
-                
+
                 if ($devueltaAnterior) {
                     $this->insertTransition($origen, $devueltaAnterior, 'DEVOLVER');
                 }

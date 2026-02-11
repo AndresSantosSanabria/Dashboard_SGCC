@@ -26,7 +26,15 @@
                 <span class="sidebar-text">Workflow</span>
             </a>
         </li>
-
+        @if (auth()->user()->isAdmin())
+            <li>
+                <a href="{{ route('configuracion.index') }}"
+                    class="nav-link text-white {{ request()->routeIs('configuracion.*') ? 'active bg-primary' : '' }}">
+                    <i class="bi bi-gear me-2 fs-5"></i>
+                    <span class="sidebar-text">Configuración</span>
+                </a>
+            </li>
+        @endif
     </ul>
     <hr>
     <div class="dropdown">

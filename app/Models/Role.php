@@ -32,8 +32,23 @@ class Role extends Model
     }
 
     public function tienePermiso(string $permiso): bool
-{
-    // permisos como ['crear_contrato' => true, 'borrar' => false]
-    return $this->permisos[$permiso] ?? false;
-}
+    {
+        // permisos como ['crear_contrato' => true, 'borrar' => false]
+        return $this->permisos[$permiso] ?? false;
+    }
+
+    public function esAdmin(): bool
+    {
+        return $this->tienePermiso('es_admin');
+    }
+
+    public function puedeSerResponsableSap(): bool
+    {
+        return $this->tienePermiso('responsable_sap');
+    }
+
+    public function puedeSerResponsableFac(): bool
+    {
+        return $this->tienePermiso('responsable_facturacion');
+    }
 }

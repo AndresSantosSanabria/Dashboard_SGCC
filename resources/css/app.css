@@ -1,2 +1,42 @@
 /* App CSS - Estilos globales (gov.co + Bootstrap) */
 /* Los estilos principales vienen de gov.co CDN/local (all.css) y Bootstrap */
+
+body {
+    background-color: var(--govcolor-white-smoke) !important;
+    color: var(--govcolor-matterhorn);
+}
+
+
+/* Sidebar Custom Styles */
+.bg-govco-navbar {
+    background-color: var(--govcolor-cobalt) !important; 
+    background-color: var(--govcolor-cobalt) !important;
+}
+
+#sidebar {
+    transition: width 0.3s;
+    overflow-x: hidden;
+}
+
+#sidebar.collapsed {
+    width: 4.5rem !important;
+}
+
+#sidebar.collapsed .nav-link span,
+#sidebar.collapsed .sidebar-header-text,
+#sidebar.collapsed .dropdown-toggle strong,
+#sidebar.collapsed .dropdown-toggle i.bi-chevron-down {
+    display: none;
+}
+
+#sidebar.collapsed .nav-link {
+    text-align: center;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+#sidebar.collapsed .dropdown-toggle {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+}
