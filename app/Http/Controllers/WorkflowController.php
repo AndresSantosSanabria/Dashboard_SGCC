@@ -15,27 +15,27 @@ class WorkflowController extends Controller
 
         // Aplicar filtros
         if ($request->filled('supervisor_id')) {
-            $query->whereHas('contrato', function($q) use ($request) {
+            $query->whereHas('contrato', function ($q) use ($request) {
                 $q->where('supervisor_id', $request->supervisor_id);
             });
         }
 
         if ($request->filled('contratista')) {
-            $query->whereHas('contrato.contratista', function($q) use ($request) {
+            $query->whereHas('contrato.contratista', function ($q) use ($request) {
                 $q->where('razon_social', 'like', '%' . $request->contratista . '%')
-                  ->orWhere('representante_legal', 'like', '%' . $request->contratista . '%');
+                    ->orWhere('representante_legal', 'like', '%' . $request->contratista . '%');
             });
         }
 
         if ($request->filled('estado_nombre')) {
-            $query->whereHas('estadoActual', function($q) use ($request) {
+            $query->whereHas('estadoActual', function ($q) use ($request) {
                 $q->where('nombre', $request->estado_nombre);
             });
         }
 
         $cuentas = $query->get();
 
-        $bloques = \App\Models\BloqueWorkflow::with(['estados' => function($q) {
+        $bloques = \App\Models\BloqueWorkflow::with(['estados' => function ($q) {
             $q->where('es_activo', true)->orderBy('id', 'asc');
         }])->orderBy('orden', 'asc')->get();
 
@@ -75,7 +75,7 @@ class WorkflowController extends Controller
             }
         }
 
-        return view('workflow', compact('workflow', 'supervisores', 'estados'));
+        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados'));
     }
 
     private function getColorPorBloque($codigo)
@@ -179,11 +179,23 @@ class WorkflowController extends Controller
         // Get destination state
         $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($estadoDestinoId);
 
+        // SPECIAL CHECK: If transitioning to REV1_PASA or SAP_OK, require responsible assignment
+        if ($estadoDestino->codigo === 'REV1_PASA' || $estadoDestino->codigo === 'SAP_OK') {
+            return response()->json([
+                'success' => true,
+                'requires_responsible' => true,
+                'cuenta_id' => $cuentaId,
+                'estado_destino_id' => $estadoDestinoId,
+                'estado_codigo' => $estadoDestino->codigo,
+                'message' => 'Se requiere asignar responsable'
+            ]);
+        }
+
         // Start transaction
         \DB::beginTransaction();
         try {
             $this->ejecutarTransicion($cuenta, $estadoDestinoId, $request->comentario);
-            
+
             \DB::commit();
 
             // Refresh account to get newest state
@@ -192,6 +204,87 @@ class WorkflowController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Estado actualizado correctamente',
+                'nuevo_estado' => [
+                    'nombre' => $cuenta->estadoActual->nombre,
+                    'tipo' => $cuenta->estadoActual->tipo,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cambiar estado: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Assign responsible and complete state transition
+     */
+    public function assignResponsible(Request $request, $cuentaId)
+    {
+        $request->validate([
+            'estado_destino_id' => 'required|exists:estados_workflow,id',
+            'responsable_id' => 'required|exists:usuarios,id',
+            'comentario' => 'nullable|string|max:500',
+        ]);
+
+        $cuenta = \App\Models\CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
+        $estadoOrigenId = $cuenta->estado_actual_id;
+        $estadoDestinoId = $request->estado_destino_id;
+
+        // Verify transition is allowed
+        $transicion = \App\Models\TransicionPermitida::where('estado_origen_id', $estadoOrigenId)
+            ->where('estado_destino_id', $estadoDestinoId)
+            ->where('es_activa', true)
+            ->first();
+
+        if (!$transicion) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Transición no permitida',
+            ], 403);
+        }
+
+        // Get destination state
+        $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($estadoDestinoId);
+
+        // Start transaction
+        \DB::beginTransaction();
+        try {
+            // Execute the transition
+            $this->ejecutarTransicion($cuenta, $estadoDestinoId, $request->comentario);
+
+            // Determine which block to update based on the destination state
+            $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($estadoDestinoId);
+            $bloqueTarget = null;
+
+            if ($estadoDestino->codigo === 'REV1_PASA') {
+                // For REV1_PASA, assign to SAP block
+                $bloqueTarget = \App\Models\BloqueWorkflow::where('codigo', 'SAP')->first();
+            } elseif ($estadoDestino->codigo === 'SAP_OK') {
+                // For SAP_OK (con ingreso mercancia), assign to Facturación block
+                $bloqueTarget = \App\Models\BloqueWorkflow::where('codigo', 'FAC')->first();
+            }
+
+            if ($bloqueTarget) {
+                // Update or create the block record with the assigned responsible
+                \App\Models\EstadoBloqueCuenta::updateOrCreate(
+                    ['cuenta_cobro_id' => $cuentaId, 'bloque_id' => $bloqueTarget->id],
+                    ['responsable_id' => $request->responsable_id]
+                );
+
+                \Log::info("Responsible assigned for cuenta {$cuentaId}: User ID = {$request->responsable_id}, Block = {$bloqueTarget->codigo} (ID: {$bloqueTarget->id})");
+            }
+
+            \DB::commit();
+
+            // Refresh account to get newest state
+            $cuenta->refresh();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Estado actualizado y responsable asignado correctamente',
                 'nuevo_estado' => [
                     'nombre' => $cuenta->estadoActual->nombre,
                     'tipo' => $cuenta->estadoActual->tipo,
@@ -256,9 +349,49 @@ class WorkflowController extends Controller
             'fecha_completado_bloque' => $estadoDestino->es_final ? now() : null,
         ];
 
-        // Si es el bloque 6 (FINALIZADA) y es un estado APROBADO, marcamos la cuenta como finalizada global
+        // LÓGICA DE CICLO AUTOMÁTICO:
+        // Si es el bloque 6 (FINALIZADO) y es un estado APROBADO (FIN_OK - Finalizada)
+        // NOTA: Con el nuevo estado 'Por Confirmar' (INICIAL), esto solo se ejecuta al pasar de 'Por Confirmar' a 'Finalizada'
         if ($estadoDestino->bloque_id == 6 && $estadoDestino->tipo == 'APROBADO') {
-            $cuenta->finalizada = true;
+
+            // Verificar si aún quedan pagos pendientes
+            if (($cuenta->numero_cuenta ?? 0) < ($cuenta->numero_pagos_totales ?? 0)) {
+
+                // 1. Aumentar número de cuenta
+                $cuenta->numero_cuenta = ($cuenta->numero_cuenta ?? 0) + 1;
+
+                // Aumentar facturas radicadas (las que ya finalizaron)
+                $cuenta->numero_facturas_radicadas = ($cuenta->numero_facturas_radicadas ?? 0) + 1;
+
+                // Calcular porcentaje de avance
+                if (($cuenta->numero_pagos_totales ?? 0) > 0) {
+                    $cuenta->porcentaje_cuentas = ($cuenta->numero_cuenta / $cuenta->numero_pagos_totales) * 100;
+                } else {
+                    $cuenta->porcentaje_cuentas = 0;
+                }
+
+                // 2. Asegurar que NO esté finalizada (ya que vuelve a empezar)
+                $cuenta->finalizada = false;
+
+                // Guardamos cambios parciales antes de la recursión
+                $cuenta->save();
+
+                // 3. Buscar el estado inicial del Bloque 1 (REV1_REV - en revision)
+                $estadoInicialBloque1 = \App\Models\EstadoWorkflow::where('codigo', 'REV1_REV')->first();
+
+                if ($estadoInicialBloque1) {
+                    // LIMPIEZA: Eliminar registros de progreso de los bloques anteriores para el nuevo ciclo
+                    \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)->delete();
+
+                    // Forzamos la transición al inicio
+                    // Usamos un comentario de sistema para que quede registro
+                    $this->ejecutarTransicion($cuenta, $estadoInicialBloque1->id, "Automatismo: Ciclo Finalizado. Cuenta #{$cuenta->numero_cuenta} iniciada.");
+                    return; // Importante: Salir para no seguir procesando lógica de 'finalizada' aquí
+                }
+            } else {
+                // Si ya llegó al total de pagos, se detiene el ciclo y queda FINALIZADA REALMENTE
+                $cuenta->finalizada = true;
+            }
         } else {
             // Si sale de finalizada (vuelve atrás), le quitamos el flag de finalizada
             $cuenta->finalizada = false;
@@ -274,8 +407,28 @@ class WorkflowController extends Controller
             ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $estadoDestino->bloque_id],
             $updateData
         );
-        
+
         $cuenta->save();
+
+        // LÓGICA ESPECIAL: Incrementar factura cuando se marca como "Radicada" en Hacienda
+        if ($estadoDestino->codigo === 'HAC_OK') {
+            // Obtener el siguiente número de factura para este contrato
+            $maxInvoice = \App\Models\CuentaCobro::where('contrato_id', $cuenta->contrato_id)
+                ->whereNotNull('ultima_factura_hacienda')
+                ->where('ultima_factura_hacienda', '!=', 'N/A')
+                ->selectRaw('MAX(CAST(ultima_factura_hacienda AS UNSIGNED)) as max_num')
+                ->value('max_num');
+
+            $nextInvoiceNumber = ($maxInvoice ?? 0) + 1;
+
+            // Actualizar ambos campos
+            $cuenta->update([
+                'ultima_factura_hacienda' => $nextInvoiceNumber,
+                'numero_facturas_radicadas' => $nextInvoiceNumber
+            ]);
+
+            \Log::info("Invoice incremented for cuenta {$cuenta->id}: Next number = {$nextInvoiceNumber}");
+        }
 
         // 5. AUTO-CHAINING: Check if this new state has an automatic transition
         // We look for transitions from this new state that have 'PASAR_BLOQUE'
@@ -313,18 +466,56 @@ class WorkflowController extends Controller
     public function getHistorial($cuentaId)
     {
         $historial = \App\Models\HistorialWorkflow::with([
-            'bloque', 
-            'estadoOrigen', 
-            'estadoDestino', 
+            'bloque',
+            'estadoOrigen',
+            'estadoDestino',
             'usuarioAccion'
         ])
-        ->where('cuenta_cobro_id', $cuentaId)
-        ->orderBy('fecha_transicion', 'asc')
-        ->get();
+            ->where('cuenta_cobro_id', $cuentaId)
+            ->orderBy('fecha_transicion', 'asc')
+            ->get();
 
         return response()->json([
             'success' => true,
             'historial' => $historial
+        ]);
+    }
+
+    /**
+     * Get users filtered by block responsibility permissions
+     */
+    public function getUsuariosResponsables($estadoCodigo)
+    {
+        $usuarios = [];
+
+        // Determine which permission to filter by based on state code
+        if ($estadoCodigo === 'REV1_PASA') {
+            // For REV1_PASA, get users who can be responsible for SAP
+            $usuarios = \App\Models\Usuario::responsablesSap()
+                ->orderBy('primer_nombre')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'nombre' => $user->primer_nombre . ' ' . $user->primer_apellido
+                    ];
+                });
+        } elseif ($estadoCodigo === 'SAP_OK') {
+            // For SAP_OK, get users who can be responsible for Facturación
+            $usuarios = \App\Models\Usuario::responsablesFac()
+                ->orderBy('primer_nombre')
+                ->get()
+                ->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'nombre' => $user->primer_nombre . ' ' . $user->primer_apellido
+                    ];
+                });
+        }
+
+        return response()->json([
+            'success' => true,
+            'usuarios' => $usuarios
         ]);
     }
 }

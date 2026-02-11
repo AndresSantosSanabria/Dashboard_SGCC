@@ -23,6 +23,11 @@ class RoleSeeder extends Seeder
                 'cuentas_editar' => true,
                 'usuarios_gestionar' => true,
                 'configuracion_sistema' => true,
+                'es_admin' => true,
+                'acceder_dashboard' => true,
+                'acceder_workflow' => true,
+                'responsable_sap' => true,
+                'responsable_facturacion' => true,
             ],
             'es_activo' => true
         ]);
@@ -38,6 +43,11 @@ class RoleSeeder extends Seeder
                 'cuentas_editar' => false,
                 'usuarios_gestionar' => false,
                 'configuracion_sistema' => false,
+                'es_admin' => false,
+                'acceder_dashboard' => true,
+                'acceder_workflow' => true,
+                'responsable_sap' => false,
+                'responsable_facturacion' => false,
             ],
             'es_activo' => true
         ]);

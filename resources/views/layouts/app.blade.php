@@ -1,18 +1,13 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+@extends('layouts.base')
 
-        <title>{{ $title ?? config('app.name') }}</title>
+@section('content')
+    <div class="container-fluid p-0">
+        <div class="d-flex" style="min-height: 100vh;">
+            @include('layouts.partials._sidebar')
 
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
-
-        @livewireStyles
-    </head>
-    <body>
-        {{ $slot }}
-
-        @livewireScripts
-    </body>
-</html>
+            <main class="flex-grow-1 p-3 bg-light w-100" style="overflow-x: hidden;">
+                @yield('page-content')
+            </main>
+        </div>
+    </div>
+@endsection

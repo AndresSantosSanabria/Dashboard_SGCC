@@ -1,0 +1,109 @@
+.sticky-col {
+    position: sticky !important;
+    background-color: var(--govcolor-white) !important;
+    z-index: 5;
+    box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
+    border-right: 1px solid var(--govcolor-silver) !important;
+}
+
+/* En el header, fondo oscuro y z-index mayor */
+thead th.sticky-col {
+    background-color: var(--govcolor-matterhorn) !important;
+    color: var(--govcolor-white) !important;
+    z-index: 15; /* Por encima de celdas sticky del body */
+}
+/* ... (pagination omitted for brevity as it remains same) ... */
+/* Estilo para filas en hover para que las celdas sticky no tapen el efecto */
+.table-hover tbody tr:hover td.sticky-col {
+    background-color: var(--govcolor-white-smoke) !important;
+}
+
+/* Timeline Styles */
+.timeline-container {
+    position: relative;
+    padding: 20px 0;
+}
+.timeline-item {
+    display: flex;
+    position: relative;
+    margin-bottom: 25px;
+    align-items: flex-start;
+}
+.timeline-marker-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-right: 20px;
+    min-width: 50px;
+}
+.timeline-marker {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    z-index: 2;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    background-color: var(--govcolor-cobalt);
+}
+.timeline-line {
+    position: absolute;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    height: calc(100% + 25px);
+    background: var(--govcolor-silver);
+}
+.timeline-item:last-child .timeline-line {
+    display: none;
+}
+.timeline-content {
+    flex: 1;
+    background: var(--govcolor-white);
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid var(--govcolor-silver);
+}
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.timeline-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--govcolor-cobalt);
+}
+.timeline-date {
+    font-size: 0.7rem;
+    color: var(--govcolor-grey);
+}
+.timeline-transition {
+    font-size: 0.8rem;
+    color: var(--govcolor-matterhorn);
+    margin-bottom: 5px;
+}
+.timeline-meta {
+    display: flex;
+    gap: 15px;
+    font-size: 0.75rem;
+    color: var(--govcolor-grey);
+    margin-top: 8px;
+}
+.timeline-comment {
+    background: var(--govcolor-white-smoke);
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 0.8rem;
+    color: var(--govcolor-matterhorn);
+    border-left: 3px solid var(--govcolor-havelock-lue);
+    margin-top: 10px;
+    font-style: italic;
+}
