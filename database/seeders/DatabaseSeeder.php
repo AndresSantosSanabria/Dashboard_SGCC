@@ -12,7 +12,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RoleSeeder::class,
             UsuarioSeeder::class,
-            DashboardTestDataSeeder::class,
+            UpdateWorkflowStatesSeeder::class,
+            SimulationDataSeeder::class,
         ]);
     }
 }

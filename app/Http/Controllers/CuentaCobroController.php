@@ -23,10 +23,29 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use PhpOffice\PhpSpreadsheet\Shared\Date;
 
 class CuentaCobroController extends Controller
 {
     private $entidadesCache = [];
+    private $blocksCache = [];
+    private $statesCache = [];
+
+    private function getBlockIdByCode(string $code): int
+    {
+        if (isset($this->blocksCache[$code])) return $this->blocksCache[$code];
+        $id = BloqueWorkflow::where('codigo', $code)->value('id');
+        if (!$id) throw new \Exception("Bloque con código '$code' no encontrado en la base de datos.");
+        return $this->blocksCache[$code] = $id;
+    }
+
+    private function getStateIdByCode(string $code): int
+    {
+        if (isset($this->statesCache[$code])) return $this->statesCache[$code];
+        $id = EstadoWorkflow::where('codigo', $code)->value('id');
+        if (!$id) throw new \Exception("Estado con código '$code' no encontrado en la base de datos.");
+        return $this->statesCache[$code] = $id;
+    }
     public function index(Request $request)
     {
         $query = CuentaCobro::query()->with([
@@ -81,7 +100,7 @@ class CuentaCobroController extends Controller
         if ($request->filled('filterEstadosRevision')) {
             $query->whereHas('estadosBloques', function ($q) use ($request) {
                 $q->whereHas('bloque', function ($bq) {
-                    $bq->where('codigo', 'REV');
+                    $bq->where('codigo', 'REV1');
                 })->whereIn('estado_actual_id', (array) $request->filterEstadosRevision);
             });
         }
@@ -111,7 +130,7 @@ class CuentaCobroController extends Controller
 
         $supervisores = Supervisor::orderBy('nombres')->get();
         $estadosRevision = EstadoWorkflow::whereHas('bloque', function ($q) {
-            $q->where('codigo', 'REV');
+            $q->where('codigo', 'REV1');
         })->get();
 
         // Para los dropdowns del modal de carga manual
@@ -151,11 +170,11 @@ class CuentaCobroController extends Controller
             $errors = [];
             $skippedReasons = [];
 
-            $bloqueRad = BloqueWorkflow::where('codigo', 'RAD')->first();
+            $bloqueRad = BloqueWorkflow::where('codigo', 'REV1')->first();
             if (!$bloqueRad) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Error de configuración: No se encontró el bloque de "Radicación" (RAD).',
+                    'message' => 'Error de configuración: No se encontró el bloque inicial (REV1).',
                 ], 500);
             }
 
@@ -264,13 +283,26 @@ class CuentaCobroController extends Controller
                         // Determinar bloque actual basado en datos históricos
                         $radHacienda = strtoupper($data['RADICADA EN HACIENDA'] ?? '');
                         $estaFinalizada = ($radHacienda === 'SI' || $radHacienda === 'SÍ');
-                        
-                        $bloqueId = 1; $estadoId = 1;
-                        if ($estaFinalizada) { $bloqueId = 5; $estadoId = 5; }
-                        elseif (!empty($data['FIRMA SECRETARIO'])) { $bloqueId = 5; $estadoId = 5; }
-                        elseif (!empty($data['EN FACTURACIÓN'])) { $bloqueId = 4; $estadoId = 4; }
-                        elseif (!empty($data['ENVIADA A INGRESO MERCANCIA SAP']) || !empty($data['ENVIADA SAP'])) { $bloqueId = 3; $estadoId = 3; }
-                        elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN']) || !empty($data['ESTADO TRAS PRIMERA REVISIÓN (SERGIO / CONSUELO)'])) { $bloqueId = 2; $estadoId = 2; }
+
+                        $bloqueId = $this->getBlockIdByCode('REV1');
+                        $estadoId = $this->getStateIdByCode('REV1_REV'); // EN REVISION
+
+                        if ($estaFinalizada) {
+                            $bloqueId = $this->getBlockIdByCode('FIN');
+                            $estadoId = $this->getStateIdByCode('FIN_COMP');
+                        } elseif (!empty($data['RADICADA EN HACIENDA']) && ($radHacienda === 'SI' || $radHacienda === 'SÍ')) {
+                            $bloqueId = $this->getBlockIdByCode('HAC');
+                            $estadoId = $this->getStateIdByCode('HAC_OK');
+                        } elseif (!empty($data['FIRMA SECRETARIO'])) {
+                            $bloqueId = $this->getBlockIdByCode('FIR');
+                            $estadoId = $this->getStateIdByCode('FIR_ESP');
+                        } elseif (!empty($data['EN FACTURACIÓN'])) {
+                            $bloqueId = $this->getBlockIdByCode('FAC');
+                            $estadoId = $this->getStateIdByCode('FAC_ESP');
+                        } elseif (!empty($data['ENVIADA A INGRESO MERCANCIA SAP']) || !empty($data['ENVIADA SAP'])) {
+                            $bloqueId = $this->getBlockIdByCode('SAP');
+                            $estadoId = $this->getStateIdByCode('SAP_ESP');
+                        }
 
                         $cuenta = CuentaCobro::create([
                             'contrato_id' => $contrato->id,
@@ -371,11 +403,11 @@ class CuentaCobroController extends Controller
             }
 
             // 3. Bloques y Estados
-            $bloqueRad = BloqueWorkflow::where('codigo', 'RAD')->first();
+            $bloqueRad = BloqueWorkflow::where('codigo', 'REV1')->first();
             $estadoRad = $bloqueRad?->estadoInicial;
 
             if (!$bloqueRad || !$estadoRad) {
-                return response()->json(['success' => false, 'message' => 'Error de configuración de workflow (RAD).'], 500);
+                return response()->json(['success' => false, 'message' => 'Error de configuración de workflow (REV1).'], 500);
             }
 
             DB::transaction(function () use ($data, $bloqueRad, $estadoRad, $numContrato) {
@@ -433,27 +465,33 @@ class CuentaCobroController extends Controller
                 $pagosTotales = (int)($data['NUMERO DE PAGOS TOTALES'] ?? 12);
                 if ($pagosTotales <= 0) $pagosTotales = 12;
 
-                // Determinar bloque actual basado en datos históricos
-                $rawRadHacienda = $data['RADICADA EN HACIENDA'] ?? '';
-                $radHacienda = strtoupper($rawRadHacienda);
-                $estaFinalizada = ($radHacienda === 'SI' || $radHacienda === 'SÍ' || $rawRadHacienda == '1');
-                
-                $bloqueId = 1; $estadoId = 1;
-                if ($estaFinalizada) { 
-                    $bloqueId = 5; $estadoId = 10; // FIRMA COMPLETADO
+                // Determinar bloque y estado actual basado en el formulario (de mayor a menor importancia)
+                $bloqueId = $this->getBlockIdByCode('REV1');
+                $estadoId = $this->getStateIdByCode('REV1_REV'); // Default inicial
+
+                if (!empty($data['RADICADA EN HACIENDA'])) {
+                    $bloqueId = $this->getBlockIdByCode('HAC');
+                    $estadoId = EstadoWorkflow::where('nombre', $data['RADICADA EN HACIENDA'])
+                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('HAC_ESP');
+                } elseif (!empty($data['FIRMA SECRETARIO'])) {
+                    $bloqueId = $this->getBlockIdByCode('FIR');
+                    $estadoId = EstadoWorkflow::where('nombre', $data['FIRMA SECRETARIO'])
+                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('FIR_ESP');
+                } elseif (!empty($data['EN FACTURACIÓN'])) {
+                    $bloqueId = $this->getBlockIdByCode('FAC');
+                    $estadoId = EstadoWorkflow::where('nombre', $data['EN FACTURACIÓN'])
+                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('FAC_ESP');
+                } elseif (!empty($data['ENVIADA A INGRESO MERCANCIA SAP'])) {
+                    $bloqueId = $this->getBlockIdByCode('SAP');
+                    $estadoId = EstadoWorkflow::where('nombre', $data['ENVIADA A INGRESO MERCANCIA SAP'])
+                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('SAP_ESP');
+                } elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
+                    $bloqueId = $this->getBlockIdByCode('REV1');
+                    $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
+                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_REV');
                 }
-                elseif (!empty($data['FIRMA SECRETARIO'])) { 
-                    $bloqueId = 5; $estadoId = 9; // PENDIENTE FIRMA
-                }
-                elseif (!empty($data['EN FACTURACIÓN'])) { 
-                    $bloqueId = 4; $estadoId = 7; // PENDIENTE FACTURACIÓN
-                }
-                elseif (!empty($data['ENVIADA A INGRESO MERCANCIA SAP']) || !empty($data['ENVIADA SAP'])) { 
-                    $bloqueId = 3; $estadoId = 5; // PENDIENTE SAP
-                }
-                elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) { 
-                    $bloqueId = 2; $estadoId = 3; // PENDIENTE REVISIÓN
-                }
+
+                $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($data['RADICADA EN HACIENDA'] ?? '') === 'SI'));
 
                 $cuenta = CuentaCobro::create([
                     'contrato_id' => $contrato->id,
@@ -549,7 +587,7 @@ class CuentaCobroController extends Controller
         try {
             // Si es un objeto ya (como Carbon o DateTime)
             if ($value instanceof \DateTimeInterface) return Carbon::instance($value);
-            
+
             // Si es numérico y parece fecha Excel
             if (is_numeric($value) && $value > 40000 && $value < 60000) {
                 return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value));
@@ -567,30 +605,17 @@ class CuentaCobroController extends Controller
      */
     private function procesarBloquesHistoricos($cuenta, $data)
     {
-        // 1. Bloque RAD (Radicación) - Siempre existe al inicio
-        EstadoBloqueCuenta::updateOrCreate(
-            ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => 1],
-            [
-                'estado_actual_id' => 1, // Inicial
-                'fecha_ingreso_bloque' => $cuenta->fecha_radicacion,
-                'fecha_completado_bloque' => $cuenta->fecha_radicacion,
-                'bloque_completado' => true,
-                'responsable_id' => $cuenta->responsable_actual_id,
-            ]
-        );
-
-        // 2. Bloque REV (Revisión)
-        $estadoRevNombre = $data['ESTADO TRAS PRIMERA REVISIÓN (SERGIO / CONSUELO)'] ?? $data['ESTADO TRAS PRIMERA REVISIÓN'] ?? null;
+        // 1. Bloque 1: ESTADO TRAS PRIMERA REVISIÓN (REV1)
+        $estadoRevNombre = $data['ESTADO TRAS PRIMERA REVISIÓN'] ?? null;
         if ($estadoRevNombre && $estadoRevNombre != 'N/A') {
             $fechaRev = $this->parseDate($data['FECHA DEVUELTA DE REVISIÓN O ENVIADA A SAP'] ?? null);
-            $estadoRev = ($estadoRevNombre == '1') 
-                ? null 
-                : EstadoWorkflow::where('nombre', 'like', "%$estadoRevNombre%")->where('bloque_id', 2)->first();
-            
+            $bloqueId = $this->getBlockIdByCode('REV1');
+            $estado = EstadoWorkflow::where('nombre', 'like', "%$estadoRevNombre%")->where('bloque_id', $bloqueId)->first();
+
             EstadoBloqueCuenta::updateOrCreate(
-                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => 2],
+                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
-                    'estado_actual_id' => $estadoRev?->id ?? 3, // Fallback a PENDIENTE REVISIÓN
+                    'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('REV1_REV'),
                     'fecha_ingreso_bloque' => $cuenta->fecha_radicacion,
                     'fecha_completado_bloque' => $fechaRev,
                     'bloque_completado' => !empty($fechaRev),
@@ -599,18 +624,17 @@ class CuentaCobroController extends Controller
             );
         }
 
-        // 3. Bloque SAP
+        // 2. Bloque 2: ENVIADA A INGRESO MERCANCIA SAP (SAP)
         $estadoSapNombre = $data['ENVIADA A INGRESO MERCANCIA SAP'] ?? $data['ENVIADA SAP'] ?? null;
         if ($estadoSapNombre && $estadoSapNombre != 'N/A') {
             $fechaSap = $this->parseDate($data['FECHA DE ENVIO A FACTURACIÓN O DEVUELTA A CORRECIONES'] ?? null);
-            $estadoSap = ($estadoSapNombre == '1')
-                ? null
-                : EstadoWorkflow::where('nombre', 'like', "%$estadoSapNombre%")->where('bloque_id', 3)->first();
-            
+            $bloqueId = $this->getBlockIdByCode('SAP');
+            $estado = EstadoWorkflow::where('nombre', 'like', "%$estadoSapNombre%")->where('bloque_id', $bloqueId)->first();
+
             EstadoBloqueCuenta::updateOrCreate(
-                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => 3],
+                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
-                    'estado_actual_id' => $estadoSap?->id ?? 5, // Fallback a PENDIENTE SAP
+                    'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('SAP_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DEVUELTA DE REVISIÓN O ENVIADA A SAP'] ?? null),
                     'fecha_completado_bloque' => $fechaSap,
                     'bloque_completado' => !empty($fechaSap),
@@ -619,18 +643,17 @@ class CuentaCobroController extends Controller
             );
         }
 
-        // 4. Bloque FAC (Facturación)
+        // 3. Bloque 3: EN FACTURACIÓN (FAC)
         $estadoFacNombre = $data['EN FACTURACIÓN'] ?? null;
         if ($estadoFacNombre && $estadoFacNombre != 'N/A') {
             $fechaFac = $this->parseDate($data['FECHA EN QUE SE GENERA FACURACIÓN'] ?? null);
-            $estadoFac = ($estadoFacNombre == '1')
-                ? null
-                : EstadoWorkflow::where('nombre', 'like', "%$estadoFacNombre%")->where('bloque_id', 4)->first();
-            
+            $bloqueId = $this->getBlockIdByCode('FAC');
+            $estado = EstadoWorkflow::where('nombre', 'like', "%$estadoFacNombre%")->where('bloque_id', $bloqueId)->first();
+
             EstadoBloqueCuenta::updateOrCreate(
-                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => 4],
+                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
-                    'estado_actual_id' => $estadoFac?->id ?? 7, // Fallback a PENDIENTE FACTURACIÓN
+                    'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('FAC_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DE ENVIO A FACTURACIÓN O DEVUELTA A CORRECIONES'] ?? null),
                     'fecha_completado_bloque' => $fechaFac,
                     'bloque_completado' => !empty($fechaFac),
@@ -639,21 +662,39 @@ class CuentaCobroController extends Controller
             );
         }
 
-        // 5. Bloque FIR (Firma)
+        // 4. Bloque 4: FIRMA SECRETARIO (FIR)
         $estadoFirNombre = $data['FIRMA SECRETARIO'] ?? null;
         if ($estadoFirNombre && $estadoFirNombre != 'N/A') {
             $fechaFir = $this->parseDate($data['FECHA EN QUE SE DEJAN PARA FIRMA DEL SECRETARIO'] ?? null);
-            $estadoFir = ($estadoFirNombre == '1')
-                ? null
-                : EstadoWorkflow::where('nombre', 'like', "%$estadoFirNombre%")->where('bloque_id', 5)->first();
-            
+            $bloqueId = $this->getBlockIdByCode('FIR');
+            $estado = EstadoWorkflow::where('nombre', 'like', "%$estadoFirNombre%")->where('bloque_id', $bloqueId)->first();
+
             EstadoBloqueCuenta::updateOrCreate(
-                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => 5],
+                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
-                    'estado_actual_id' => $estadoFir?->id ?? 9, // Fallback a PENDIENTE FIRMA
+                    'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('FIR_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE GENERA FACURACIÓN'] ?? null),
                     'fecha_completado_bloque' => $fechaFir,
                     'bloque_completado' => !empty($fechaFir),
+                    'responsable_id' => $cuenta->responsable_actual_id,
+                ]
+            );
+        }
+
+        // 5. Bloque 5: EN HACIENDA (HAC)
+        $estadoHacNombre = $data['RADICADA EN HACIENDA'] ?? null;
+        if ($estadoHacNombre && $estadoHacNombre != 'N/A') {
+            $fechaHac = $this->parseDate($data['FECHA DE RADICACIÓN'] ?? null);
+            $bloqueId = $this->getBlockIdByCode('HAC');
+            $estado = EstadoWorkflow::where('nombre', 'like', "%$estadoHacNombre%")->where('bloque_id', $bloqueId)->first();
+
+            EstadoBloqueCuenta::updateOrCreate(
+                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
+                [
+                    'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('HAC_ESP'),
+                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE DEJAN PARA FIRMA DEL SECRETARIO'] ?? null),
+                    'fecha_completado_bloque' => $fechaHac,
+                    'bloque_completado' => !empty($fechaHac),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );

@@ -28,6 +28,12 @@ class Contratista extends Model
         'updated_at' => 'datetime',
     ];
 
+    // Accessors
+    public function getNombreCompletoAttribute()
+    {
+        return $this->razon_social ?: $this->representante_legal;
+    }
+
     // Relaciones
     public function contratos()
     {

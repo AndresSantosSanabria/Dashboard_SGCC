@@ -1,10 +1,11 @@
 <div class="table-responsive" style="max-height: 700px;">
-    <table class="table table-hover table-bordered mb-0" id="cuentasTable" style="min-width: 3000px; font-size: 0.85rem;">
+    <table class="table table-hover table-bordered mb-0" id="cuentasTable" style="min-width: 3000px; font-size: 0.65rem;">
         <thead class="table-dark sticky-top">
             <tr>
-                <th>NUMERO DE CONTRATO</th>
-                <th>CONTRATISTA</th>
-                <th>CEDULA</th>
+                <th class="sticky-col sticky-col-1">NUMERO DE CONTRATO</th>
+                <th class="sticky-col sticky-col-2">CONTRATISTA</th>
+                <th class="sticky-col sticky-col-3">CEDULA</th>
+                <th>ESTADO ACTUAL</th>
                 <th>RP</th>
                 <th>FECHA RP</th>
                 <th>VALOR RP</th>
@@ -37,6 +38,7 @@
                 <th>ULTIMA FACTURA HACIENDA</th>
                 <th>OBS. DEVOLUCION</th>
                 <th>DIFERENCIA CUENTAS</th>
+                <th>ACCIÓN</th>
             </tr>
         </thead>
         <tbody>
@@ -48,16 +50,18 @@
                     $ultimaSS = $cuenta->planillasSeguridadSocial->first();
                     $ssVigente = $contratista?->seguridadSocialVigente;
 
-                    // Lógica para bloques específicos
-                    $bloqueRevision = $cuenta->estadosBloques->where('bloque.codigo', 'REV')->first();
-                    $bloqueSap = $cuenta->estadosBloques->where('bloque.codigo', 'SAP')->first();
-                    $bloqueFacturacion = $cuenta->estadosBloques->where('bloque.codigo', 'FAC')->first();
-                    $bloqueFirma = $cuenta->estadosBloques->where('bloque.codigo', 'FIR')->first();
-                @endphp
+                    // Lógica para bloques específicos usando IDs para mayor confiabilidad
+                    $bloqueRevision = $cuenta->estadosBloques->where('bloque_id', 1)->first();
+                    $bloqueSap = $cuenta->estadosBloques->where('bloque_id', 2)->first();
+                    $bloqueFacturacion = $cuenta->estadosBloques->where('bloque_id', 3)->first();
+                    $bloqueFirma = $cuenta->estadosBloques->where('bloque_id', 4)->first();
+                    $bloqueHacienda = $cuenta->estadosBloques->where('bloque_id', 5)->first();
+@endphp
                 <tr>
-                    <td><strong>{{ $contrato->numero_contrato ?? 'N/A' }}</strong></td>
-                    <td>{{ $contratista->razon_social ?? ($contratista->representante_legal ?? 'N/A') }}</td>
-                    <td>{{ $contratista->nit ?? 'N/A' }}</td>
+                    <td class="sticky-col sticky-col-1"><strong>{{ $contrato->numero_contrato ?? 'N/A' }}</strong></td>
+                    <td class="sticky-col sticky-col-2">{{ $contratista->razon_social ?? ($contratista->representante_legal ?? 'N/A') }}</td>
+                    <td class="sticky-col sticky-col-3">{{ $contratista->nit ?? 'N/A' }}</td>
+                    <td><span class="badge bg-info">{{ $cuenta->estadoActual?->nombre ?? 'N/A' }}</span></td>
                     <td>{{ $rp->numero_rp ?? 'N/A' }}</td>
                     <td>{{ $rp && $rp->fecha_rp ? $rp->fecha_rp->format('d/m/Y') : 'N/A' }}</td>
                     <td>${{ number_format($rp->valor_rp ?? 0, 0, ',', '.') }}</td>
@@ -89,10 +93,14 @@
 
                     {{-- Workflow: Revisión --}}
                     <td>
-                        <span
-                            class="badge {{ $bloqueRevision?->bloque_completado ? 'bg-success' : 'bg-warning text-dark' }}">
-                            {{ $bloqueRevision?->estadoActual->nombre ?? 'N/A' }}
-                        </span>
+                        @if ($bloqueRevision && $bloqueRevision->estadoActual)
+                            <span
+                                class="badge {{ $bloqueRevision->bloque_completado ? 'bg-success' : 'bg-warning text-dark' }}">
+                                {{ $bloqueRevision->estadoActual->nombre }}
+                            </span>
+                        @else
+                            <span class="text-muted small">N/A</span>
+                        @endif
                     </td>
                     <td>{{ $bloqueRevision?->fecha_completado_bloque ? $bloqueRevision->fecha_completado_bloque->format('d/m/Y') : 'N/A' }}
                     </td>
@@ -104,9 +112,13 @@
                     <td>{{ $bloqueFacturacion?->fecha_ingreso_bloque ? $bloqueFacturacion->fecha_ingreso_bloque->format('d/m/Y') : 'N/A' }}
                     </td>
                     <td>
-                        <span class="badge {{ $bloqueFacturacion?->bloque_completado ? 'bg-success' : 'bg-info' }}">
-                            {{ $bloqueFacturacion?->estadoActual->nombre ?? 'N/A' }}
-                        </span>
+                        @if ($bloqueFacturacion && $bloqueFacturacion->estadoActual)
+                            <span class="badge {{ $bloqueFacturacion->bloque_completado ? 'bg-success' : 'bg-info' }}">
+                                {{ $bloqueFacturacion->estadoActual->nombre }}
+                            </span>
+                        @else
+                            <span class="text-muted small">N/A</span>
+                        @endif
                     </td>
                     <td>{{ $bloqueFacturacion?->responsable->primer_nombre ?? 'Sin asignar' }}</td>
                     <td>{{ $bloqueFacturacion?->fecha_completado_bloque ? $bloqueFacturacion->fecha_completado_bloque->format('d/m/Y') : 'N/A' }}
@@ -114,18 +126,40 @@
 
                     {{-- Firma y Hacienda --}}
                     <td>
-                        <span class="badge {{ $bloqueFirma?->bloque_completado ? 'bg-success' : 'bg-secondary' }}">
-                            {{ $bloqueFirma?->estadoActual->nombre ?? 'N/A' }}
-                        </span>
+                        @if ($bloqueFirma && $bloqueFirma->estadoActual)
+                            <span class="badge {{ $bloqueFirma->bloque_completado ? 'bg-success' : 'bg-secondary' }}">
+                                {{ $bloqueFirma->estadoActual->nombre }}
+                            </span>
+                        @else
+                            <span class="text-muted small">N/A</span>
+                        @endif
                     </td>
                     <td>{{ $bloqueFirma?->fecha_ingreso_bloque ? $bloqueFirma->fecha_ingreso_bloque->format('d/m/Y') : 'N/A' }}
                     </td>
-                    <td>{{ $cuenta->finalizada ? 'SÍ' : 'NO' }}</td>
-                    <td>{{ $cuenta->fecha_radicacion_hacienda ? $cuenta->fecha_radicacion_hacienda->format('d/m/Y') : 'N/A' }}
+                    <td>
+                        @if ($bloqueHacienda && $bloqueHacienda->estadoActual)
+                            <span class="badge {{ $bloqueHacienda->bloque_completado ? 'bg-success' : 'bg-secondary' }}">
+                                {{ $bloqueHacienda->estadoActual->nombre }}
+                            </span>
+                        @elseif ($cuenta->finalizada)
+                            <span class="badge bg-success">SÍ</span>
+                        @else
+                            <span class="text-muted small text-uppercase">Pendiente</span>
+                        @endif
+                    </td>
+                    <td>{{ $bloqueHacienda?->fecha_ingreso_bloque ? $bloqueHacienda->fecha_ingreso_bloque->format('d/m/Y') : ($cuenta->fecha_radicacion_hacienda ? $cuenta->fecha_radicacion_hacienda->format('d/m/Y') : 'N/A') }}
                     </td>
                     <td>{{ $cuenta->ultima_factura_hacienda ?? 'N/A' }}</td>
                     <td>{{ $cuenta->observacion_hacienda ?? 'N/A' }}</td>
                     <td>{{ number_format($cuenta->diferencia_cuentas ?? 0, 0, ',', '.') }}</td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="showHistory({{ $cuenta->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')">
+                            <!-- <i class="fas fa-history"></i> -->
+                            <span class="govco-svg govco-clock"></span> 
+                            <!-- <i class="govco-icon govco-icon-clock"></i> -->
+                           
+                        </button>
+                    </td>
                 </tr>
             @empty
                 <tr>

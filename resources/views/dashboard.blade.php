@@ -3,6 +3,45 @@
 @section('title', 'Dashboard - Inicio')
 
 @section('page-content')
+    <style>
+        .sticky-col {
+            position: sticky !important;
+            background-color: white !important;
+            z-index: 5;
+            box-shadow: 2px 0 5px -2px rgba(0,0,0,0.1);
+            border-right: 1px solid #dee2e6 !important;
+        }
+
+        /* En el header, fondo oscuro y z-index mayor */
+        thead th.sticky-col {
+            background-color: #343a40 !important;
+            z-index: 15; /* Por encima de celdas sticky del body */
+        }
+
+        .sticky-col-1 { left: 0; min-width: 140px; max-width: 140px; }
+        .sticky-col-2 { left: 140px; min-width: 210px; max-width: 210px; }
+        .sticky-col-3 { left: 350px; min-width: 120px; max-width: 120px; }
+
+        /* Estilo para filas en hover para que las celdas sticky no tapen el efecto */
+        .table-hover tbody tr:hover td.sticky-col {
+            background-color: #f2f2f2 !important;
+        }
+
+        /* Timeline Styles */
+        .timeline-container { position: relative; padding: 20px 0; }
+        .timeline-item { display: flex; position: relative; margin-bottom: 25px; align-items: flex-start; }
+        .timeline-marker-wrapper { position: relative; display: flex; flex-direction: column; align-items: center; margin-right: 20px; min-width: 50px; }
+        .timeline-marker { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1rem; z-index: 2; box-shadow: 0 4px 6px rgba(0,0,0,0.1); flex-shrink: 0; }
+        .timeline-line { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: 2px; height: calc(100% + 25px); background: #e9ecef; }
+        .timeline-item:last-child .timeline-line { display: none; }
+        .timeline-content { flex: 1; background: #f8f9fe; border-radius: 10px; padding: 15px; border: 1px solid #e9ecef; }
+        .timeline-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .timeline-title { font-weight: 700; font-size: 0.9rem; color: #172b4d; }
+        .timeline-date { font-size: 0.7rem; color: #8898aa; }
+        .timeline-transition { font-size: 0.8rem; color: #525f7f; margin-bottom: 5px; }
+        .timeline-meta { display: flex; gap: 15px; font-size: 0.75rem; color: #8898aa; margin-top: 8px; }
+        .timeline-comment { background: #fff; border-radius: 6px; padding: 10px; font-size: 0.8rem; color: #525f7f; border-left: 3px solid #5e72e4; margin-top: 10px; font-style: italic; }
+    </style>
     <h1 style="margin-top: 20px; margin-bottom: 30px; color: #000000; text-align: center; font-weight: bold;">
         Vista consolidada de cuentas de cobro
     </h1>
@@ -167,8 +206,7 @@
                                 <label class="form-label small">ESTADO REVISIÓN 1</label>
                                 <select name="ESTADO TRAS PRIMERA REVISIÓN" class="form-select form-select-sm">
                                     <option value="">Seleccione estado...</option>
-                                    <option value="1">1 (Prueba rápida)</option>
-                                    @foreach($todosLosEstados['REV'] ?? [] as $estado)
+                                    @foreach ($todosLosEstados['REV1'] ?? [] as $estado)
                                         <option value="{{ $estado->nombre }}">{{ $estado->nombre }}</option>
                                     @endforeach
                                 </select>
@@ -182,8 +220,7 @@
                                 <label class="form-label small">ENVIADA SAP</label>
                                 <select name="ENVIADA A INGRESO MERCANCIA SAP" class="form-select form-select-sm">
                                     <option value="">Seleccione estado...</option>
-                                    <option value="1">1 (Prueba rápida)</option>
-                                    @foreach($todosLosEstados['SAP'] ?? [] as $estado)
+                                    @foreach ($todosLosEstados['SAP'] ?? [] as $estado)
                                         <option value="{{ $estado->nombre }}">{{ $estado->nombre }}</option>
                                     @endforeach
                                 </select>
@@ -203,8 +240,7 @@
                                 <label class="form-label small">EN FACTURACIÓN</label>
                                 <select name="EN FACTURACIÓN" class="form-select form-select-sm">
                                     <option value="">Seleccione estado...</option>
-                                    <option value="1">1 (Prueba rápida)</option>
-                                    @foreach($todosLosEstados['FAC'] ?? [] as $estado)
+                                    @foreach ($todosLosEstados['FAC'] ?? [] as $estado)
                                         <option value="{{ $estado->nombre }}">{{ $estado->nombre }}</option>
                                     @endforeach
                                 </select>
@@ -224,8 +260,7 @@
                                 <label class="form-label small">FIRMA SECRETARIO</label>
                                 <select name="FIRMA SECRETARIO" class="form-select form-select-sm">
                                     <option value="">Seleccione estado...</option>
-                                    <option value="1">1 (Prueba rápida)</option>
-                                    @foreach($todosLosEstados['FIR'] ?? [] as $estado)
+                                    @foreach ($todosLosEstados['FIR'] ?? [] as $estado)
                                         <option value="{{ $estado->nombre }}">{{ $estado->nombre }}</option>
                                     @endforeach
                                 </select>
@@ -236,8 +271,13 @@
                                     class="form-control form-control-sm">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small">RADICADA HACIENDA</label>
-                                <input type="text" name="RADICADA EN HACIENDA" class="form-control form-control-sm">
+                                <label class="form-label small">ESTADO HACIENDA</label>
+                                <select name="RADICADA EN HACIENDA" class="form-select form-select-sm">
+                                    <option value="">Seleccione estado...</option>
+                                    @foreach ($todosLosEstados['HAC'] ?? [] as $estado)
+                                        <option value="{{ $estado->nombre }}">{{ $estado->nombre }}</option>
+                                    @endforeach
+                                </select>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small">FECHA RAD HACIENDA</label>
@@ -401,7 +441,6 @@
                 </div>
 
                 <div class="d-grid gap-2 mt-4">
-                    <button type="submit" class="btn btn-primary">Ver resultados</button>
                     <a href="{{ route('dashboard') }}" class="btn btn-secondary">Limpiar filtros</a>
                 </div>
             </div>
@@ -424,23 +463,6 @@
         </div>
     </div>
 
-    <div id="snackbar-container" class="container-toast-interactivo"
-        style="display: none; position: fixed; bottom: 20px; right: 20px; z-index: 1060;">
-        <div class="toast-govco">
-            <div class="toast-header-govco" style="display: flex; align-items: center; justify-content: space-between;">
-                <div style="display: flex; align-items: center;">
-                    <span id="snackbar-icon" class="toast-icon-govco alerta-icon-success-govco"></span>
-                    <strong class="toast-title-govco" id="snackbar-title">Notificación</strong>
-                </div>
-                <button type="button" class="close-btn-toast" onclick="hideSnackbar()">
-                    <span class="govco-times"></span>
-                </button>
-            </div>
-            <div class="toast-body-govco" id="snackbar-message">
-                Operación exitosa.
-            </div>
-        </div>
-    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -541,43 +563,6 @@
                     });
             });
 
-            // Funciones de Snackbar
-            window.showSnackbar = function(message, type = 'success') {
-                const snackbar = document.getElementById('snackbar-container');
-                const msgEl = document.getElementById('snackbar-message');
-                const titleEl = document.getElementById('snackbar-title');
-                const iconEl = document.getElementById('snackbar-icon');
-
-                msgEl.textContent = message;
-
-                if (type === 'success') {
-                    titleEl.textContent = 'Éxito';
-                    iconEl.className = 'toast-icon-govco alerta-icon-success-govco';
-                    iconEl.style.color = '#0D684B';
-                } else {
-                    titleEl.textContent = 'Error';
-                    iconEl.className = 'toast-icon-govco alerta-icon-error-govco';
-                    iconEl.style.color = '#B30937';
-                }
-
-                snackbar.style.display = 'block';
-                snackbar.classList.add('animate__animated', 'animate__slideInUp');
-
-                // Auto hide after 5 seconds
-                setTimeout(() => {
-                    hideSnackbar();
-                }, 5000);
-            };
-
-            window.hideSnackbar = function() {
-                const snackbar = document.getElementById('snackbar-container');
-                snackbar.classList.remove('animate__slideInUp');
-                snackbar.classList.add('animate__slideOutDown');
-                setTimeout(() => {
-                    snackbar.style.display = 'none';
-                    snackbar.classList.remove('animate__slideOutDown');
-                }, 500);
-            };
         });
 
         // --- Lógica de Filtros Instantáneos (Live Search) ---
@@ -701,5 +686,115 @@
         }
 
         bindPagination();
+    </script>
+
+    <!-- Modal de Historial de Workflow -->
+    <div class="modal fade" id="historyModal" tabindex="-1" aria-labelledby="historyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="historyModalLabel">
+                        <i class="fas fa-history me-2"></i>Historial de Movimientos - Contrato <span id="historyContratoNum"></span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body bg-light" style="max-height: 70vh; overflow-y: auto;">
+                    <div id="historySpinner" class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Obteniendo línea de tiempo...</p>
+                    </div>
+                    <div id="timelineContent" class="timeline-container px-3" style="display: none;">
+                        <!-- El contenido se cargará dinámicamente -->
+                    </div>
+                    <div id="historyEmpty" class="text-center py-5" style="display: none;">
+                        <i class="fas fa-info-circle text-muted mb-3" style="font-size: 3rem;"></i>
+                        <p class="text-muted">No hay registros de movimientos para esta cuenta.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showHistory(cuentaId, contratoNum) {
+            const modal = new bootstrap.Modal(document.getElementById('historyModal'));
+            document.getElementById('historyContratoNum').textContent = contratoNum;
+            
+            const spinner = document.getElementById('historySpinner');
+            const content = document.getElementById('timelineContent');
+            const empty = document.getElementById('historyEmpty');
+
+            spinner.style.display = 'block';
+            content.style.display = 'none';
+            empty.style.display = 'none';
+            content.innerHTML = '';
+
+            modal.show();
+
+            fetch(`/workflow/historial/${cuentaId}`)
+                .then(response => response.json())
+                .then(data => {
+                    spinner.style.display = 'none';
+                    
+                    if (data.success && data.historial.length > 0) {
+                        content.style.display = 'block';
+                        
+                        data.historial.forEach(h => {
+                            const date = new Date(h.fecha_transicion).toLocaleString('es-ES', {
+                                day: '2-digit', month: '2-digit', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit', hour12: true
+                            });
+
+                            const item = document.createElement('div');
+                            item.className = 'timeline-item';
+                            
+                            // Determinar color de badge por tipo de estado destino
+                            let badgeClass = 'bg-info';
+                            if (h.estado_destino?.tipo === 'DEVUELTO') badgeClass = 'bg-danger';
+                            if (h.estado_destino?.tipo === 'APROBADO' || h.estado_destino?.tipo === 'FINAL') badgeClass = 'bg-success';
+                            
+                            item.innerHTML = `
+                                <div class="timeline-marker-wrapper">
+                                    <div class="timeline-marker bg-primary">
+                                        <i class="fas fa-exchange-alt"></i>
+                                    </div>
+                                    <div class="timeline-line"></div>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="timeline-header">
+                                        <div class="timeline-title">${h.bloque?.nombre ?? 'Bloque'}</div>
+                                        <div class="timeline-date font-weight-bold">${date}</div>
+                                    </div>
+                                    <div class="timeline-transition">
+                                        <strong>${h.estado_origen?.nombre ?? 'Inicio'}</strong> 
+                                        <i class="fas fa-arrow-right mx-2 text-muted" style="font-size: 0.7rem;"></i> 
+                                        <span class="badge ${badgeClass}">${h.estado_destino?.nombre ?? 'N/A'}</span>
+                                    </div>
+                                    <div class="timeline-meta">
+                                        <span><i class="fas fa-user me-1"></i> ${h.usuario_accion?.primer_nombre ?? 'Sistema'}</span>
+                                        ${h.accion ? `<span><i class="fas fa-tag me-1"></i> ${h.accion}</span>` : ''}
+                                    </div>
+                                    ${h.comentarios ? `
+                                        <div class="timeline-comment">
+                                            "${h.comentarios}"
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                            content.appendChild(item);
+                        });
+                    } else {
+                        empty.style.display = 'block';
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching history:', err);
+                    spinner.style.display = 'none';
+                    empty.style.display = 'block';
+                    empty.querySelector('p').textContent = 'Error al cargar el historial.';
+                });
+        }
     </script>
 @endsection

@@ -5,6 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', config('app.name'))</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {{-- Preferir assets locales: public/assets o public/build/assets (Vite). Si no existen, usar CDN gov.co --}}
     @if (file_exists(public_path('assets/css/all.css')))
@@ -18,8 +19,8 @@
     {{-- Bootstrap (gov.co v5 depende de Bootstrap 5) --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    {{-- CSS de Vite: all.css (gov.co) y sidebar.css --}}
-    @vite(['resources/css/all.css', 'resources/css/sidebar.css'])
+    {{-- CSS de Vite --}}
+    @vite(['resources/css/all.css', 'resources/css/sidebar.css', 'resources/css/snackbar.css'])
 
 </head>
 
@@ -27,6 +28,35 @@
 
 
     @yield('content')
+
+    {{-- Snackbar Global --}}
+    <div id="snackbar"></div>
+
+    <script>
+        window.showSnackbar = function(message, type = 'success') {
+            const snackbar = document.getElementById("snackbar");
+            if (!snackbar) return;
+
+            // Limpiar mensajes técnicos para el usuario
+            let cleanMessage = message;
+            if (message.includes("SQLSTATE") || message.includes("Integrity constraint") || message.includes(
+                "column")) {
+                cleanMessage = "Error técnico en la base de datos. Por favor contacte al administrador.";
+            } else if (message.includes("CSRF") || message.includes("mismatch")) {
+                cleanMessage = "Sesión expirada o error de seguridad. Por favor recargue la página.";
+            } else if (message.includes("configuration") || message.includes("RAD")) {
+                cleanMessage = "Error de configuración de flujo. Por favor informe al administrador.";
+            }
+
+            snackbar.textContent = cleanMessage;
+            snackbar.className = "show " + type;
+
+            const duration = cleanMessage.length > 50 ? 5000 : 3000;
+            setTimeout(function() {
+                snackbar.className = snackbar.className.replace("show", "");
+            }, duration);
+        };
+    </script>
 
 
     {{-- Preferir script local copiado a public/assets o public/build/assets; si no existe, usar CDN gov.co --}}

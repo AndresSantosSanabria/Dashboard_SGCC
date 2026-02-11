@@ -119,7 +119,7 @@ class CuentaCobro extends Model
     // Accessors for Dashboard
     public function getDiferenciaCuentasAttribute()
     {
-        return ($this->numero_pagos_totales ?? 0) - ($this->numero_facturas_radicadas ?? 0);
+        return ($this->numero_pagos_totales ?? 0) - ($this->numero_cuenta ?? 0);
     }
 
     public function getUltimaFacturaHaciendaAttribute($value)

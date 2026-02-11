@@ -34,4 +34,9 @@ Route::middleware('auth')->group(function () {
 });
 
 // Workflow (protected)
-Route::get('/workflow', [WorkflowController::class, 'index'])->middleware('auth')->name('workflow');
+Route::middleware('auth')->group(function () {
+    Route::get('/workflow', [WorkflowController::class, 'index'])->name('workflow');
+    Route::get('/workflow/estados-disponibles/{cuenta}', [WorkflowController::class, 'getEstadosDisponibles'])->name('workflow.estados');
+    Route::post('/workflow/cambiar-estado/{cuenta}', [WorkflowController::class, 'cambiarEstado'])->name('workflow.cambiar-estado');
+    Route::get('/workflow/historial/{cuenta}', [WorkflowController::class, 'getHistorial'])->name('workflow.historial');
+});
