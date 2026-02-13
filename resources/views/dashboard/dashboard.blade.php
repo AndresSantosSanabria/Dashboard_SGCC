@@ -13,46 +13,49 @@
     <p class="text-muted mt-3">Bienvenido, <strong>{{ auth()->user()?->primer_nombre ?? 'Usuario' }}</strong>.</p>
 
 
-    <div class="carga-archivo-govco" style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
-        <div class="row align-items-center">
-            <div class="col-lg-7">
-                <form id="importForm" enctype="multipart/form-data" class="m-0" data-url="{{ route('dashboard.importar') }}">
-                    @csrf
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="all-input-carga-archivo-govco m-0" style="flex: 1;">
-                            <input type="file" id="inputId" name="inputFile" class="input-carga-archivo-govco active"
-                                data-error="false" data-action="uploadFile" data-action-delete="deleteFile"
-                                accept=".xlsx,.xls,.xlsm,.csv" />
-                            <label for="inputId" class="container-input-carga-archivo-govco m-0"
-                                style="display: inline-flex; align-items: center; width: 100%;">
-                                <span class="button-file-carga-archivo-govco">Seleccionar archivo Excel</span>
-                                <span class="file-name-carga-archivo-govco" id="fileNameDisplay">Sin archivo
-                                    seleccionado</span>
-                            </label>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <div id="importSpinner" style="display: none;">
-                                <div class="spinner-indicador-de-carga-govco" role="status"></div>
+    @if ($canEditDashboard)
+        <div class="carga-archivo-govco" style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <div class="row align-items-center">
+                <div class="col-lg-7">
+                    <form id="importForm" enctype="multipart/form-data" class="m-0"
+                        data-url="{{ route('dashboard.importar') }}">
+                        @csrf
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="all-input-carga-archivo-govco m-0" style="flex: 1;">
+                                <input type="file" id="inputId" name="inputFile"
+                                    class="input-carga-archivo-govco active" data-error="false" data-action="uploadFile"
+                                    data-action-delete="deleteFile" accept=".xlsx,.xls,.xlsm,.csv" />
+                                <label for="inputId" class="container-input-carga-archivo-govco m-0"
+                                    style="display: inline-flex; align-items: center; width: 100%;">
+                                    <span class="button-file-carga-archivo-govco">Seleccionar archivo Excel</span>
+                                    <span class="file-name-carga-archivo-govco" id="fileNameDisplay">Sin archivo
+                                        seleccionado</span>
+                                </label>
                             </div>
-                            <button type="submit" id="btnImport" class="button-loader-carga-archivo-govco m-0"
-                                disabled>Cargar archivo</button>
+                            <div class="d-flex align-items-center gap-2">
+                                <div id="importSpinner" style="display: none;">
+                                    <div class="spinner-indicador-de-carga-govco" role="status"></div>
+                                </div>
+                                <button type="submit" id="btnImport" class="button-loader-carga-archivo-govco m-0"
+                                    disabled>Cargar archivo</button>
+                            </div>
                         </div>
-                    </div>
-                </form>
-            </div>
-            <div class="col-lg-5 text-end d-flex gap-2 justify-content-end align-items-center">
-                <button type="button" class="btn-govco fill-btn-govco m-0" data-bs-toggle="modal"
-                    data-bs-target="#manualEntryModal" style="height: fit-content;">
-                    Cargar Manual
-                </button>
-                <a href="{{ route('dashboard.plantilla') }}"
-                    class="btn-govco outline-btn-govco d-inline-flex align-items-center m-0"
-                    style="text-decoration: none; height: fit-content;">
-                    Plantilla
-                </a>
+                    </form>
+                </div>
+                <div class="col-lg-5 text-end d-flex gap-2 justify-content-end align-items-center">
+                    <button type="button" class="btn-govco fill-btn-govco m-0" data-bs-toggle="modal"
+                        data-bs-target="#manualEntryModal" style="height: fit-content;">
+                        Cargar Manual
+                    </button>
+                    <a href="{{ route('dashboard.plantilla') }}"
+                        class="btn-govco outline-btn-govco d-inline-flex align-items-center m-0"
+                        style="text-decoration: none; height: fit-content;">
+                        Plantilla
+                    </a>
+                </div>
             </div>
         </div>
-    </div>
+    @endif
 
     @include('dashboard.componentes.manual_entry_modal')
     {{-- El script para el modal manual ahora está en dashboard.js --}}

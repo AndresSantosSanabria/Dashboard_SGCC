@@ -23,7 +23,6 @@
 
 <body style="overflow-x: hidden;">
 
-
     @yield('content')
 
     {{-- Snackbar Global --}}

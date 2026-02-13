@@ -47,6 +47,36 @@ class CuentaCobroController extends Controller
         return $this->statesCache[$code] = $id;
     }
 
+    public function publicConsultation(Request $request)
+    {
+        $nit = $request->input('nit');
+
+        if (!$nit) {
+            return response()->json(['error' => 'NIT no proporcionado'], 400);
+        }
+
+        // Search for the account associated with the NIT via Contratista -> Contrato -> CuentaCobro
+        $cuenta = CuentaCobro::whereHas('contrato.contratista', function ($query) use ($nit) {
+            $query->where('nit', $nit);
+        })
+            ->with(['estadoActual', 'bloqueActual', 'contrato.contratista'])
+            ->latest('updated_at')
+            ->first();
+
+        if (!$cuenta) {
+            return response()->json(['error' => 'No se encontró ninguna cuenta asociada a este NIT/Cédula.'], 404);
+        }
+
+        return response()->json([
+            'contratista' => $cuenta->contrato->contratista->razon_social,
+            'numero_contrato' => $cuenta->contrato->numero_contrato,
+            'numero_cuenta' => $cuenta->numero_cuenta,
+            'estado' => $cuenta->estadoActual->nombre ?? 'N/A',
+            'bloque' => $cuenta->bloqueActual->nombre ?? 'N/A',
+            'ultima_actualizacion' => $cuenta->updated_at->format('d/m/Y H:i A'),
+        ]);
+    }
+
     private function getNextInvoiceNumber($contratoId)
     {
         // Obtener el máximo número de factura radicado para este contrato
@@ -61,6 +91,42 @@ class CuentaCobroController extends Controller
     }
     public function index(Request $request)
     {
+        $user = auth()->user();
+
+        // 1. Check if user can access dashboard (Management) or Consolidado (Read-Only)
+        $canManage = $user->puedeAccederDashboard();
+        $canViewOnly = $user->puedeAccederConsolidado();
+
+        $canViewOnly = $user->puedeAccederConsolidado();
+
+        // DEBUG BLOCK
+        if (!$canViewOnly && request()->has('debug')) {
+            dd([
+                'DEBUG INFO' => 'Access Denied',
+                'User ID' => $user->id,
+                'Role' => $user->rol ? $user->rol->toArray() : 'No Role',
+                'User Permissions' => $user->permisos,
+                'Is Admin?' => $user->isAdmin(),
+                'Can Access Dashboard?' => $user->puedeAccederDashboard(),
+                'Can Access Consolidated?' => $user->puedeAccederConsolidado(),
+                'Has "acceder_dashboard"?' => $user->tienePermiso('acceder_dashboard'),
+                'Has "acceder_consolidado"?' => $user->tienePermiso('acceder_consolidado'),
+                'Role Permissions Raw' => $user->rol ? $user->rol->permisos : 'N/A',
+            ]);
+        }
+
+        if (!$canViewOnly) {
+            if ($user->puedeAccederWorkflow()) {
+                return redirect()->route('workflow');
+            }
+            if ($user->isAdmin()) {
+                return redirect()->route('configuracion.index');
+            }
+            abort(403, 'No tienes permiso para acceder a esta sección.');
+        }
+
+        $canEditDashboard = $user->tienePermiso('editar_dashboard');
+
         $query = CuentaCobro::query()->with([
             'contrato.contratista.seguridadSocialVigente.entidadSalud',
             'contrato.contratista.seguridadSocialVigente.entidadPension',
@@ -76,6 +142,20 @@ class CuentaCobroController extends Controller
             'estadoActual',
             'bloqueActual'
         ]);
+
+        // 2. Filter by "Solo asignados" if applicable
+        // 2. Filter by "Solo asignados" if applicable (STRICT: Only current responsibility)
+        if ($user->verSoloAsignados()) {
+            $query->where('responsable_actual_id', $user->id);
+        }
+
+        // 3. Filter by allowed blocks (Consistent with Workflow)
+        $bloquesPermitidos = $user->bloquesPermitidos();
+        if (is_array($bloquesPermitidos)) {
+            $query->whereHas('bloqueActual', function ($q) use ($bloquesPermitidos) {
+                $q->whereIn('codigo', $bloquesPermitidos);
+            });
+        }
 
         // Nivel 1: Barra de Búsqueda Superior
         if ($request->filled('searchContrato')) {
@@ -153,15 +233,18 @@ class CuentaCobroController extends Controller
             ->groupBy('bloque.codigo');
 
         if ($request->ajax()) {
-            return response(view('dashboard.componentes.cuentas_table', compact('cuentas'))->render())
+            return response(view('dashboard.componentes.cuentas_table', compact('cuentas', 'canManage', 'canEditDashboard'))->render())
                 ->header('X-Total-Count', $cuentas->total());
         }
 
-        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados'));
+        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados', 'canManage', 'canEditDashboard'));
     }
 
     public function importExcel(Request $request)
     {
+        if (!auth()->user()->tienePermiso('editar_dashboard')) {
+            return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar importaciones.'], 403);
+        }
         try {
             $request->validate([
                 'inputFile' => 'required|mimes:xlsx,xls,csv,xlsm|max:10240',
@@ -288,7 +371,7 @@ class CuentaCobroController extends Controller
                         // 9. CUENTA DE COBRO
                         Log::info("Fila $filaActual: Creando cuenta de cobro");
 
-                        $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $data['N° CUENTA'] ?? $data['NUMERO CUENTA'] ?? 1;
+                        $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $data['N° CUENTA'] ?? $data['NUMERO CUENTA'] ?? 0;
                         $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
                         $pagosTotales = (int)($data['NUMERO DE PAGOS TOTALES'] ?? $data['TOTAL PAGOS'] ?? 12);
                         if ($pagosTotales <= 0) $pagosTotales = 12;
@@ -298,7 +381,7 @@ class CuentaCobroController extends Controller
                         $estaFinalizada = ($radHacienda === 'SI' || $radHacienda === 'SÍ');
 
                         $bloqueId = $this->getBlockIdByCode('REV1');
-                        $estadoId = $this->getStateIdByCode('REV1_REV'); // EN REVISION
+                        $estadoId = $this->getStateIdByCode('REV1_RES'); // DEFAULT: RESERVA
 
                         if ($estaFinalizada) {
                             $bloqueId = $this->getBlockIdByCode('FIN');
@@ -315,18 +398,25 @@ class CuentaCobroController extends Controller
                         } elseif (!empty($data['ENVIADA A INGRESO MERCANCIA SAP']) || !empty($data['ENVIADA SAP'])) {
                             $bloqueId = $this->getBlockIdByCode('SAP');
                             $estadoId = $this->getStateIdByCode('SAP_ESP');
+                        } elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
+                            // Si viene dato en la columna REV1, buscarlo
+                            $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
+                                ->where('bloque_id', $bloqueId)
+                                ->value('id') ?? $this->getStateIdByCode('REV1_RES');
                         }
+
+                        $fechaRadicacionExcel = $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? $data['FECHA RADICACION'] ?? null);
 
                         $cuenta = CuentaCobro::create([
                             'contrato_id' => $contrato->id,
                             'numero_cuenta' => $numeroCuenta,
                             'valor_cobro' => $valorRP / $pagosTotales,
-                            'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? $data['FECHA RADICACION'] ?? null) ?? now(),
+                            'fecha_radicacion' => $fechaRadicacionExcel, // Null if empty
                             'numero_pagos_totales' => $pagosTotales,
                             'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? 0,
 
-                            'porcentaje_cuentas' => ($pagosTotales > 0) ? (($pagosTotales / $numeroCuenta) * 100) : 0,
-                            'radicado_por' => $data['RADICADO POR'] ?? Auth::user()->user ?? 'SISTEMA',
+                            'porcentaje_cuentas' => ($pagosTotales > 0 && $numeroCuenta > 0) ? (($numeroCuenta / $pagosTotales) * 100) : 0,
+                            'radicado_por' => $data['RADICADO POR'] ?? null,
                             'bloque_actual_id' => $bloqueId,
                             'estado_actual_id' => $estadoId,
                             'responsable_actual_id' => Auth::id(),
@@ -341,7 +431,7 @@ class CuentaCobroController extends Controller
                         $this->procesarBloquesHistoricos($cuenta, $data);
 
                         // 11. PLANILLA SEGURIDAD SOCIAL
-                        $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? $data['MES PLANILLA'] ?? null;
+                        $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? $data['MES PLANILLA'] ?? 'RESERVA';
                         if ($mesPlanilla && !empty($mesPlanilla)) {
                             PlanillaSeguridadSocial::create([
                                 'cuenta_cobro_id' => $cuenta->id,
@@ -397,6 +487,9 @@ class CuentaCobroController extends Controller
 
     public function storeManual(Request $request)
     {
+        if (!auth()->user()->tienePermiso('editar_dashboard')) {
+            return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar cargas manuales.'], 403);
+        }
         try {
             // Normalizar keys: PHP convierte espacios en guiones bajos (_) en los nombres de los campos
             $data = [];
@@ -474,14 +567,14 @@ class CuentaCobroController extends Controller
                 $this->crearSeguridadSocial($data, $contratista);
 
                 // 7. Cuenta de Cobro
-                $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? 1;
+                $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? 0;
                 $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
                 $pagosTotales = (int)($data['NUMERO DE PAGOS TOTALES'] ?? 12);
                 if ($pagosTotales <= 0) $pagosTotales = 12;
 
                 // Determinar bloque y estado actual basado en el formulario (de mayor a menor importancia)
                 $bloqueId = $this->getBlockIdByCode('REV1');
-                $estadoId = $this->getStateIdByCode('REV1_REV'); // Default inicial
+                $estadoId = $this->getStateIdByCode('REV1_RES'); // Default: RESERVA
 
                 if (!empty($data['RADICADA EN HACIENDA'])) {
                     $bloqueId = $this->getBlockIdByCode('HAC');
@@ -502,7 +595,7 @@ class CuentaCobroController extends Controller
                 } elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
                     $bloqueId = $this->getBlockIdByCode('REV1');
                     $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
-                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_REV');
+                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_RES');
                 }
 
                 $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($data['RADICADA EN HACIENDA'] ?? '') === 'SI'));
@@ -521,12 +614,12 @@ class CuentaCobroController extends Controller
                     'contrato_id' => $contrato->id,
                     'numero_cuenta' => $numeroCuenta,
                     'valor_cobro' => $valorRP / $pagosTotales,
-                    'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? now(),
+                    'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null),
                     'numero_pagos_totales' => $pagosTotales,
                     'numero_facturas_radicadas' => $ultimaFacturaHacienda ?? $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
 
-                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($pagosTotales / $numeroCuenta) * 100) : 0,
-                    'radicado_por' => $data['RADICADO POR'] ?? Auth::user()->user ?? 'SISTEMA',
+                    'porcentaje_cuentas' => ($pagosTotales > 0 && $numeroCuenta > 0) ? (($numeroCuenta / $pagosTotales) * 100) : 0,
+                    'radicado_por' => $data['RADICADO POR'] ?? null,
                     'bloque_actual_id' => $bloqueId,
                     'estado_actual_id' => $estadoId,
                     'responsable_actual_id' => Auth::id(),
@@ -541,7 +634,7 @@ class CuentaCobroController extends Controller
                 $this->procesarBloquesHistoricos($cuenta, $data);
 
                 // 9. Planilla
-                $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? null;
+                $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? 'RESERVA';
                 if ($mesPlanilla) {
                     PlanillaSeguridadSocial::create([
                         'cuenta_cobro_id' => $cuenta->id,

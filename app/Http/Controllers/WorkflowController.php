@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class WorkflowController extends Controller
 {
@@ -11,9 +13,30 @@ class WorkflowController extends Controller
      */
     public function index(Request $request)
     {
+        /** @var \App\Models\Usuario $user */
+        $user = auth()->user();
+
+        // 1. Check if user can access workflow
+        if (!$user->puedeAccederWorkflow()) {
+            abort(403, 'No tienes permiso para acceder al Workflow');
+        }
+
         $query = \App\Models\CuentaCobro::with(['contrato.contratista', 'bloqueActual', 'estadoActual', 'estadosBloques', 'historialWorkflow.usuarioAccion', 'historialWorkflow.estadoOrigen', 'historialWorkflow.estadoDestino', 'contrato.supervisor']);
 
-        // Aplicar filtros
+        // 2. Filter by "Solo asignados" if applicable
+        if ($user->verSoloAsignados()) {
+            $query->where('responsable_actual_id', $user->id);
+        }
+
+        // 3. Filter by allowed blocks
+        $bloquesPermitidos = $user->bloquesPermitidos();
+        if (is_array($bloquesPermitidos)) {
+            $query->whereHas('bloqueActual', function ($q) use ($bloquesPermitidos) {
+                $q->whereIn('codigo', $bloquesPermitidos);
+            });
+        }
+
+        // Aplicar filtros de búsqueda
         if ($request->filled('supervisor_id')) {
             $query->whereHas('contrato', function ($q) use ($request) {
                 $q->where('supervisor_id', $request->supervisor_id);
@@ -35,9 +58,23 @@ class WorkflowController extends Controller
 
         $cuentas = $query->get();
 
-        $bloques = \App\Models\BloqueWorkflow::with(['estados' => function ($q) {
+        $bloquesPermitidos = $user->bloquesPermitidos();
+
+        $bloquesQuery = \App\Models\BloqueWorkflow::with(['estados' => function ($q) {
             $q->where('es_activo', true)->orderBy('id', 'asc');
-        }])->orderBy('orden', 'asc')->get();
+        }])->orderBy('orden', 'asc');
+
+        if (is_array($bloquesPermitidos)) {
+            $bloquesQuery->whereIn('codigo', $bloquesPermitidos);
+        }
+
+        // If restricted to assignments, hide blocks that have no accounts assigned to the user
+        if ($user->verSoloAsignados()) {
+            $bloquesOcupados = $cuentas->pluck('bloque_actual_id')->unique()->toArray();
+            $bloquesQuery->whereIn('id', $bloquesOcupados);
+        }
+
+        $bloques = $bloquesQuery->get();
 
         // Data for filters
         $supervisores = \App\Models\Supervisor::orderBy('nombres')->get();
@@ -75,7 +112,13 @@ class WorkflowController extends Controller
             }
         }
 
-        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados'));
+        $canEdit = $user->puedeEditarWorkflow();
+
+        if ($request->ajax()) {
+            return view('workflow.componentes.board', compact('workflow', 'canEdit'));
+        }
+
+        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados', 'canEdit'));
     }
 
     private function getColorPorBloque($codigo)
@@ -192,11 +235,11 @@ class WorkflowController extends Controller
         }
 
         // Start transaction
-        \DB::beginTransaction();
+        DB::beginTransaction();
         try {
             $this->ejecutarTransicion($cuenta, $estadoDestinoId, $request->comentario);
 
-            \DB::commit();
+            DB::commit();
 
             // Refresh account to get newest state
             $cuenta->refresh();
@@ -210,7 +253,7 @@ class WorkflowController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            \DB::rollBack();
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cambiar estado: ' . $e->getMessage(),
@@ -250,7 +293,7 @@ class WorkflowController extends Controller
         $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($estadoDestinoId);
 
         // Start transaction
-        \DB::beginTransaction();
+        DB::beginTransaction();
         try {
             // Execute the transition
             $this->ejecutarTransicion($cuenta, $estadoDestinoId, $request->comentario);
@@ -274,10 +317,13 @@ class WorkflowController extends Controller
                     ['responsable_id' => $request->responsable_id]
                 );
 
-                \Log::info("Responsible assigned for cuenta {$cuentaId}: User ID = {$request->responsable_id}, Block = {$bloqueTarget->codigo} (ID: {$bloqueTarget->id})");
+                // SYNC: Update the main account's current responsible
+                $cuenta->update(['responsable_actual_id' => $request->responsable_id]);
+
+                Log::info("Responsible assigned for cuenta {$cuentaId}: User ID = {$request->responsable_id}, Block = {$bloqueTarget->codigo} (ID: {$bloqueTarget->id})");
             }
 
-            \DB::commit();
+            DB::commit();
 
             // Refresh account to get newest state
             $cuenta->refresh();
@@ -291,7 +337,7 @@ class WorkflowController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            \DB::rollBack();
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cambiar estado: ' . $e->getMessage(),
@@ -408,6 +454,8 @@ class WorkflowController extends Controller
             $updateData
         );
 
+        // SYNC: Also update main account's current responsible to keep it in sync with the current block
+        $cuenta->responsable_actual_id = $updateData['responsable_id'];
         $cuenta->save();
 
         // LÓGICA ESPECIAL: Incrementar factura cuando se marca como "Radicada" en Hacienda
@@ -427,7 +475,7 @@ class WorkflowController extends Controller
                 'numero_facturas_radicadas' => $nextInvoiceNumber
             ]);
 
-            \Log::info("Invoice incremented for cuenta {$cuenta->id}: Next number = {$nextInvoiceNumber}");
+            Log::info("Invoice incremented for cuenta {$cuenta->id}: Next number = {$nextInvoiceNumber}");
         }
 
         // 5. AUTO-CHAINING: Check if this new state has an automatic transition
@@ -487,35 +535,41 @@ class WorkflowController extends Controller
     public function getUsuariosResponsables($estadoCodigo)
     {
         $usuarios = [];
+        $responsableType = '';
 
         // Determine which permission to filter by based on state code
         if ($estadoCodigo === 'REV1_PASA') {
             // For REV1_PASA, get users who can be responsible for SAP
+            $responsableType = 'sap';
             $usuarios = \App\Models\Usuario::responsablesSap()
                 ->orderBy('primer_nombre')
                 ->get()
                 ->map(function ($user) {
                     return [
                         'id' => $user->id,
-                        'nombre' => $user->primer_nombre . ' ' . $user->primer_apellido
+                        'nombre' => $user->primer_nombre . ' ' . $user->primer_apellido,
+                        'tipo_responsable' => 'SAP'
                     ];
                 });
         } elseif ($estadoCodigo === 'SAP_OK') {
             // For SAP_OK, get users who can be responsible for Facturación
+            $responsableType = 'facturacion';
             $usuarios = \App\Models\Usuario::responsablesFac()
                 ->orderBy('primer_nombre')
                 ->get()
                 ->map(function ($user) {
                     return [
                         'id' => $user->id,
-                        'nombre' => $user->primer_nombre . ' ' . $user->primer_apellido
+                        'nombre' => $user->primer_nombre . ' ' . $user->primer_apellido,
+                        'tipo_responsable' => 'Facturación'
                     ];
                 });
         }
 
         return response()->json([
             'success' => true,
-            'usuarios' => $usuarios
+            'usuarios' => $usuarios,
+            'responsable_type' => $responsableType
         ]);
     }
 }

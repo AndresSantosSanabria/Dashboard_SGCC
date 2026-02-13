@@ -125,16 +125,26 @@ function cambiarEstado(cuentaId, estadoDestinoId, requiereComentario, estadoNomb
                             userData.usuarios.forEach(usuario => {
                                 const option = document.createElement('option');
                                 option.value = usuario.id;
-                                option.textContent = usuario.nombre;
+                                option.textContent = `${usuario.nombre} (${usuario.tipo_responsable})`;
+                                option.dataset.tipoResponsable = usuario.tipo_responsable;
                                 select.appendChild(option);
                             });
                             
                             // Update modal message based on block
                             const message = document.getElementById('modalResponsableMessage');
+                            const badgeContainer = document.getElementById('responsableBadgeContainer');
+                            const badge = document.getElementById('responsableBadge');
+                            
                             if (data.estado_codigo === 'REV1_PASA') {
                                 message.innerHTML = '<i class="fas fa-info-circle me-2"></i>Seleccione el responsable para el bloque SAP:';
+                                badge.className = 'badge bg-primary';
+                                badge.innerHTML = '<i class="fas fa-cogs me-1"></i>Responsable SAP';
+                                badgeContainer.classList.remove('d-none');
                             } else if (data.estado_codigo === 'SAP_OK') {
                                 message.innerHTML = '<i class="fas fa-info-circle me-2"></i>Seleccione el responsable para el bloque Facturación:';
+                                badge.className = 'badge bg-success';
+                                badge.innerHTML = '<i class="fas fa-money-bill-wave me-1"></i>Responsable Facturación';
+                                badgeContainer.classList.remove('d-none');
                             }
                             
                             // Show the responsible assignment modal

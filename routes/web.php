@@ -6,12 +6,29 @@ use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\CuentaCobroController;
+use App\Http\Controllers\BackupController;
 use App\Models\CuentaCobro;
 
 // Root: if authenticated, go to dashboard; otherwise show welcome
 Route::get('/', function () {
     if (Auth::check()) {
-        return redirect()->route('dashboard');
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        // Prioridad: dashboard, consolidado, workflow, admin
+        if ($user->puedeAccederDashboard()) {
+            return redirect()->route('dashboard');
+        }
+        if ($user->puedeAccederConsolidado()) {
+            return redirect()->route('consolidado'); // Cambia a la ruta correcta si existe
+        }
+        if ($user->puedeAccederWorkflow()) {
+            return redirect()->route('workflow');
+        }
+        if ($user->isAdmin()) {
+            return redirect()->route('configuracion.index');
+        }
+        // Si no tiene acceso a ninguna sección, mostrar mensaje
+        return response('No tienes permisos para acceder a ninguna sección.', 403);
     }
     return view('login.login');
 });
@@ -24,6 +41,9 @@ Route::get('/login', function () {
 // Authentication actions
 Route::post('/login', [LoginController::class, 'login'])->name('login.attempt');
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
+
+// Public Consultation
+Route::post('/consultar-estado', [CuentaCobroController::class, 'publicConsultation'])->name('public.consultation');
 
 // Dashboard y Cuentas de Cobro (protected)
 Route::middleware('auth')->group(function () {
@@ -53,4 +73,27 @@ Route::middleware('auth')->prefix('configuracion')->group(function () {
     Route::get('/editar/{id}', [\App\Http\Controllers\ConfiguracionController::class, 'edit'])->name('configuracion.edit');
     Route::put('/actualizar/{id}', [\App\Http\Controllers\ConfiguracionController::class, 'update'])->name('configuracion.update');
     Route::post('/toggle-status/{id}', [\App\Http\Controllers\ConfiguracionController::class, 'toggleStatus'])->name('configuracion.toggle-status');
+
+    // Roles Management
+    Route::get('/roles', [\App\Http\Controllers\RoleController::class, 'index'])->name('configuracion.roles.index');
+    Route::get('/roles/crear', [\App\Http\Controllers\RoleController::class, 'create'])->name('configuracion.roles.create');
+    Route::post('/roles/store', [\App\Http\Controllers\RoleController::class, 'store'])->name('configuracion.roles.store');
+    Route::get('/roles/editar/{id}', [\App\Http\Controllers\RoleController::class, 'edit'])->name('configuracion.roles.edit');
+    Route::put('/roles/actualizar/{id}', [\App\Http\Controllers\RoleController::class, 'update'])->name('configuracion.roles.update');
+    Route::post('/roles/toggle-status/{id}', [\App\Http\Controllers\RoleController::class, 'toggleStatus'])->name('configuracion.roles.toggle-status');
+});
+
+Route::get('/debug-permisos', function () {
+    $user = \Illuminate\Support\Facades\Auth::user();
+    if (!$user) return 'No logged in user';
+
+    return [
+        'user_id' => $user->id,
+        'email' => $user->email,
+        'rol' => $user->rol,
+        'permisos_explicit' => $user->permisos,
+        'is_admin_check' => $user->isAdmin(),
+        'has_dashboard' => $user->tienePermiso('acceder_dashboard'),
+        'has_consolidado' => $user->tienePermiso('acceder_consolidado'),
+    ];
 });

@@ -20,6 +20,7 @@ class Usuario extends Authenticatable
         'user',
         'password',
         'rol_id',
+        'permisos',
         'es_activo',
         'fecha_inactivacion',
         'ultimo_login',
@@ -32,6 +33,7 @@ class Usuario extends Authenticatable
 
     protected $casts = [
         'es_activo' => 'boolean',
+        'permisos' => 'array',
         'fecha_inactivacion' => 'datetime',
         'ultimo_login' => 'datetime',
         'created_at' => 'datetime',
@@ -90,19 +92,95 @@ class Usuario extends Authenticatable
         );
     }
 
+    public function tienePermiso(string $permiso): bool
+    {
+        // 1. Check if user has explicit permission defined
+        if (isset($this->permisos[$permiso])) {
+            return (bool) $this->permisos[$permiso];
+        }
+
+        // 2. Administrators have all permissions by default
+        // We check 'es_admin' specifically to prevent infinite loops if isAdmin() is used
+        if ($permiso !== 'es_admin' && $this->isAdmin()) {
+            return true;
+        }
+
+        // 3. Fall back to role permissions
+        return $this->rol ? $this->rol->tienePermiso($permiso) : false;
+    }
+
     public function isAdmin(): bool
     {
-        return $this->rol && $this->rol->esAdmin();
+        return $this->tienePermiso('es_admin');
     }
 
     public function puedeSerResponsableSap(): bool
     {
-        return $this->rol && $this->rol->puedeSerResponsableSap();
+        return $this->tienePermiso('responsable_sap');
     }
 
     public function puedeSerResponsableFac(): bool
     {
-        return $this->rol && $this->rol->puedeSerResponsableFac();
+        return $this->tienePermiso('responsable_facturacion');
+    }
+
+    public function puedeAccederDashboard(): bool
+    {
+        return $this->tienePermiso('acceder_dashboard');
+    }
+
+    public function puedeAccederWorkflow(): bool
+    {
+        return $this->tienePermiso('acceder_workflow');
+    }
+
+    public function puedeAccederConsolidado(): bool
+    {
+        return $this->tienePermiso('acceder_consolidado') || $this->tienePermiso('acceder_dashboard');
+    }
+
+    public function puedeEditarWorkflow(): bool
+    {
+        return $this->tienePermiso('editar_workflow');
+    }
+
+    /**
+     * Check if user is restricted to seeing only their assigned accounts
+     */
+    public function verSoloAsignados(): bool
+    {
+        // 1. Explicit individual check
+        if (isset($this->permisos['ver_solo_asignados'])) {
+            return (bool) $this->permisos['ver_solo_asignados'];
+        }
+
+        // 2. Admin bypass (admins see everything by default)
+        if ($this->isAdmin()) {
+            return false;
+        }
+
+        // 3. Fallback to role
+        return $this->rol ? $this->rol->tienePermiso('ver_solo_asignados') : false;
+    }
+
+    /**
+     * Get the blocks the user is allowed to see/manage
+     * Returns true if all blocks, or an array of block codes
+     */
+    public function bloquesPermitidos()
+    {
+        // 1. Explicit individual check
+        if (isset($this->permisos['bloques_permitidos'])) {
+            return $this->permisos['bloques_permitidos'];
+        }
+
+        // 2. Admin bypass (admins see all blocks by default)
+        if ($this->isAdmin()) {
+            return true;
+        }
+
+        // 3. Fallback to role
+        return $this->rol ? ($this->rol->permisos['bloques_permitidos'] ?? true) : true;
     }
 
     // Scopes for filtering users
@@ -113,15 +191,35 @@ class Usuario extends Authenticatable
 
     public function scopeResponsablesSap($query)
     {
-        return $query->whereHas('rol', function ($q) {
-            $q->where('permisos->responsable_sap', true);
-        })->where('es_activo', true);
+        return $query->where('es_activo', true)
+            ->where(function ($q) {
+                $q->where('permisos->es_admin', true)
+                    ->orWhere('permisos->responsable_sap', true)
+                    ->orWhere(function ($sq) {
+                        $sq->whereNull('permisos->responsable_sap')
+                            ->whereNull('permisos->es_admin')
+                            ->whereHas('rol', function ($r) {
+                                $r->where('permisos->responsable_sap', true)
+                                    ->orWhere('permisos->es_admin', true);
+                            });
+                    });
+            });
     }
 
     public function scopeResponsablesFac($query)
     {
-        return $query->whereHas('rol', function ($q) {
-            $q->where('permisos->responsable_facturacion', true);
-        })->where('es_activo', true);
+        return $query->where('es_activo', true)
+            ->where(function ($q) {
+                $q->where('permisos->es_admin', true)
+                    ->orWhere('permisos->responsable_facturacion', true)
+                    ->orWhere(function ($sq) {
+                        $sq->whereNull('permisos->responsable_facturacion')
+                            ->whereNull('permisos->es_admin')
+                            ->whereHas('rol', function ($r) {
+                                $r->where('permisos->responsable_facturacion', true)
+                                    ->orWhere('permisos->es_admin', true);
+                            });
+                    });
+            });
     }
 }

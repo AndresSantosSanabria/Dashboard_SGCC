@@ -34,8 +34,9 @@ class ConfiguracionController extends Controller
         }
 
         $roles = Role::where('es_activo', true)->get();
+        $bloques = \App\Models\BloqueWorkflow::all();
 
-        return view('configuracion.form', compact('roles'));
+        return view('configuracion.form', compact('roles', 'bloques'));
     }
 
     /**
@@ -60,7 +61,50 @@ class ConfiguracionController extends Controller
         $validated['password'] = Hash::make($validated['password']);
         $validated['es_activo'] = true;
 
-        Usuario::create($validated);
+        // Extract and format permissions
+        $permisos = [];
+
+        // Define all possible boolean permission keys
+        $permissionKeys = [
+            'acceder_dashboard',
+            'editar_dashboard',
+            'acceder_consolidado',
+            'acceder_workflow',
+            'editar_workflow',
+            'es_admin',
+            'ver_solo_asignados',
+            'responsable_sap',
+            'responsable_facturacion',
+            'contratos_ver',
+            'contratos_editar',
+            'cuentas_ver',
+            'cuentas_editar',
+            'reportes_exportar'
+        ];
+
+        // Only save permissions that are explicitly TRUE
+        // This way, FALSE permissions won't override role permissions
+        foreach ($permissionKeys as $key) {
+            if (isset($request->input('permisos', [])[$key]) && $request->input('permisos')[$key] == '1') {
+                $permisos[$key] = true;
+            }
+        }
+
+        // Handle blocks - only save if there are specific blocks selected
+        if ($request->has('bloques_all')) {
+            $permisos['bloques_permitidos'] = true;
+        } else {
+            $bloques = $request->input('bloques_permitidos', []);
+            if (!empty($bloques)) {
+                $permisos['bloques_permitidos'] = $bloques;
+            }
+        }
+
+        $usuario = new Usuario();
+        $usuario->fill($validated);
+        // Only assign permisos if there are any true values, otherwise leave as null to use role permissions
+        $usuario->permisos = !empty($permisos) ? $permisos : null;
+        $usuario->save();
 
         return redirect()->route('configuracion.index')
             ->with('success', 'Usuario creado exitosamente');
@@ -77,8 +121,9 @@ class ConfiguracionController extends Controller
 
         $usuario = Usuario::with('rol')->findOrFail($id);
         $roles = Role::where('es_activo', true)->get();
+        $bloques = \App\Models\BloqueWorkflow::all();
 
-        return view('configuracion.form', compact('usuario', 'roles'));
+        return view('configuracion.form', compact('usuario', 'roles', 'bloques'));
     }
 
     /**
@@ -108,7 +153,49 @@ class ConfiguracionController extends Controller
             unset($validated['password']);
         }
 
-        $usuario->update($validated);
+        // Extract and format permissions
+        $permisos = [];
+
+        // Define all possible boolean permission keys
+        $permissionKeys = [
+            'acceder_dashboard',
+            'editar_dashboard',
+            'acceder_consolidado',
+            'acceder_workflow',
+            'editar_workflow',
+            'es_admin',
+            'ver_solo_asignados',
+            'responsable_sap',
+            'responsable_facturacion',
+            'contratos_ver',
+            'contratos_editar',
+            'cuentas_ver',
+            'cuentas_editar',
+            'reportes_exportar'
+        ];
+
+        // Only save permissions that are explicitly TRUE
+        // This way, FALSE permissions won't override role permissions
+        foreach ($permissionKeys as $key) {
+            if (isset($request->input('permisos', [])[$key]) && $request->input('permisos')[$key] == '1') {
+                $permisos[$key] = true;
+            }
+        }
+
+        // Handle blocks - only save if there are specific blocks selected
+        if ($request->has('bloques_all')) {
+            $permisos['bloques_permitidos'] = true;
+        } else {
+            $bloques = $request->input('bloques_permitidos', []);
+            if (!empty($bloques)) {
+                $permisos['bloques_permitidos'] = $bloques;
+            }
+        }
+
+        $usuario->fill($validated);
+        // Only assign permisos if there are any true values, otherwise leave as null to use role permissions
+        $usuario->permisos = !empty($permisos) ? $permisos : null;
+        $usuario->save();
 
         return redirect()->route('configuracion.index')
             ->with('success', 'Usuario actualizado exitosamente');

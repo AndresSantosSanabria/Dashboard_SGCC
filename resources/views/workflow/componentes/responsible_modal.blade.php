@@ -15,6 +15,9 @@
                     <i class="fas fa-info-circle me-2"></i>
                     Seleccione el responsable que gestionará esta cuenta:
                 </p>
+                <div class="alert alert-info d-none mb-3" id="responsableBadgeContainer" style="border-radius: 8px;">
+                    <span id="responsableBadge" class="badge"></span>
+                </div>
                 <div class="mb-3">
                     <label for="selectResponsable" class="form-label fw-bold">Responsable:</label>
                     <select id="selectResponsable" class="form-select form-select-lg" style="border-radius: 8px;">

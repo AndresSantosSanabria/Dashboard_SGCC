@@ -2,8 +2,9 @@
     style="width: 280px; height: 100vh; position: sticky; top: 0; z-index: 1000;">
     <div
         class="d-flex align-items-center justify-content-between mb-3 mb-md-0 me-md-auto text-white text-decoration-none w-100">
-        <a href="/" class="d-flex align-items-center text-white text-decoration-none">
-            <span class="fs-4 sidebar-header-text">Sidebar</span>
+        <a href="/" class="d-flex align-items-center text-decoration-none">
+            <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo Gobernación" class="sidebar-logo"
+                style="max-width: 180px; height: auto;">
         </a>
         <button id="sidebarToggle" class="btn btn-link text-white p-0">
             <i class="bi bi-list fs-4"></i>
@@ -11,21 +12,25 @@
     </div>
     <hr>
     <ul class="nav nav-pills flex-column mb-auto">
-        <li class="nav-item">
-            <a href="{{ route('dashboard') }}"
-                class="nav-link text-white {{ request()->routeIs('dashboard') ? 'active bg-primary' : '' }}"
-                aria-current="page">
-                <i class="bi bi-speedometer2 me-2 fs-5"></i>
-                <span class="sidebar-text">Dashboard</span>
-            </a>
-        </li>
-        <li>
-            <a href="{{ route('workflow') }}"
-                class="nav-link text-white {{ request()->routeIs('workflow') ? 'active bg-primary' : '' }}">
-                <i class="bi bi-grid me-2 fs-5"></i>
-                <span class="sidebar-text">Workflow</span>
-            </a>
-        </li>
+        @if (auth()->user()->puedeAccederConsolidado())
+            <li class="nav-item">
+                <a href="{{ route('dashboard') }}"
+                    class="nav-link text-white {{ request()->routeIs('dashboard') ? 'active bg-primary' : '' }}"
+                    aria-current="page">
+                    <i class="bi bi-speedometer2 me-2 fs-5"></i>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
+            </li>
+        @endif
+        @if (auth()->user()->puedeAccederWorkflow())
+            <li>
+                <a href="{{ route('workflow') }}"
+                    class="nav-link text-white {{ request()->routeIs('workflow') ? 'active bg-primary' : '' }}">
+                    <i class="bi bi-grid me-2 fs-5"></i>
+                    <span class="sidebar-text">Workflow</span>
+                </a>
+            </li>
+        @endif
         @if (auth()->user()->isAdmin())
             <li>
                 <a href="{{ route('configuracion.index') }}"

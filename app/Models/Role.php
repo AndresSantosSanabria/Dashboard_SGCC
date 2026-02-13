@@ -16,6 +16,7 @@ class Role extends Model
         'descripcion',
         'permisos',
         'es_activo',
+        'tipo',
     ];
 
     protected $casts = [

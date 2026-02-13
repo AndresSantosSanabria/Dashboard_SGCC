@@ -4,11 +4,14 @@
             <div class="modal-header-custom">
                 <div class="modal-title-custom">Cambiar Estado de la Cuenta
                 </div>
-                <div class="status-buttons-row" id="statusButtons{{ $cuenta->id }}">
-                    <div class="spinner-border spinner-border-sm text-light" role="status"><span
-                            class="visually-hidden">Cargando...</span></div>
-                </div><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close" style="position: absolute; top: 20px; right: 20px;"></button>
+                @if ($canEdit)
+                    <div class="status-buttons-row" id="statusButtons{{ $cuenta->id }}">
+                        <div class="spinner-border spinner-border-sm text-light" role="status"><span
+                                class="visually-hidden">Cargando...</span></div>
+                    </div>
+                @endif
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
+                    style="position: absolute; top: 20px; right: 20px;"></button>
             </div>
             <div class="modal-body" style="padding: 30px;">
                 <div class="info-cards-row">

@@ -8,9 +8,14 @@
             <h1 class="h3 mb-0 text-gray-800">
                 <i class="fas fa-users-cog me-2"></i>Gestión de Usuarios
             </h1>
-            <a href="{{ route('configuracion.create') }}" class="btn btn-primary">
-                <i class="fas fa-user-plus me-2"></i>Crear Usuario
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{{ route('configuracion.roles.index') }}" class="btn btn-secondary">
+                    <i class="fas fa-user-shield me-2"></i>Gestionar Roles
+                </a>
+                <a href="{{ route('configuracion.create') }}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Crear Usuario
+                </a>
+            </div>
         </div>
 
         @if (session('success'))
@@ -53,17 +58,18 @@
                                     <td>{{ $usuario->ultimo_login ? $usuario->ultimo_login->format('d/m/Y H:i') : 'Nunca' }}
                                     </td>
                                     <td>
-                                        <a href="{{ route('configuracion.edit', $usuario->id) }}"
-                                            class="btn btn-sm btn-primary" title="Editar">
-                                            <i class="fas fa-edit"></i>
+                                        <a href="{{ route('configuracion.edit', $usuario->id) }}" class="btn btn-sm"
+                                            title="Editar">
+                                            <span class="govco-svg govco-edit"></span>
                                         </a>
                                         @if ($usuario->id !== auth()->id())
                                             <button onclick="toggleStatus({{ $usuario->id }})"
                                                 class="btn btn-sm {{ $usuario->es_activo ? 'btn-danger' : 'btn-success' }}"
                                                 id="toggle-btn-{{ $usuario->id }}"
                                                 title="{{ $usuario->es_activo ? 'Desactivar' : 'Activar' }}">
-                                                <i class="fas {{ $usuario->es_activo ? 'fa-ban' : 'fa-check' }}"
-                                                    id="toggle-icon-{{ $usuario->id }}"></i>
+                                                <span
+                                                    class="govco-svg govco-toggle-{{ $usuario->es_activo ? 'on' : 'off' }}">
+                                                </span>
                                             </button>
                                         @endif
                                     </td>

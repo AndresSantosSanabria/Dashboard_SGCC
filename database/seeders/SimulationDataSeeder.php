@@ -16,6 +16,8 @@ use App\Models\EstadoWorkflow;
 use App\Models\EstadoBloqueCuenta;
 use App\Models\RegistroPresupuestal;
 use App\Models\PlanillaSeguridadSocial;
+use App\Models\EntidadSeguridadSocial;
+use App\Models\ContratistaSeguridadSocial;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -36,6 +38,8 @@ class SimulationDataSeeder extends Seeder
             DB::table('cuentas_cobro')->delete();
             DB::table('registros_presupuestales')->delete();
             DB::table('documentos')->delete();
+            DB::table('contratista_seguridad_social')->delete();
+            DB::table('entidades_seguridad_social')->delete();
             DB::table('contratos')->delete();
             echo "✓ Datos limpiados\n";
 
@@ -46,119 +50,161 @@ class SimulationDataSeeder extends Seeder
             $usuario = Usuario::where('user', 'admin')->first() ?? Usuario::first();
 
             if (!$usuario) {
-                 echo "⚠️ No se encontró usuario admin, saltando seeder de datos.\n";
-                 return;
+                echo "⚠️ No se encontró usuario admin, saltando seeder de datos.\n";
+                return;
             }
+
+            // 1.1 Crear Entidades de Seguridad Social
+            $entidadSalud = EntidadSeguridadSocial::firstOrCreate(['nombre' => 'REVISOR FISCAL SALUD'], ['tipo' => 'SALUD', 'codigo' => 'RF01', 'es_activa' => true]);
+            $entidadPension = EntidadSeguridadSocial::firstOrCreate(['nombre' => 'REVISOR FISCAL PENSION'], ['tipo' => 'PENSION', 'codigo' => 'RF02', 'es_activa' => true]);
+            $entidadArl = EntidadSeguridadSocial::firstOrCreate(['nombre' => 'REVISOR FISCAL ARL'], ['tipo' => 'ARL', 'codigo' => 'RF03', 'es_activa' => true]);
 
             // 2. Crear Contratistas
             $contratistasData = [
-                ['nit' => '900123456-1', 'razon_social' => 'CONSTRUCCIONES ABC SAS', 'tipo_persona' => 'JURIDICA'],
-                ['nit' => '800987654-2', 'razon_social' => 'TECNOLOGÍA Y DESARROLLO LTDA', 'tipo_persona' => 'JURIDICA'],
-                ['nit' => '1020304050', 'razon_social' => 'MARIA FERNANDA RODRIGUEZ', 'tipo_persona' => 'NATURAL'],
-                ['nit' => '50607080', 'razon_social' => 'CARLOS ANDRES GOMEZ', 'tipo_persona' => 'NATURAL'],
-                ['nit' => '901222333-0', 'razon_social' => 'SERVICIOS INTEGRALES DE SALUD', 'tipo_persona' => 'JURIDICA'],
+                ['nit' => '9001562707', 'razon_social' => 'CORPORACION RED NACIONAL ACADEMICA - RENATA', 'tipo_persona' => 'JURIDICA'],
+                ['nit' => '8999992307', 'razon_social' => 'UNIVERSIDAD DISTRITAL FRANCISCO JOSÉ DE CALDAS', 'tipo_persona' => 'JURIDICA'],
+                ['nit' => '9007414970', 'razon_social' => 'TECNOPHONE COLOMBIA S A S', 'tipo_persona' => 'JURIDICA'],
             ];
 
             $contratistas = [];
             foreach ($contratistasData as $data) {
-                $contratistas[] = Contratista::firstOrCreate(['nit' => $data['nit']], $data);
+                $contratista = Contratista::updateOrCreate(['nit' => $data['nit']], $data);
+                $contratistas[] = $contratista;
+
+                // Asociar Seguridad Social
+                ContratistaSeguridadSocial::updateOrCreate(
+                    ['contratista_id' => $contratista->id, 'es_vigente' => true],
+                    [
+                        'entidad_salud_id' => $entidadSalud->id,
+                        'entidad_pension_id' => $entidadPension->id,
+                        'entidad_arl_id' => $entidadArl->id,
+                        'fecha_inicio' => Carbon::now()->subYear(),
+                        'fecha_fin' => Carbon::now()->addYear(),
+                    ]
+                );
             }
 
             // 3. Crear Supervisores
             $supervisoresData = [
-                ['nombres' => 'SERGIO', 'apellidos' => 'MONCALEANO', 'cargo' => 'JEFE DE AREA'],
-                ['nombres' => 'CONSUELO', 'apellidos' => 'MARTINEZ', 'cargo' => 'COORDINADORA'],
-                ['nombres' => 'JUAN', 'apellidos' => 'PABLO DUARTE', 'cargo' => 'SUPERVISOR TÉCNICO'],
+                ['nombres' => 'HERNAN', 'apellidos' => 'RODRIGUEZ GUEVARA', 'cargo' => 'REVISOR FISCAL'],
+                ['nombres' => 'ALEJANDRO', 'apellidos' => 'OLARTE CARRILLO', 'cargo' => 'REVISOR FISCAL'],
+                ['nombres' => 'ARMANDO', 'apellidos' => 'GONZALEZ', 'cargo' => 'REVISOR FISCAL'],
             ];
 
             $supervisores = [];
             foreach ($supervisoresData as $data) {
-                $supervisores[] = Supervisor::firstOrCreate(['nombres' => $data['nombres'], 'apellidos' => $data['apellidos']], $data);
+                $supervisores[] = Supervisor::updateOrCreate(['nombres' => $data['nombres'], 'apellidos' => $data['apellidos']], $data);
             }
 
             // 4. Crear Contratos y Cuentas de Cobro
             $bloques = BloqueWorkflow::orderBy('orden')->get();
-            $estados = EstadoWorkflow::all()->groupBy('bloque_id');
+            $estadoReserva = EstadoWorkflow::where('nombre', 'reserva')->first() ?? EstadoWorkflow::first();
 
-            // Limitamos a 3 contratos exactos como pidió el usuario
-            for ($i = 1; $i <= 3; $i++) {
-                $contratista = $contratistas[$i-1]; // Usar los primeros 3 contratistas
-                $supervisor = $supervisores[array_rand($supervisores)];
-                
-                $montoTotal = rand(5000000, 20000000);
-                $numContrato = "CONT-2026-" . str_pad($i, 3, '0', STR_PAD_LEFT);
+            $dataCuentas = [
+                [
+                    'contrato' => 'STD-CD-CVI-070-2025',
+                    'contratista_index' => 0,
+                    'supervisor_index' => 0,
+                    'monto' => 28577658777,
+                    'rp' => '4600029927',
+                    'pagos_totales' => 18,
+                    'cuenta_actual' => 0,
+                    'observaciones' => null,
+                    'fecha_inicio' => Carbon::now()->subMonths(6),
+                    'fecha_fin' => Carbon::now()->addMonths(9),
+                ],
+                [
+                    'contrato' => 'STD-CD-CI-087-2025',
+                    'contratista_index' => 1,
+                    'supervisor_index' => 1,
+                    'monto' => 1332000000,
+                    'rp' => '4600030561',
+                    'pagos_totales' => 1,
+                    'cuenta_actual' => 0,
+                    'observaciones' => null,
+                    'fecha_inicio' => Carbon::create(2025, 11, 7),
+                    'fecha_fin' => Carbon::create(2025, 11, 7)->addYear(),
+                ],
+                [
+                    'contrato' => 'STD-SA-CV-119-2025 OC 153903',
+                    'contratista_index' => 2,
+                    'supervisor_index' => 2,
+                    'monto' => 386862500,
+                    'rp' => '4600032468',
+                    'pagos_totales' => 1,
+                    'cuenta_actual' => 0,
+                    'observaciones' => null,
+                    'fecha_inicio' => Carbon::create(2025, 1, 1),
+                    'fecha_fin' => Carbon::create(2025, 12, 19),
+                ]
+            ];
+
+            foreach ($dataCuentas as $index => $item) {
+                $contratista = $contratistas[$item['contratista_index']];
+                $supervisor = $supervisores[$item['supervisor_index']];
 
                 $contrato = Contrato::create([
-                    'numero_contrato' => $numContrato,
+                    'numero_contrato' => $item['contrato'],
                     'contratista_id' => $contratista->id,
                     'supervisor_id' => $supervisor->id,
                     'modalidad_id' => $modalidad->id,
                     'planta_id' => $planta->id,
                     'concepto_id' => $concepto->id,
-                    'fecha_inicio' => Carbon::now()->subMonths($i),
-                    'fecha_fin' => Carbon::now()->addMonths(12),
-                    'monto_total' => $montoTotal,
+                    'fecha_inicio' => $item['fecha_inicio'],
+                    'fecha_fin' => $item['fecha_fin'],
+                    'monto_total' => $item['monto'],
                     'es_activo' => true,
                 ]);
 
                 // Registro Presupuestal
                 RegistroPresupuestal::create([
-                    'numero_rp' => "RP-" . rand(1000, 9999),
+                    'numero_rp' => $item['rp'],
                     'contrato_id' => $contrato->id,
                     'fecha_rp' => $contrato->fecha_inicio,
-                    'valor_rp' => $montoTotal,
+                    'valor_rp' => $item['monto'],
                 ]);
 
-                // 1 cuenta por contrato para simplicidad en la prueba
-                $bloqueIndex = $i - 1; // Ponerlos en diferentes bloques para probar (1 en REV1, 1 en SAP, 1 en FAC)
-                $bloqueActual = $bloques[$bloqueIndex];
-                $estadoActual = $estados[$bloqueActual->id]->where('es_inicial', true)->first();
-                
-                $finalizada = ($bloqueActual->codigo === 'FIN');
+                // 1 cuenta por contrato 
+                $bloqueActual = $bloques[0]; // REV1
+                $estadoActual = $estadoReserva;
 
                 $cuenta = CuentaCobro::create([
                     'contrato_id' => $contrato->id,
-                    'numero_cuenta' => 1,
-                    'valor_cobro' => $montoTotal / 12,
-                    'fecha_radicacion' => Carbon::now()->subDays(rand(1, 15)),
-                    'numero_pagos_totales' => 12,
-                    'numero_facturas_radicadas' => ($finalizada ? 1 : 0),
-                    'porcentaje_cuentas' => ($finalizada ? 100 : 0),
-                    'radicado_por' => $usuario->user,
+                    'numero_cuenta' => $item['cuenta_actual'],
+                    'valor_cobro' => $item['monto'] / $item['pagos_totales'],
+                    'fecha_radicacion' => null, // Dejar vacío como pidió el usuario
+                    'numero_pagos_totales' => $item['pagos_totales'],
+                    'numero_facturas_radicadas' => 0,
+                    'porcentaje_cuentas' => ($item['cuenta_actual'] / $item['pagos_totales']) * 100,
+                    'radicado_por' => null, // Dejar vacío como pidió el usuario
                     'bloque_actual_id' => $bloqueActual->id,
                     'estado_actual_id' => $estadoActual->id,
                     'responsable_actual_id' => $usuario->id,
-                    'finalizada' => $finalizada,
-                    'observaciones' => "Cuenta de prueba " . $i,
+                    'finalizada' => false,
+                    'observaciones' => null,
                 ]);
 
-                // Poblar historial de bloques
-                for ($k = 0; $k <= $bloqueIndex; $k++) {
-                    $b = $bloques[$k];
-                    $e = $estados[$b->id]->where('es_inicial', true)->first();
-                    
-                    EstadoBloqueCuenta::create([
-                        'cuenta_cobro_id' => $cuenta->id,
-                        'bloque_id' => $b->id,
-                        'estado_actual_id' => ($k === $bloqueIndex ? $estadoActual->id : $estados[$b->id]->where('es_final', true)->first()?->id ?? $e->id),
-                        'fecha_ingreso_bloque' => Carbon::now()->subDays(20 - ($k * 5)),
-                        'fecha_completado_bloque' => ($k < $bloqueIndex ? Carbon::now()->subDays(20 - ($k * 5) - 2) : null),
-                        'bloque_completado' => ($k < $bloqueIndex),
-                        'responsable_id' => $usuario->id,
-                    ]);
-                }
+                // Poblar historial de bloques (solo el actual)
+                EstadoBloqueCuenta::create([
+                    'cuenta_cobro_id' => $cuenta->id,
+                    'bloque_id' => $bloqueActual->id,
+                    'estado_actual_id' => $estadoActual->id,
+                    'fecha_ingreso_bloque' => Carbon::now(),
+                    'bloque_completado' => false,
+                    'responsable_id' => $usuario->id,
+                ]);
 
                 // Planilla
                 PlanillaSeguridadSocial::create([
                     'cuenta_cobro_id' => $cuenta->id,
                     'numero_planilla' => "PLAN-" . rand(100000, 999999),
-                    'mes_planilla' => strtoupper(Carbon::now()->subMonth()->translatedFormat('F')),
+                    'mes_planilla' => 'RESERVA',
                     'es_ultima' => true,
                 ]);
             }
 
             DB::commit();
-            echo "✅ Datos de simulación generados exitosamente.\n";
+            echo "✅ Datos de simulación actualizados exitosamente.\n";
         } catch (\Exception $e) {
             DB::rollBack();
             echo "❌ ERROR: " . $e->getMessage() . "\n";

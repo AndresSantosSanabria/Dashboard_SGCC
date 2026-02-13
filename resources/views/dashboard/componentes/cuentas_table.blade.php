@@ -1,5 +1,5 @@
 <div class="table-responsive" style="max-height: 700px;">
-    <table class="table table-hover table-bordered mb-0" id="cuentasTable" style="min-width: 3000px; font-size: 0.65rem;">
+    <table class="table table-hover table-bordered mb-0" id="cuentasTable" style="min-width: 3000px; font-size: 0.85rem; font-weight: 600;">
         <thead class="table-dark sticky-top">
             <tr>
                 <th class="sticky-col sticky-col-1">NUMERO DE CONTRATO</th>
@@ -38,7 +38,9 @@
                 <th>ULTIMA FACTURA HACIENDA</th>
                 <th>OBS. DEVOLUCION</th>
                 <th>DIFERENCIA CUENTAS</th>
-                <th>ACCIÓN</th>
+                @if ($canEditDashboard)
+                    <th>ACCIÓN</th>
+                @endif
             </tr>
         </thead>
         <tbody>
@@ -154,18 +156,20 @@
                     <td>{{ $cuenta->ultima_factura_hacienda ?? 'N/A' }}</td>
                     <td>{{ $cuenta->observacion_hacienda ?? 'N/A' }}</td>
                     <td>{{ number_format($cuenta->diferencia_cuentas ?? 0, 0, ',', '.') }}</td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-outline-primary"
-                            onclick="showHistory({{ $cuenta->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')">
-                            <!-- <i class="fas fa-history"></i> -->
-                            <span class="govco-svg govco-clock"></span>
-                        </button>
-                        <br>
-                        <button type="button" class="btn btn-sm btn-outline-primary"
-                            onclick="editAccount({{ $cuenta->id }})">
-                            <span class="govco-svg govco-edit"></span>
-                        </button>
-                    </td>
+                    @if ($canEditDashboard)
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                onclick="showHistory({{ $cuenta->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')">
+                                <!-- <i class="fas fa-history"></i> -->
+                                <span class="govco-svg govco-clock"></span>
+                            </button>
+                            <br>
+                            <button type="button" class="btn btn-sm btn-outline-primary"
+                                onclick="editAccount({{ $cuenta->id }})">
+                                <span class="govco-svg govco-edit"></span>
+                            </button>
+                        </td>
+                    @endif
                 </tr>
             @empty
                 <tr>
