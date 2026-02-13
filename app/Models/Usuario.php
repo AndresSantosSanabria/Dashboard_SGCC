@@ -169,9 +169,27 @@ class Usuario extends Authenticatable
      */
     public function bloquesPermitidos()
     {
-        // 1. Explicit individual check
-        if (isset($this->permisos['bloques_permitidos'])) {
-            return $this->permisos['bloques_permitidos'];
+        // 1. Check individual user permisos (priority over role)
+        $bloquesUsuario = $this->permisos['bloques_permitidos'] ?? null;
+        
+        if ($bloquesUsuario !== null && $bloquesUsuario !== false) {
+            // If explicitly set to true, allow all
+            if ($bloquesUsuario === true) {
+                return true;
+            }
+            
+            // If it's an array, validate it has valid entries
+            if (is_array($bloquesUsuario)) {
+                $filteredBloques = array_filter($bloquesUsuario, function($b) {
+                    return $b !== null && $b !== '' && $b !== false;
+                });
+                
+                if (count($filteredBloques) > 0) {
+                    return array_values($filteredBloques); // Return re-indexed array
+                }
+                // Empty filtered array = all blocks
+                return true;
+            }
         }
 
         // 2. Admin bypass (admins see all blocks by default)
@@ -179,8 +197,28 @@ class Usuario extends Authenticatable
             return true;
         }
 
-        // 3. Fallback to role
-        return $this->rol ? ($this->rol->permisos['bloques_permitidos'] ?? true) : true;
+        // 3. Fallback to role permisos
+        if ($this->rol && isset($this->rol->permisos['bloques_permitidos'])) {
+            $bloquesRole = $this->rol->permisos['bloques_permitidos'];
+            
+            if ($bloquesRole === true) {
+                return true;
+            }
+            
+            if (is_array($bloquesRole)) {
+                $filteredBloques = array_filter($bloquesRole, function($b) {
+                    return $b !== null && $b !== '' && $b !== false;
+                });
+                
+                if (count($filteredBloques) > 0) {
+                    return array_values($filteredBloques);
+                }
+                return true;
+            }
+        }
+        
+        // 4. Default: all blocks
+        return true;
     }
 
     // Scopes for filtering users

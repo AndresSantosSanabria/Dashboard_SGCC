@@ -64,7 +64,12 @@
                     <td class="sticky-col sticky-col-2">
                         {{ $contratista->razon_social ?? ($contratista->representante_legal ?? 'N/A') }}</td>
                     <td class="sticky-col sticky-col-3">{{ $contratista->nit ?? 'N/A' }}</td>
-                    <td><span class="badge bg-info">{{ $cuenta->estadoActual?->nombre ?? 'N/A' }}</span></td>
+                    @php
+                        $estadoNombre = $cuenta->estadoActual?->nombre ?? 'N/A';
+                        $esDevuelta = stripos($estadoNombre, 'devuelta') !== false || stripos($estadoNombre, 'devolución') !== false || stripos($estadoNombre, 'devuelto') !== false;
+                        $badgeClass = $esDevuelta ? 'bg-danger' : 'bg-primary';
+                    @endphp
+                    <td><span class="badge {{ $badgeClass }}">{{ $estadoNombre }}</span></td>
                     <td>{{ $rp->numero_rp ?? 'N/A' }}</td>
                     <td>{{ $rp && $rp->fecha_rp ? $rp->fecha_rp->format('d/m/Y') : 'N/A' }}</td>
                     <td>${{ number_format($rp->valor_rp ?? 0, 0, ',', '.') }}</td>
@@ -97,8 +102,11 @@
                     {{-- Workflow: Revisión --}}
                     <td>
                         @if ($bloqueRevision && $bloqueRevision->estadoActual)
-                            <span
-                                class="badge {{ $bloqueRevision->bloque_completado ? 'bg-success' : 'bg-warning text-dark' }}">
+                            @php
+                                $estadoRevisionNombre = $bloqueRevision->estadoActual->nombre;
+                                $esDevueltaRevision = stripos($estadoRevisionNombre, 'devuelta') !== false || stripos($estadoRevisionNombre, 'devolución') !== false || stripos($estadoRevisionNombre, 'devuelto') !== false;
+                            @endphp
+                            <span class="badge {{ $esDevueltaRevision ? 'bg-danger' : ($bloqueRevision->bloque_completado ? 'bg-success' : 'bg-warning text-dark') }}">
                                 {{ $bloqueRevision->estadoActual->nombre }}
                             </span>
                         @else
@@ -107,7 +115,19 @@
                     </td>
                     <td>{{ $bloqueRevision?->fecha_completado_bloque ? $bloqueRevision->fecha_completado_bloque->format('d/m/Y') : 'N/A' }}
                     </td>
-                    <td>{{ $bloqueSap?->fecha_ingreso_bloque ? $bloqueSap->fecha_ingreso_bloque->format('d/m/Y') : 'N/A' }}
+                    {{-- Workflow: SAP --}}
+                    <td>
+                        @if ($bloqueSap && $bloqueSap->estadoActual)
+                            @php
+                                $estadoSapNombre = $bloqueSap->estadoActual->nombre;
+                                $esDevueltaSap = stripos($estadoSapNombre, 'devuelta') !== false || stripos($estadoSapNombre, 'devolución') !== false || stripos($estadoSapNombre, 'devuelto') !== false;
+                            @endphp
+                            <span class="badge {{ $esDevueltaSap ? 'bg-danger' : ($bloqueSap->bloque_completado ? 'bg-success' : 'bg-secondary') }}">
+                                {{ $bloqueSap->estadoActual->nombre }}
+                            </span>
+                        @else
+                            <span class="text-muted small">N/A</span>
+                        @endif
                     </td>
                     <td>{{ $bloqueSap?->responsable->primer_nombre ?? 'Sin asignar' }}</td>
 
@@ -116,7 +136,11 @@
                     </td>
                     <td>
                         @if ($bloqueFacturacion && $bloqueFacturacion->estadoActual)
-                            <span class="badge {{ $bloqueFacturacion->bloque_completado ? 'bg-success' : 'bg-info' }}">
+                            @php
+                                $estadoFactNombre = $bloqueFacturacion->estadoActual->nombre;
+                                $esDevueltaFact = stripos($estadoFactNombre, 'devuelta') !== false || stripos($estadoFactNombre, 'devolución') !== false || stripos($estadoFactNombre, 'devuelto') !== false;
+                            @endphp
+                            <span class="badge {{ $esDevueltaFact ? 'bg-danger' : ($bloqueFacturacion->bloque_completado ? 'bg-success' : 'bg-primary') }}">
                                 {{ $bloqueFacturacion->estadoActual->nombre }}
                             </span>
                         @else
@@ -130,7 +154,11 @@
                     {{-- Firma y Hacienda --}}
                     <td>
                         @if ($bloqueFirma && $bloqueFirma->estadoActual)
-                            <span class="badge {{ $bloqueFirma->bloque_completado ? 'bg-success' : 'bg-secondary' }}">
+                            @php
+                                $estadoFirmaNombre = $bloqueFirma->estadoActual->nombre;
+                                $esDevueltaFirma = stripos($estadoFirmaNombre, 'devuelta') !== false || stripos($estadoFirmaNombre, 'devolución') !== false || stripos($estadoFirmaNombre, 'devuelto') !== false;
+                            @endphp
+                            <span class="badge {{ $esDevueltaFirma ? 'bg-danger' : ($bloqueFirma->bloque_completado ? 'bg-success' : 'bg-secondary') }}">
                                 {{ $bloqueFirma->estadoActual->nombre }}
                             </span>
                         @else
@@ -141,8 +169,11 @@
                     </td>
                     <td>
                         @if ($bloqueHacienda && $bloqueHacienda->estadoActual)
-                            <span
-                                class="badge {{ $bloqueHacienda->bloque_completado ? 'bg-success' : 'bg-secondary' }}">
+                            @php
+                                $estadoHaciendaNombre = $bloqueHacienda->estadoActual->nombre;
+                                $esDevueltaHacienda = stripos($estadoHaciendaNombre, 'devuelta') !== false || stripos($estadoHaciendaNombre, 'devolución') !== false || stripos($estadoHaciendaNombre, 'devuelto') !== false;
+                            @endphp
+                            <span class="badge {{ $esDevueltaHacienda ? 'bg-danger' : ($bloqueHacienda->bloque_completado ? 'bg-success' : 'bg-secondary') }}">
                                 {{ $bloqueHacienda->estadoActual->nombre }}
                             </span>
                         @elseif ($cuenta->finalizada)

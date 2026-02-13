@@ -5,13 +5,50 @@
     --govco-gray-bg: #E9EEF2;
 }
 
+/* Custom Scrollbar for internal containers */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 16px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 72, 132, 0.3);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 72, 132, 0.5);
+}
+
+/* Dark scrollbar for dark backgrounds */
+.premium-left-card::-webkit-scrollbar-track,
+.results-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.premium-left-card::-webkit-scrollbar-thumb,
+.results-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.premium-left-card::-webkit-scrollbar-thumb:hover,
+.results-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
 /* GOV.CO Bar Positioning */
 .barra-superior-govco {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
-    z-index: 11000; /* Above the full screen wrapper */
+    z-index: 11000;
+    /* Above the full screen wrapper */
 }
 
 /* Force full screen and center */
@@ -21,42 +58,59 @@
     left: 0;
     width: 100vw;
     height: 100vh;
-    padding-top: 32px; /* Reserved space for GOVCO bar */
+    padding-top: 32px;
+    /* Reserved space for GOVCO bar */
     background-color: var(--govco-gray-bg);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 10000; 
-    overflow: hidden;
+    z-index: 10000;
+    overflow-y: auto;
+    /* Allow vertical scroll */
+    -webkit-overflow-scrolling: touch;
 }
 
-/* The Main Card - Enlarged */
 .premium-card {
     display: flex;
-    width: 95%;
-    max-width: 1150px;
-    height: 720px;
+    width: 90%;
+    max-width: 80%;
+    /* Fluid height logic */
+    min-height: 500px;
+    /* Don't shrink too much */
+    height: auto;
+    max-height: 80vh;
+    /* Trying to fit in viewport */
     background: linear-gradient(135deg, var(--govco-blue) 0%, #002d54 100%);
     border-radius: 24px;
     box-shadow: 0 20px 50px rgba(0, 72, 132, 0.2);
-    overflow: hidden;
+    overflow-y: auto;
+    /* Internal scroll if really needed */
+    overflow-x: hidden;
     position: relative;
     transition: all 0.4s ease;
+    margin: auto;
 }
 
 /* Consultation Results Styles */
 .results-container {
     margin-top: 30px;
+    padding: 8%;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 15px;
-    padding: 20px;
     animation: fadeIn 0.5s ease;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .result-item {
@@ -90,8 +144,6 @@
 .premium-card::before {
     content: "";
     position: absolute;
-    top: -50px;
-    left: -50px;
     width: 300px;
     height: 300px;
     background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
@@ -101,7 +153,9 @@
 /* Left Section: Welcome Info */
 .premium-left {
     flex: 1.2;
-    padding: 60px;
+    padding: 10%;
+    align-items: center;
+    /* Dynamic padding based on viewport size */
     color: #fff;
     display: flex;
     flex-direction: column;
@@ -111,8 +165,9 @@
 
 .premium-logo {
     max-width: 200px;
-    margin-bottom: 30px;
-    align-self: center; /* Center logo in white box */
+    margin-bottom: 40px;
+    align-self: center;
+    /* Center logo in white box */
 }
 
 /* Informational Left Card */
@@ -121,10 +176,17 @@
     backdrop-filter: blur(15px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 20px;
-    padding: 35px;
+    padding: 20px;
     width: 100%;
     max-width: 500px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    /* Prevent overflow */
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    /* Firefox */
+    display: flex;
+    flex-direction: column;
 }
 
 .premium-left-card h2 {
@@ -132,7 +194,8 @@
     font-weight: 800;
     margin-bottom: 25px;
     line-height: 1.2;
-    text-transform: none; /* Removed uppercase for this specific card */
+    text-transform: none;
+    /* Removed uppercase for this specific card */
 }
 
 .premium-left-card p {
@@ -198,8 +261,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 30px;
-    background: rgba(255, 255, 255, 0.03); /* Subtle backdrop */
+    padding: 2vmin;
+    background: rgba(255, 255, 255, 0.03);
     z-index: 2;
 }
 
@@ -304,23 +367,308 @@
     font-weight: 700;
 }
 
+/* Vertical Compact Mode for Laptops/Tablets */
+@media (max-height: 800px) and (min-width: 851px) {
+    .premium-card {
+        min-height: 600px;
+        height: auto;
+        max-height: 100vh;
+    }
+
+    .premium-left,
+    .premium-right {
+        padding: 3vmin;
+    }
+
+    .premium-logo {
+        max-width: 140px;
+        margin-bottom: 25px;
+    }
+
+    .premium-left-card {
+        padding: 80px;
+        max-height: 60vh;
+        /* Explicit limit to force scroll */
+        overflow-y: auto;
+    }
+
+    .premium-left-card h2 {
+        font-size: 1.4rem;
+        margin-bottom: 15px;
+    }
+
+    .premium-left-card p {
+        font-size: 0.85rem;
+        margin-bottom: 15px;
+    }
+
+    .search-field-prem {
+        margin-bottom: 15px;
+    }
+
+    .white-login-box {
+        padding: 5%;
+        max-width: 70%;
+        max-height: 85%;
+        overflow-y: auto;
+    }
+
+    .white-login-box h1 {
+        font-size: 1.5rem;
+        margin-bottom: 5px;
+    }
+
+    .white-login-box .subtitle {
+        margin-bottom: 15px;
+    }
+
+    .form-group-prem {
+        margin-bottom: 10px;
+    }
+
+    .options-prem {
+        margin-bottom: 10px;
+    }
+
+    .btn-prem-login {
+        padding: 10px;
+        margin-bottom: 10px;
+    }
+}
+
+/* Super Compact Mode */
+@media (max-height: 600px) and (min-width: 851px) {
+    .premium-logo {
+        max-width: 100px;
+        margin-bottom: 10px;
+    }
+
+    .premium-left-card {
+        max-height: 50vh;
+    }
+
+    .white-login-box h1 {
+        font-size: 1.3rem;
+    }
+
+    .premium-left,
+    .premium-right {
+        padding: 1.5vmin;
+    }
+}
+
 /* Mobile Adjustments */
 @media (max-width: 850px) {
+    .login-full-screen {
+        display: block;
+        padding-top: 80px;
+        padding-bottom: 30px;
+        overflow-y: auto;
+        height: 100vh;
+        align-items: flex-start;
+    }
+
     .premium-card {
         flex-direction: column;
         height: auto;
-        min-height: 90vh;
+        min-height: auto;
+        max-height: none;
         width: 95%;
+        margin: 10px auto;
+        border-radius: 16px;
+        overflow: visible;
     }
+
     .premium-left {
-        padding: 40px;
+        padding: 30px 25px;
         flex: none;
     }
+
+    .premium-logo {
+        max-width: 150px;
+        margin-bottom: 25px;
+    }
+
+    .premium-left-card {
+        padding: 20px;
+        max-height: none;
+        overflow: visible;
+    }
+
+    .premium-left-card h2 {
+        font-size: 1.4rem;
+        margin-bottom: 15px;
+    }
+
+    .premium-left-card p {
+        font-size: 0.85rem;
+        margin-bottom: 20px;
+    }
+
     .premium-right {
-        padding: 0 20px 40px 20px;
+        padding: 0 25px 30px 25px;
         flex: none;
     }
+
     .white-login-box {
+        padding: 30px 25px;
+        border-radius: 16px;
         box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.05);
+    }
+
+    .white-login-box h1 {
+        font-size: 1.5rem;
+    }
+
+    .form-group-prem {
+        margin-bottom: 15px;
+    }
+
+    .options-prem {
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .btn-prem-login {
+        padding: 12px;
+    }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+    .login-full-screen {
+        padding-top: 70px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .premium-card {
+        width: 100%;
+        border-radius: 12px;
+        margin: 5px auto;
+    }
+
+    .premium-left {
+        padding: 25px 20px;
+    }
+
+    .premium-logo {
+        max-width: 120px;
+        margin-bottom: 20px;
+    }
+
+    .premium-left-card {
+        padding: 15px;
+    }
+
+    .premium-left-card h2 {
+        font-size: 1.2rem;
+    }
+
+    .premium-left-card p {
+        font-size: 0.8rem;
+    }
+
+    .search-input-prem {
+        padding: 10px 12px;
+    }
+
+    .btn-search-prem {
+        padding: 12px;
+    }
+
+    .premium-right {
+        padding: 0 20px 25px 20px;
+    }
+
+    .white-login-box {
+        padding: 25px 20px;
+    }
+
+    .white-login-box h1 {
+        font-size: 1.3rem;
+    }
+
+    .white-login-box .subtitle {
+        font-size: 0.8rem;
+        margin-bottom: 20px;
+    }
+
+    .form-group-prem label {
+        font-size: 0.8rem;
+    }
+
+    .input-prem {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    .btn-prem-login {
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+
+    .footer-prem {
+        font-size: 0.75rem;
+    }
+}
+
+/* Tablet adjustments */
+@media (min-width: 601px) and (max-width: 850px) {
+    .premium-card {
+        width: 85%;
+    }
+
+    .premium-left-card h2 {
+        font-size: 1.6rem;
+    }
+
+    .white-login-box {
+        padding: 35px 30px;
+    }
+}
+
+/* Landscape mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    .login-full-screen {
+        padding-top: 60px;
+        height: auto;
+        min-height: 100vh;
+    }
+
+    .premium-card {
+        flex-direction: row;
+        min-height: auto;
+    }
+
+    .premium-left {
+        padding: 20px;
+    }
+
+    .premium-left-card {
+        display: none;
+    }
+
+    .premium-logo {
+        max-width: 80px;
+        margin-bottom: 10px;
+    }
+
+    .premium-right {
+        padding: 15px;
+    }
+
+    .white-login-box {
+        padding: 15px;
+    }
+
+    .white-login-box h1 {
+        font-size: 1.2rem;
+        margin-bottom: 5px;
+    }
+
+    .form-group-prem {
+        margin-bottom: 10px;
     }
 }

@@ -151,10 +151,15 @@ class CuentaCobroController extends Controller
 
         // 3. Filter by allowed blocks (Consistent with Workflow)
         $bloquesPermitidos = $user->bloquesPermitidos();
-        if (is_array($bloquesPermitidos)) {
-            $query->whereHas('bloqueActual', function ($q) use ($bloquesPermitidos) {
-                $q->whereIn('codigo', $bloquesPermitidos);
+        if (is_array($bloquesPermitidos) && count($bloquesPermitidos) > 0) {
+            $query->whereIn('bloque_actual_id', function ($subQuery) use ($bloquesPermitidos) {
+                $subQuery->select('id')
+                    ->from('bloque_workflows')
+                    ->whereIn('codigo', $bloquesPermitidos);
             });
+        } elseif ($bloquesPermitidos !== true) {
+            // If not true (all blocks) and not valid array, show no accounts
+            $query->whereRaw('1 = 0');
         }
 
         // Nivel 1: Barra de Búsqueda Superior
@@ -781,8 +786,8 @@ class CuentaCobroController extends Controller
                     'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion,
                     'numero_pagos_totales' => $pagosTotales,
                     'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
-
-                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($pagosTotales / ($data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta)) * 100) : 0,
+                    
+                    'porcentaje_cuentas' => ($pagosTotales > 0) ? ((($data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta) / $pagosTotales) * 100) : 0,
                     'radicado_por' => $data['RADICADO POR'] ?? $cuenta->radicado_por,
                     'observaciones' => $data['OBSERVACIONES'] ?? null,
                     'ultima_factura_hacienda' => $data['ULTIMA FACTURA RADICADA HACIENDA'] ?? null,
@@ -915,7 +920,7 @@ class CuentaCobroController extends Controller
                 ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('REV1_REV'),
-                    'fecha_ingreso_bloque' => $cuenta->fecha_radicacion,
+                    'fecha_ingreso_bloque' => $cuenta->fecha_radicacion ?? $cuenta->updated_at ?? now(),
                     'fecha_completado_bloque' => $fechaRev,
                     'bloque_completado' => !empty($fechaRev),
                     'responsable_id' => $cuenta->responsable_actual_id,
@@ -934,7 +939,7 @@ class CuentaCobroController extends Controller
                 ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('SAP_ESP'),
-                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DEVUELTA DE REVISIÓN O ENVIADA A SAP'] ?? null),
+                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DEVUELTA DE REVISIÓN O ENVIADA A SAP'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaSap,
                     'bloque_completado' => !empty($fechaSap),
                     'responsable_id' => $cuenta->responsable_actual_id,
@@ -953,7 +958,7 @@ class CuentaCobroController extends Controller
                 ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('FAC_ESP'),
-                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DE ENVIO A FACTURACIÓN O DEVUELTA A CORRECIONES'] ?? null),
+                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DE ENVIO A FACTURACIÓN O DEVUELTA A CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaFac,
                     'bloque_completado' => !empty($fechaFac),
                     'responsable_id' => $cuenta->responsable_actual_id,
@@ -972,7 +977,7 @@ class CuentaCobroController extends Controller
                 ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('FIR_ESP'),
-                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE GENERA FACURACIÓN'] ?? null),
+                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE GENERA FACURACIÓN'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaFir,
                     'bloque_completado' => !empty($fechaFir),
                     'responsable_id' => $cuenta->responsable_actual_id,
@@ -991,7 +996,7 @@ class CuentaCobroController extends Controller
                 ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('HAC_ESP'),
-                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE DEJAN PARA FIRMA DEL SECRETARIO'] ?? null),
+                    'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE DEJAN PARA FIRMA DEL SECRETARIO'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaHac,
                     'bloque_completado' => !empty($fechaHac),
                     'responsable_id' => $cuenta->responsable_actual_id,

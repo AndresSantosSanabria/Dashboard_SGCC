@@ -28,11 +28,13 @@ class WorkflowController extends Controller
             $query->where('responsable_actual_id', $user->id);
         }
 
-        // 3. Filter by allowed blocks
+        // 3. Filter by allowed blocks - robust filter
         $bloquesPermitidos = $user->bloquesPermitidos();
-        if (is_array($bloquesPermitidos)) {
-            $query->whereHas('bloqueActual', function ($q) use ($bloquesPermitidos) {
-                $q->whereIn('codigo', $bloquesPermitidos);
+        if (is_array($bloquesPermitidos) && count($bloquesPermitidos) > 0) {
+            $query->whereIn('bloque_actual_id', function ($subQuery) use ($bloquesPermitidos) {
+                $subQuery->select('id')
+                    ->from('bloque_workflows')
+                    ->whereIn('codigo', $bloquesPermitidos);
             });
         }
 
@@ -64,8 +66,18 @@ class WorkflowController extends Controller
             $q->where('es_activo', true)->orderBy('id', 'asc');
         }])->orderBy('orden', 'asc');
 
-        if (is_array($bloquesPermitidos)) {
+        // 3. Apply block filter only if it's a valid array with items
+        $bloquesPermitidos = $user->bloquesPermitidos();
+        
+        // Debug: Log blocks permitidos (remove in production)
+        \Illuminate\Support\Facades\Log::debug('Workflow blocks permitidos for user ' . $user->id . ': ', ['bloques' => $bloquesPermitidos]);
+        
+        if (is_array($bloquesPermitidos) && count($bloquesPermitidos) > 0) {
             $bloquesQuery->whereIn('codigo', $bloquesPermitidos);
+        } elseif ($bloquesPermitidos !== true) {
+            // If not true (all blocks) and not valid array, show no blocks
+            \Illuminate\Support\Facades\Log::warning('Invalid bloques_permitidos for user ' . $user->id . ': ', ['value' => $bloquesPermitidos]);
+            $bloquesQuery->whereRaw('1 = 0');
         }
 
         // If restricted to assignments, hide blocks that have no accounts assigned to the user
@@ -351,6 +363,7 @@ class WorkflowController extends Controller
     private function ejecutarTransicion($cuenta, $estadoDestinoId, $comentario = null)
     {
         $estadoOrigenId = $cuenta->estado_actual_id;
+        $estadoOrigen = \App\Models\EstadoWorkflow::findOrFail($estadoOrigenId);
         $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($estadoDestinoId);
 
         // 1. Calculate time in previous state
@@ -381,6 +394,33 @@ class WorkflowController extends Controller
             $cuenta->observaciones = $comentario;
         }
 
+        // **NUEVA LÓGICA**: Determinar si es una devolución comparando bloques
+        $bloqueAnteriorId = $cuenta->bloque_actual_id;
+        $bloqueNuevoId = $estadoDestino->bloque_id;
+        $esDevolucion = $this->esDevolucionDeBloque($bloqueAnteriorId, $bloqueNuevoId);
+
+        // **MARCAR BLOQUE ANTERIOR COMO DEVUELTO SI ES DEVOLUCIÓN**
+        if ($esDevolucion) {
+            $this->marcarBloqueComoDevuelto($cuenta->id, $bloqueAnteriorId, $comentario);
+        }
+
+        // **RESTAURAR RESPONSABLE SI ES DEVOLUCIÓN**
+        $responsableId = auth()->id() ?? 1; // Default: usuario actual
+        
+        if ($esDevolucion) {
+            // Buscar el responsable que trabajó previamente en este bloque
+            $responsablePrevio = $this->obtenerResponsablePrevio($cuenta->id, $bloqueNuevoId);
+            
+            if ($responsablePrevio) {
+                $responsableId = $responsablePrevio;
+                Log::info("🔄 DEVOLUCIÓN detectada para cuenta {$cuenta->id}: Restaurando responsable anterior (User ID: {$responsableId}) del bloque {$bloqueNuevoId}");
+            } else {
+                Log::warning("⚠️ DEVOLUCIÓN sin responsable previo para cuenta {$cuenta->id} en bloque {$bloqueNuevoId}. Usando usuario actual: {$responsableId}");
+            }
+        } else {
+            Log::info("➡️ AVANCE detectado para cuenta {$cuenta->id}: Asignando a usuario actual (User ID: {$responsableId})");
+        }
+
         // 4. Update/Create entry for the block of the destination state
         $existeRegistro = \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)
             ->where('bloque_id', $estadoDestino->bloque_id)
@@ -388,9 +428,8 @@ class WorkflowController extends Controller
 
         $updateData = [
             'estado_actual_id' => $estadoDestinoId,
-            'responsable_id' => auth()->id() ?? 1,
+            'responsable_id' => $responsableId, // ✅ Usar el responsable determinado (previo o actual)
             'fecha_ultima_actualizacion' => now(),
-            // Se marca como finalizada solo si llegamos al último bloque y es un estado final
             'bloque_completado' => (bool)$estadoDestino->es_final,
             'fecha_completado_bloque' => $estadoDestino->es_final ? now() : null,
         ];
@@ -454,8 +493,8 @@ class WorkflowController extends Controller
             $updateData
         );
 
-        // SYNC: Also update main account's current responsible to keep it in sync with the current block
-        $cuenta->responsable_actual_id = $updateData['responsable_id'];
+        // ✅ SYNC: Actualizar responsable actual en la cuenta principal
+        $cuenta->responsable_actual_id = $responsableId;
         $cuenta->save();
 
         // LÓGICA ESPECIAL: Incrementar factura cuando se marca como "Radicada" en Hacienda
@@ -490,6 +529,80 @@ class WorkflowController extends Controller
             // Recursive call to follow the chain
             // Note: In a real environment, we'd add recursion depth protection
             $this->ejecutarTransicion($cuenta, $transicionAutomatica->estado_destino_id, "Automatismo: {$transicionAutomatica->accion}");
+        }
+    }
+
+    /**
+     * Determina si la transición es una devolución a un bloque anterior
+     */
+    private function esDevolucionDeBloque($bloqueOrigenId, $bloqueDestinoId)
+    {
+        if ($bloqueOrigenId === $bloqueDestinoId) {
+            return false; // Mismo bloque, no es devolución
+        }
+
+        $bloqueOrigen = \App\Models\BloqueWorkflow::find($bloqueOrigenId);
+        $bloqueDestino = \App\Models\BloqueWorkflow::find($bloqueDestinoId);
+
+        if (!$bloqueOrigen || !$bloqueDestino) {
+            return false;
+        }
+
+        // Es devolución si el orden del bloque destino es MENOR que el origen
+        return $bloqueDestino->orden < $bloqueOrigen->orden;
+    }
+
+    /**
+     * Obtiene el ID del responsable que trabajó previamente en un bloque
+     */
+    private function obtenerResponsablePrevio($cuentaId, $bloqueId)
+    {
+        $estadoBloqueAnterior = \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuentaId)
+            ->where('bloque_id', $bloqueId)
+            ->whereNotNull('responsable_id')
+            ->orderBy('fecha_ultima_actualizacion', 'desc')
+            ->first();
+
+        if ($estadoBloqueAnterior && $estadoBloqueAnterior->responsable_id) {
+            // Verificar que el usuario todavía existe y está activo
+            $usuario = \App\Models\Usuario::where('id', $estadoBloqueAnterior->responsable_id)
+                ->where('es_activo', true)
+                ->first();
+            
+            if ($usuario) {
+                return $estadoBloqueAnterior->responsable_id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Marca el bloque anterior como "Devuelto" cuando hay una devolución
+     */
+    private function marcarBloqueComoDevuelto($cuentaId, $bloqueAnteriorId, $comentario = null)
+    {
+        // Buscar un estado de tipo "DEVUELTO" para el bloque anterior
+        $estadoDevuelto = \App\Models\EstadoWorkflow::where('bloque_id', $bloqueAnteriorId)
+            ->where('tipo', 'DEVUELTO')
+            ->where('es_activo', true)
+            ->first();
+
+        if ($estadoDevuelto) {
+            // Actualizar el registro del bloque anterior para marcarlo como devuelto
+            \App\Models\EstadoBloqueCuenta::updateOrCreate(
+                ['cuenta_cobro_id' => $cuentaId, 'bloque_id' => $bloqueAnteriorId],
+                [
+                    'estado_actual_id' => $estadoDevuelto->id,
+                    'bloque_completado' => true, // El bloque se "completó" pero con devolución
+                    'fecha_completado_bloque' => now(),
+                    'fecha_ultima_actualizacion' => now(),
+                ]
+            );
+
+            Log::info("📤 Bloque {$bloqueAnteriorId} marcado como DEVUELTO para cuenta {$cuentaId}. Estado: {$estadoDevuelto->nombre}");
+        } else {
+            Log::warning("⚠️ No se encontró estado tipo DEVUELTO para bloque {$bloqueAnteriorId}. No se pudo marcar la devolución.");
         }
     }
 

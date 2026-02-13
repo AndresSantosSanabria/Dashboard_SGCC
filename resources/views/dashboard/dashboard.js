@@ -77,12 +77,21 @@ document.addEventListener("DOMContentLoaded", function () {
     if (btnSaveManual) {
         btnSaveManual.addEventListener("click", function () {
             const formData = new FormData(manualForm);
+            const url = manualForm.dataset.url || "{{ route('dashboard.manual') }}";
+
+            // Determinar si es Update (contiene 'actualizar' en la URL)
+            const isUpdate = url.includes("actualizar");
+
+            if (isUpdate) {
+                formData.append("_method", "PUT");
+            }
+
             btnSaveManual.disabled = true;
             btnSaveManual.innerHTML =
-                '<span class="spinner-border spinner-border-sm" role="status"></span> Cargando...';
+                '<span class="spinner-border spinner-border-sm" role="status"></span> Procesando...';
 
-            fetch(manualForm.dataset.url || "{{ route('dashboard.manual') }}", {
-                method: "POST",
+            fetch(url, {
+                method: "POST", // Siempre POST para enviar FormData con archivos/datos, Laravel lee _method
                 body: formData,
                 headers: {
                     "X-Requested-With": "XMLHttpRequest",
@@ -106,13 +115,13 @@ document.addEventListener("DOMContentLoaded", function () {
                     } else {
                         showSnackbar("⚠️ " + data.message, "error");
                         btnSaveManual.disabled = false;
-                        btnSaveManual.textContent = "Cargar Registro";
+                        btnSaveManual.textContent = isUpdate ? "Actualizar Registro" : "Cargar Registro";
                     }
                 })
                 .catch((error) => {
                     showSnackbar("❌ Error: " + error.message, "error");
                     btnSaveManual.disabled = false;
-                    btnSaveManual.textContent = "Cargar Registro";
+                    btnSaveManual.textContent = isUpdate ? "Actualizar Registro" : "Cargar Registro";
                 });
         });
     }
@@ -314,15 +323,14 @@ window.showHistory = function (cuentaId, contratoNum) {
                                 <span><i class="fas fa-user me-1"></i> ${h.usuario_accion?.primer_nombre ?? "Sistema"}</span>
                                 ${h.accion ? `<span><i class="fas fa-tag me-1"></i> ${h.accion}</span>` : ""}
                             </div>
-                            ${
-                                h.comentarios
-                                    ? `
+                            ${h.comentarios
+                            ? `
                                 <div class="timeline-comment">
                                     "${h.comentarios}"
                                 </div>
                             `
-                                    : ""
-                            }
+                            : ""
+                        }
                         </div>
                     `;
                     content.appendChild(item);
@@ -413,7 +421,7 @@ window.editAccount = function (id) {
     function calculatePercentage() {
         const cuenta = parseFloat(inputCuenta.value) || 0;
         const pagos = parseFloat(inputPagos.value) || 0;
-        
+
         if (pagos > 0) {
             const porcentaje = (pagos / cuenta);
             if (inputPorcentaje) {
@@ -435,7 +443,7 @@ window.editAccount = function (id) {
             modalTitle.textContent = "Cargar Información Manualmente";
             btnSave.textContent = "Cargar Registro";
             form.dataset.url = "{{ route('dashboard.manual') }}";
-            
+
             // Desbloquear campos
             const readOnlyFields = [
                 'NUMERO DE CONTRATO',
@@ -457,73 +465,4 @@ window.editAccount = function (id) {
     );
 };
 
-// Modificar el listener de btnSaveManual para soportar PUT
-const btnSaveManual = document.getElementById("btnSaveManual");
-if (btnSaveManual) {
-    // Reemplazar el listener anterior (clonando el nodo para eliminar listeners previos es una opción,
-    // pero mejor ajustamos la lógica del fetch existente para usar el dataset.url y method dinámico)
 
-    // NOTA: El listener original ya usa `manualForm.dataset.url`, así que solo falta manejar el método.
-    // Vamos a sobreescribir el listener clonando el botón para limpiar el anterior.
-    const newBtn = btnSaveManual.cloneNode(true);
-    btnSaveManual.parentNode.replaceChild(newBtn, btnSaveManual);
-
-    newBtn.addEventListener("click", function () {
-        const manualForm = document.getElementById("manualForm");
-        const formData = new FormData(manualForm);
-
-        // Determinar si es Update o Create
-        const isUpdate = manualForm.dataset.url.includes("actualizar");
-        const method = isUpdate ? "POST" : "POST"; // Usaremos POST con _method si es update, o PUT directo
-
-        if (isUpdate) {
-            formData.append("_method", "PUT");
-        }
-
-        newBtn.disabled = true;
-        newBtn.innerHTML =
-            '<span class="spinner-border spinner-border-sm" role="status"></span> Procesando...';
-
-        fetch(manualForm.dataset.url, {
-            method: "POST", // Siempre POST para FormData, con _method interno
-            body: formData,
-            headers: {
-                "X-Requested-With": "XMLHttpRequest",
-                "X-CSRF-TOKEN": document.querySelector('input[name="_token"]')
-                    .value,
-                Accept: "application/json",
-            },
-        })
-            .then((response) =>
-                response
-                    .json()
-                    .catch(() => ({
-                        success: false,
-                        message: "Error en respuesta del servidor",
-                    })),
-            )
-            .then((data) => {
-                newBtn.disabled = false;
-                newBtn.textContent = isUpdate
-                    ? "Actualizar Registro"
-                    : "Cargar Registro";
-
-                if (data.success) {
-                    showSnackbar("✅ " + data.message, "success");
-                    const modalEl = document.getElementById("manualEntryModal");
-                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                    if (modalInstance) modalInstance.hide();
-                    setTimeout(() => location.reload(), 1500);
-                } else {
-                    showSnackbar("⚠️ " + data.message, "error");
-                }
-            })
-            .catch((error) => {
-                newBtn.disabled = false;
-                newBtn.textContent = isUpdate
-                    ? "Actualizar Registro"
-                    : "Cargar Registro";
-                showSnackbar("❌ Error: " + error.message, "error");
-            });
-    });
-}

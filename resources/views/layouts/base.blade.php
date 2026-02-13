@@ -35,6 +35,7 @@
 
             // Limpiar mensajes técnicos para el usuario
             let cleanMessage = message;
+            
             if (message.includes("SQLSTATE") || message.includes("Integrity constraint") || message.includes(
                     "column")) {
                 cleanMessage = "Error técnico en la base de datos. Por favor contacte al administrador.";
@@ -43,6 +44,7 @@
             } else if (message.includes("configuration") || message.includes("RAD")) {
                 cleanMessage = "Error de configuración de flujo. Por favor informe al administrador.";
             }
+            
 
             snackbar.textContent = cleanMessage;
             snackbar.className = "show " + type;
