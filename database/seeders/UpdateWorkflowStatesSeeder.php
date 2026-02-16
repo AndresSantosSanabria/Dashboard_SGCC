@@ -43,7 +43,6 @@ class UpdateWorkflowStatesSeeder extends Seeder
             $estadosPorBloque = [
                 1 => [
                     ['nombre' => 'en revision', 'codigo' => 'REV1_REV', 'tipo' => 'INICIAL', 'es_inicial' => 1],
-                    ['nombre' => 'reserva', 'codigo' => 'REV1_RES', 'tipo' => 'EN_PROCESO'],
                     ['nombre' => 'en espera firma jaime moncaleano', 'codigo' => 'REV1_ESP_MON', 'tipo' => 'EN_PROCESO'],
                     ['nombre' => 'pasa', 'codigo' => 'REV1_PASA', 'tipo' => 'APROBADO', 'es_final' => 1],
                     ['nombre' => 'devuelta', 'codigo' => 'REV1_DEV', 'tipo' => 'DEVUELTO'],

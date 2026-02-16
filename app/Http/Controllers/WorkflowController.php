@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class WorkflowController extends Controller
 {
@@ -14,14 +15,15 @@ class WorkflowController extends Controller
     public function index(Request $request)
     {
         /** @var \App\Models\Usuario $user */
-        $user = auth()->user();
+        $user = Auth::user();
 
         // 1. Check if user can access workflow
         if (!$user->puedeAccederWorkflow()) {
             abort(403, 'No tienes permiso para acceder al Workflow');
         }
 
-        $query = \App\Models\CuentaCobro::with(['contrato.contratista', 'bloqueActual', 'estadoActual', 'estadosBloques', 'historialWorkflow.usuarioAccion', 'historialWorkflow.estadoOrigen', 'historialWorkflow.estadoDestino', 'contrato.supervisor']);
+        $query = \App\Models\CuentaCobro::with(['contrato.contratista', 'bloqueActual', 'estadoActual', 'estadosBloques', 'historialWorkflow.usuarioAccion', 'historialWorkflow.estadoOrigen', 'historialWorkflow.estadoDestino', 'contrato.supervisor'])
+            ->where('finalizada', false);
 
         // 2. Filter by "Solo asignados" if applicable
         if ($user->verSoloAsignados()) {
@@ -33,7 +35,7 @@ class WorkflowController extends Controller
         if (is_array($bloquesPermitidos) && count($bloquesPermitidos) > 0) {
             $query->whereIn('bloque_actual_id', function ($subQuery) use ($bloquesPermitidos) {
                 $subQuery->select('id')
-                    ->from('bloque_workflows')
+                    ->from('bloques_workflow')
                     ->whereIn('codigo', $bloquesPermitidos);
             });
         }
@@ -58,6 +60,10 @@ class WorkflowController extends Controller
             });
         }
 
+        if ($request->filled('numero_cuenta')) {
+            $query->where('numero_cuenta', $request->numero_cuenta);
+        }
+
         $cuentas = $query->get();
 
         $bloquesPermitidos = $user->bloquesPermitidos();
@@ -68,15 +74,15 @@ class WorkflowController extends Controller
 
         // 3. Apply block filter only if it's a valid array with items
         $bloquesPermitidos = $user->bloquesPermitidos();
-        
+
         // Debug: Log blocks permitidos (remove in production)
-        \Illuminate\Support\Facades\Log::debug('Workflow blocks permitidos for user ' . $user->id . ': ', ['bloques' => $bloquesPermitidos]);
-        
+        Log::debug('Workflow blocks permitidos for user ' . $user->id . ': ', ['bloques' => $bloquesPermitidos]);
+
         if (is_array($bloquesPermitidos) && count($bloquesPermitidos) > 0) {
             $bloquesQuery->whereIn('codigo', $bloquesPermitidos);
         } elseif ($bloquesPermitidos !== true) {
             // If not true (all blocks) and not valid array, show no blocks
-            \Illuminate\Support\Facades\Log::warning('Invalid bloques_permitidos for user ' . $user->id . ': ', ['value' => $bloquesPermitidos]);
+            Log::warning('Invalid bloques_permitidos for user ' . $user->id . ': ', ['value' => $bloquesPermitidos]);
             $bloquesQuery->whereRaw('1 = 0');
         }
 
@@ -382,7 +388,7 @@ class WorkflowController extends Controller
             'bloque_id' => $cuenta->bloque_actual_id,
             'estado_origen_id' => $estadoOrigenId,
             'estado_destino_id' => $estadoDestinoId,
-            'usuario_accion_id' => auth()->id() ?? 1,
+            'usuario_accion_id' => Auth::id() ?? 1,
             'fecha_transicion' => now(),
             'tiempo_en_estado_anterior_minutos' => $tiempoEnEstadoMinutos,
             'comentarios' => $comentario,
@@ -404,13 +410,13 @@ class WorkflowController extends Controller
             $this->marcarBloqueComoDevuelto($cuenta->id, $bloqueAnteriorId, $comentario);
         }
 
-        // **RESTAURAR RESPONSABLE SI ES DEVOLUCIÓN**
-        $responsableId = auth()->id() ?? 1; // Default: usuario actual
-        
+        // **RESTAURAR RESPONSABLE IF DEVOLUCIÓN**
+        $responsableId = Auth::id() ?? 1; // Default: usuario actual
+
         if ($esDevolucion) {
             // Buscar el responsable que trabajó previamente en este bloque
             $responsablePrevio = $this->obtenerResponsablePrevio($cuenta->id, $bloqueNuevoId);
-            
+
             if ($responsablePrevio) {
                 $responsableId = $responsablePrevio;
                 Log::info("🔄 DEVOLUCIÓN detectada para cuenta {$cuenta->id}: Restaurando responsable anterior (User ID: {$responsableId}) del bloque {$bloqueNuevoId}");
@@ -434,49 +440,11 @@ class WorkflowController extends Controller
             'fecha_completado_bloque' => $estadoDestino->es_final ? now() : null,
         ];
 
-        // LÓGICA DE CICLO AUTOMÁTICO:
-        // Si es el bloque 6 (FINALIZADO) y es un estado APROBADO (FIN_OK - Finalizada)
-        // NOTA: Con el nuevo estado 'Por Confirmar' (INICIAL), esto solo se ejecuta al pasar de 'Por Confirmar' a 'Finalizada'
+        // LÓGICA DE CICLO MANUAL:
+        // Cuando llega al bloque 6 (FINALIZADO) y es un estado APROBADO, se marca como finalizada
+        // para que desaparezca del workflow. El usuario la reactivará desde el dashboard.
         if ($estadoDestino->bloque_id == 6 && $estadoDestino->tipo == 'APROBADO') {
-
-            // Verificar si aún quedan pagos pendientes
-            if (($cuenta->numero_cuenta ?? 0) < ($cuenta->numero_pagos_totales ?? 0)) {
-
-                // 1. Aumentar número de cuenta
-                $cuenta->numero_cuenta = ($cuenta->numero_cuenta ?? 0) + 1;
-
-                // Aumentar facturas radicadas (las que ya finalizaron)
-                $cuenta->numero_facturas_radicadas = ($cuenta->numero_facturas_radicadas ?? 0) + 1;
-
-                // Calcular porcentaje de avance
-                if (($cuenta->numero_pagos_totales ?? 0) > 0) {
-                    $cuenta->porcentaje_cuentas = ($cuenta->numero_cuenta / $cuenta->numero_pagos_totales) * 100;
-                } else {
-                    $cuenta->porcentaje_cuentas = 0;
-                }
-
-                // 2. Asegurar que NO esté finalizada (ya que vuelve a empezar)
-                $cuenta->finalizada = false;
-
-                // Guardamos cambios parciales antes de la recursión
-                $cuenta->save();
-
-                // 3. Buscar el estado inicial del Bloque 1 (REV1_REV - en revision)
-                $estadoInicialBloque1 = \App\Models\EstadoWorkflow::where('codigo', 'REV1_REV')->first();
-
-                if ($estadoInicialBloque1) {
-                    // LIMPIEZA: Eliminar registros de progreso de los bloques anteriores para el nuevo ciclo
-                    \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)->delete();
-
-                    // Forzamos la transición al inicio
-                    // Usamos un comentario de sistema para que quede registro
-                    $this->ejecutarTransicion($cuenta, $estadoInicialBloque1->id, "Automatismo: Ciclo Finalizado. Cuenta #{$cuenta->numero_cuenta} iniciada.");
-                    return; // Importante: Salir para no seguir procesando lógica de 'finalizada' aquí
-                }
-            } else {
-                // Si ya llegó al total de pagos, se detiene el ciclo y queda FINALIZADA REALMENTE
-                $cuenta->finalizada = true;
-            }
+            $cuenta->finalizada = true;
         } else {
             // Si sale de finalizada (vuelve atrás), le quitamos el flag de finalizada
             $cuenta->finalizada = false;
@@ -499,22 +467,25 @@ class WorkflowController extends Controller
 
         // LÓGICA ESPECIAL: Incrementar factura cuando se marca como "Radicada" en Hacienda
         if ($estadoDestino->codigo === 'HAC_OK') {
-            // Obtener el siguiente número de factura para este contrato
-            $maxInvoice = \App\Models\CuentaCobro::where('contrato_id', $cuenta->contrato_id)
-                ->whereNotNull('ultima_factura_hacienda')
-                ->where('ultima_factura_hacienda', '!=', 'N/A')
-                ->selectRaw('MAX(CAST(ultima_factura_hacienda AS UNSIGNED)) as max_num')
-                ->value('max_num');
+            // SOLO asignar si no tiene número (IDEMPOTENCIA)
+            if (empty($cuenta->ultima_factura_hacienda) || $cuenta->ultima_factura_hacienda === 'N/A') {
+                // Obtener el siguiente número de factura para este contrato
+                $maxInvoice = \App\Models\CuentaCobro::where('contrato_id', $cuenta->contrato_id)
+                    ->whereNotNull('ultima_factura_hacienda')
+                    ->where('ultima_factura_hacienda', '!=', 'N/A')
+                    ->selectRaw('MAX(CAST(ultima_factura_hacienda AS UNSIGNED)) as max_num')
+                    ->value('max_num');
 
-            $nextInvoiceNumber = ($maxInvoice ?? 0) + 1;
+                $nextInvoiceNumber = ($maxInvoice ?? 0) + 1;
 
-            // Actualizar ambos campos
-            $cuenta->update([
-                'ultima_factura_hacienda' => $nextInvoiceNumber,
-                'numero_facturas_radicadas' => $nextInvoiceNumber
-            ]);
+                // Actualizar ambos campos
+                $cuenta->update([
+                    'ultima_factura_hacienda' => $nextInvoiceNumber,
+                    'numero_facturas_radicadas' => $nextInvoiceNumber
+                ]);
 
-            Log::info("Invoice incremented for cuenta {$cuenta->id}: Next number = {$nextInvoiceNumber}");
+                Log::info("Invoice incremented for cuenta {$cuenta->id}: Next number = {$nextInvoiceNumber}");
+            }
         }
 
         // 5. AUTO-CHAINING: Check if this new state has an automatic transition
@@ -568,7 +539,7 @@ class WorkflowController extends Controller
             $usuario = \App\Models\Usuario::where('id', $estadoBloqueAnterior->responsable_id)
                 ->where('es_activo', true)
                 ->first();
-            
+
             if ($usuario) {
                 return $estadoBloqueAnterior->responsable_id;
             }
@@ -684,5 +655,61 @@ class WorkflowController extends Controller
             'usuarios' => $usuarios,
             'responsable_type' => $responsableType
         ]);
+    }
+
+    /**
+
+     * Inicia manualmente la siguiente cuenta de cobro para un contrato finalizado
+     */
+    public function iniciarSiguienteCuenta(Request $request, $cuentaId)
+    {
+        $cuenta = \App\Models\CuentaCobro::findOrFail($cuentaId);
+
+        // Validar que esté finalizada y tenga pagos pendientes
+        if (!$cuenta->finalizada) {
+            return response()->json(['success' => false, 'message' => 'La cuenta actual no ha finalizado su proceso.'], 422);
+        }
+
+        if (($cuenta->numero_cuenta ?? 0) >= ($cuenta->numero_pagos_totales ?? 0)) {
+            return response()->json(['success' => false, 'message' => 'El contrato ya ha completado todos sus pagos.'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            // 1. Aumentar número de cuenta
+            $cuenta->numero_cuenta = ($cuenta->numero_cuenta ?? 0) + 1;
+
+            // 2. Reiniciar flags
+            $cuenta->finalizada = false;
+            $cuenta->ultima_factura_hacienda = null; // Reset para el nuevo ciclo
+            $cuenta->save();
+
+            // 3. Buscar el estado inicial del Bloque 1
+            $estadoInicialBloque1 = \App\Models\EstadoWorkflow::where('codigo', 'REV1_REV')->first();
+
+            if (!$estadoInicialBloque1) {
+                throw new \Exception('No se encontró el estado inicial del Bloque 1 (REV1_REV).');
+            }
+
+            // 4. LIMPIEZA: Eliminar registros de progreso de los bloques anteriores para el nuevo ciclo
+            \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)->delete();
+
+            // 5. Transicionar al inicio
+            $this->ejecutarTransicion($cuenta, $estadoInicialBloque1->id, "Inicio manual del ciclo - Cuenta #{$cuenta->numero_cuenta}.");
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Se ha iniciado correctamente la cuenta #{$cuenta->numero_cuenta}.",
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error al iniciar siguiente cuenta: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al iniciar el ciclo: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

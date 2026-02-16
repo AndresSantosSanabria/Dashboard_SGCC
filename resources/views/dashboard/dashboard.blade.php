@@ -102,6 +102,7 @@
                     'filterEstadosRevision',
                     'filterRadicadaHacienda',
                     'filterEnFacturacion',
+                    'numero_cuenta',
                 ]),
             )->filter();
         @endphp

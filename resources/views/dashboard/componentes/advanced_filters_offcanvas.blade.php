@@ -13,6 +13,12 @@
         </div>
 
         <div class="mb-3">
+            <label class="form-label fw-bold">Número de Cuenta</label>
+            <input type="number" name="numero_cuenta" value="{{ request('numero_cuenta') }}"
+                class="form-control filter-input" placeholder="Ej: 5">
+        </div>
+
+        <div class="mb-3">
             <label class="form-label fw-bold">Supervisor</label>
             <select name="filterSupervisor" class="form-select filter-input">
                 <option value="">Todos los supervisores</option>

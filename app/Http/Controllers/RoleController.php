@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Role;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class RoleController extends Controller
 {
@@ -13,7 +14,7 @@ class RoleController extends Controller
     public function index()
     {
         /** @var \App\Models\Usuario $user */
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user->isAdmin()) {
             abort(403);
         }
@@ -27,7 +28,7 @@ class RoleController extends Controller
     public function create()
     {
         /** @var \App\Models\Usuario $user */
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user->isAdmin()) {
             abort(403);
         }
@@ -42,7 +43,7 @@ class RoleController extends Controller
     {
         try {
             /** @var \App\Models\Usuario $user */
-            $user = auth()->user();
+            $user = Auth::user();
             if (!$user->isAdmin()) {
                 abort(403);
             }
@@ -179,7 +180,7 @@ class RoleController extends Controller
     public function edit($id)
     {
         /** @var \App\Models\Usuario $user */
-        $user = auth()->user();
+        $user = Auth::user();
         if (!$user->isAdmin()) {
             abort(403);
         }
@@ -197,7 +198,7 @@ class RoleController extends Controller
     {
         try {
             /** @var \App\Models\Usuario $user */
-            $user = auth()->user();
+            $user = Auth::user();
             if (!$user->isAdmin()) {
                 abort(403);
             }
@@ -225,7 +226,8 @@ class RoleController extends Controller
             if ($request->has('bloques_all')) {
                 $systemPermissions['bloques_permitidos'] = true;
             } else {
-                $systemPermissions['bloques_permitidos'] = $request->input('bloques_permitidos', []);
+                $bloquesArray = $request->input('bloques_permitidos', []);
+                $systemPermissions['bloques_permitidos'] = $bloquesArray;
             }
 
             // Handle Responsibilities
@@ -255,7 +257,7 @@ class RoleController extends Controller
     {
         try {
             /** @var \App\Models\Usuario $user */
-            $user = auth()->user();
+            $user = Auth::user();
             if (!$user->isAdmin()) {
                 return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
             }

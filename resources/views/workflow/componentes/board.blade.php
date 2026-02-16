@@ -35,7 +35,9 @@
                                 $estadoBloqueActual = $cuenta->estadosBloques
                                     ->where('bloque_id', $cuenta->bloque_actual_id)
                                     ->first();
-                                $fechaIngreso = $estadoBloqueActual?->fecha_ultima_actualizacion;
+                                $fechaIngreso =
+                                    $estadoBloqueActual?->fecha_ultima_actualizacion ??
+                                    ($estadoBloqueActual?->fecha_ingreso_bloque ?? $cuenta->created_at);
                             @endphp
                             <div class="account-card {{ $alertClass }}" data-bs-toggle="modal"
                                 data-bs-target="#modalCuenta{{ $cuenta->id }}">

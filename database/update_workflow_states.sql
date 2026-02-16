@@ -26,8 +26,7 @@ INSERT INTO estados_workflow (bloque_id, nombre, codigo, tipo, es_inicial, es_fi
 (1, 'EN ESPERA FIRMA MONCALEANO', 'REV1_ESP_MONC', 'EN_PROCESO', false, false, false, '#ffc107', 'Esperando firma Moncaleano', true, NOW(), NOW()),
 (1, 'EN REVISION', 'REV1_REV', 'EN_PROCESO', false, false, false, '#17a2b8', 'En proceso de revisión', true, NOW(), NOW()),
 (1, 'POR ADJUDICARSE', 'REV1_ADJ', 'EN_PROCESO', false, false, false, '#6c757d', 'Pendiente de adjudicación', true, NOW(), NOW()),
-(1, 'CUENTAS POR PAGAR', 'REV1_CPP', 'EN_PROCESO', false, false, false, '#fd7e14', 'En cuentas por pagar', true, NOW(), NOW()),
-(1, 'RESERVA', 'REV1_RES', 'EN_PROCESO', false, false, false, '#6f42c1', 'En reserva', true, NOW(), NOW());
+(1, 'CUENTAS POR PAGAR', 'REV1_CPP', 'EN_PROCESO', false, false, false, '#fd7e14', 'En cuentas por pagar', true, NOW(), NOW());
 
 -- BLOQUE 2: ENVIADA A INGRESO MERCANCIA SAP
 INSERT INTO estados_workflow (bloque_id, nombre, codigo, tipo, es_inicial, es_final, permite_devolucion, color_hex, descripcion, es_activo, created_at, updated_at) VALUES

@@ -6,6 +6,7 @@ use App\Models\Usuario;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class ConfiguracionController extends Controller
 {
@@ -14,8 +15,10 @@ class ConfiguracionController extends Controller
      */
     public function index()
     {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
         // Check if user is admin
-        if (!auth()->user()->isAdmin()) {
+        if (!$user->isAdmin()) {
             abort(403, 'No tienes permisos para acceder a esta sección');
         }
 
@@ -29,7 +32,9 @@ class ConfiguracionController extends Controller
      */
     public function create()
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             abort(403, 'No tienes permisos para acceder a esta sección');
         }
 
@@ -44,7 +49,9 @@ class ConfiguracionController extends Controller
      */
     public function store(Request $request)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             abort(403, 'No tienes permisos para realizar esta acción');
         }
 
@@ -100,10 +107,14 @@ class ConfiguracionController extends Controller
             }
         }
 
+        // IMPORTANT: If the role is NOT personalized, clear individual permissions
+        $role = Role::find($request->rol_id);
+        $isPersonalizado = $role && str_contains(strtolower($role->nombre), 'personalizado');
+
         $usuario = new Usuario();
         $usuario->fill($validated);
-        // Only assign permisos if there are any true values, otherwise leave as null to use role permissions
-        $usuario->permisos = !empty($permisos) ? $permisos : null;
+        // Only assign permisos if it's a personalized role AND there are true values
+        $usuario->permisos = ($isPersonalizado && !empty($permisos)) ? $permisos : null;
         $usuario->save();
 
         return redirect()->route('configuracion.index')
@@ -115,7 +126,9 @@ class ConfiguracionController extends Controller
      */
     public function edit($id)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             abort(403, 'No tienes permisos para acceder a esta sección');
         }
 
@@ -131,7 +144,9 @@ class ConfiguracionController extends Controller
      */
     public function update(Request $request, $id)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             abort(403, 'No tienes permisos para realizar esta acción');
         }
 
@@ -192,9 +207,15 @@ class ConfiguracionController extends Controller
             }
         }
 
+        // IMPORTANT: If the role is NOT personalized, clear individual permissions 
+        // to ensure the user inherits everything from the role without overrides.
+        // We find the role name to check for "personalized" keyword.
+        $role = Role::find($request->rol_id);
+        $isPersonalizado = $role && str_contains(strtolower($role->nombre), 'personalizado');
+
         $usuario->fill($validated);
-        // Only assign permisos if there are any true values, otherwise leave as null to use role permissions
-        $usuario->permisos = !empty($permisos) ? $permisos : null;
+        // Only assign permisos if it's a personalized role AND there are true values
+        $usuario->permisos = ($isPersonalizado && !empty($permisos)) ? $permisos : null;
         $usuario->save();
 
         return redirect()->route('configuracion.index')
@@ -206,14 +227,16 @@ class ConfiguracionController extends Controller
      */
     public function toggleStatus($id)
     {
-        if (!auth()->user()->isAdmin()) {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
             return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
         }
 
         $usuario = Usuario::findOrFail($id);
 
         // Prevent deactivating yourself
-        if ($usuario->id === auth()->id()) {
+        if ($usuario->id === Auth::id()) {
             return response()->json([
                 'success' => false,
                 'message' => 'No puedes desactivar tu propia cuenta'

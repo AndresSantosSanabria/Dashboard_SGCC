@@ -63,7 +63,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/workflow/asignar-responsable/{cuenta}', [WorkflowController::class, 'assignResponsible'])->name('workflow.asignar-responsable');
     Route::get('/workflow/historial/{cuenta}', [WorkflowController::class, 'getHistorial'])->name('workflow.historial');
     Route::get('/workflow/usuarios-responsables/{estadoCodigo}', [WorkflowController::class, 'getUsuariosResponsables'])->name('workflow.usuarios-responsables');
+    Route::post('/workflow/iniciar-siguiente-cuenta/{cuenta}', [WorkflowController::class, 'iniciarSiguienteCuenta'])->name('workflow.iniciar-siguiente-cuenta');
 });
+
 
 // Configuración (admin only)
 Route::middleware('auth')->prefix('configuracion')->group(function () {

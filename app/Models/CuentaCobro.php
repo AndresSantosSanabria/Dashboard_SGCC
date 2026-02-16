@@ -134,13 +134,14 @@ class CuentaCobro extends Model
 
     /**
      * Accessor for dynamic percentage calculation.
-     * Formula: (Current Account / Total Payments) * 100
+     * New formula: (Filed Invoices / Total Payments) * 100
      */
     public function getPorcentajeCuentasAttribute($value)
     {
         // If we have valid numbers, calculate dynamically
+        // New formula: (Filed Invoices / Total Payments) * 100
         if (($this->numero_pagos_totales ?? 0) > 0) {
-            return round(($this->numero_cuenta / $this->numero_pagos_totales) * 100, 2);
+            return round((($this->numero_facturas_radicadas ?? 0) / $this->numero_pagos_totales) * 100, 2);
         }
         // Fallback to stored value or 0
         return $value ?? 0;

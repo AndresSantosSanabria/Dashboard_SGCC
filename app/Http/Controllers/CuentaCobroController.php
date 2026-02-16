@@ -23,7 +23,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
 
 class CuentaCobroController extends Controller
 {
@@ -91,7 +90,8 @@ class CuentaCobroController extends Controller
     }
     public function index(Request $request)
     {
-        $user = auth()->user();
+        /** @var \App\Models\Usuario $user */
+        $user = \Illuminate\Support\Facades\Auth::user();
 
         // 1. Check if user can access dashboard (Management) or Consolidado (Read-Only)
         $canManage = $user->puedeAccederDashboard();
@@ -154,7 +154,7 @@ class CuentaCobroController extends Controller
         if (is_array($bloquesPermitidos) && count($bloquesPermitidos) > 0) {
             $query->whereIn('bloque_actual_id', function ($subQuery) use ($bloquesPermitidos) {
                 $subQuery->select('id')
-                    ->from('bloque_workflows')
+                    ->from('bloques_workflow')
                     ->whereIn('codigo', $bloquesPermitidos);
             });
         } elseif ($bloquesPermitidos !== true) {
@@ -211,6 +211,10 @@ class CuentaCobroController extends Controller
             }
         }
 
+        if ($request->filled('numero_cuenta')) {
+            $query->where('numero_cuenta', $request->numero_cuenta);
+        }
+
         if ($request->filled('filterEnFacturacion')) {
             $query->whereHas('estadosBloques', function ($q) use ($request) {
                 $q->whereHas('bloque', function ($bq) {
@@ -247,7 +251,9 @@ class CuentaCobroController extends Controller
 
     public function importExcel(Request $request)
     {
-        if (!auth()->user()->tienePermiso('editar_dashboard')) {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->tienePermiso('editar_dashboard')) {
             return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar importaciones.'], 403);
         }
         try {
@@ -386,11 +392,11 @@ class CuentaCobroController extends Controller
                         $estaFinalizada = ($radHacienda === 'SI' || $radHacienda === 'SÍ');
 
                         $bloqueId = $this->getBlockIdByCode('REV1');
-                        $estadoId = $this->getStateIdByCode('REV1_RES'); // DEFAULT: RESERVA
+                        $estadoId = $this->getStateIdByCode('REV1_REV'); // DEFAULT: RESERVA
 
                         if ($estaFinalizada) {
                             $bloqueId = $this->getBlockIdByCode('FIN');
-                            $estadoId = $this->getStateIdByCode('FIN_COMP');
+                            $estadoId = $this->getStateIdByCode('FIN_OK');
                         } elseif (!empty($data['RADICADA EN HACIENDA']) && ($radHacienda === 'SI' || $radHacienda === 'SÍ')) {
                             $bloqueId = $this->getBlockIdByCode('HAC');
                             $estadoId = $this->getStateIdByCode('HAC_OK');
@@ -407,7 +413,7 @@ class CuentaCobroController extends Controller
                             // Si viene dato en la columna REV1, buscarlo
                             $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
                                 ->where('bloque_id', $bloqueId)
-                                ->value('id') ?? $this->getStateIdByCode('REV1_RES');
+                                ->value('id') ?? $this->getStateIdByCode('REV1_REV');
                         }
 
                         $fechaRadicacionExcel = $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? $data['FECHA RADICACION'] ?? null);
@@ -420,7 +426,7 @@ class CuentaCobroController extends Controller
                             'numero_pagos_totales' => $pagosTotales,
                             'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? 0,
 
-                            'porcentaje_cuentas' => ($pagosTotales > 0 && $numeroCuenta > 0) ? (($numeroCuenta / $pagosTotales) * 100) : 0,
+                            'porcentaje_cuentas' => ($pagosTotales > 0) ? ((($data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? 0) / $pagosTotales) * 100) : 0,
                             'radicado_por' => $data['RADICADO POR'] ?? null,
                             'bloque_actual_id' => $bloqueId,
                             'estado_actual_id' => $estadoId,
@@ -492,7 +498,9 @@ class CuentaCobroController extends Controller
 
     public function storeManual(Request $request)
     {
-        if (!auth()->user()->tienePermiso('editar_dashboard')) {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->tienePermiso('editar_dashboard')) {
             return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar cargas manuales.'], 403);
         }
         try {
@@ -503,11 +511,25 @@ class CuentaCobroController extends Controller
                 $data[$normalizedKey] = $value;
             }
 
-            // 1. Validar obligatorio
-            $numContrato = $data['NUMERO DE CONTRATO'] ?? null;
-            if (empty($numContrato)) {
-                return response()->json(['success' => false, 'message' => 'El Número de Contrato es obligatorio.'], 422);
+            // 1. Validar obligatorios (Server-side)
+            $requiredFields = [
+                'NUMERO DE CONTRATO' => 'Número de Contrato',
+                'CONTRATISTA' => 'Contratista',
+                'CEDULA' => 'Cédula / NIT',
+                'FECHA DE INICIO' => 'Fecha de Inicio',
+                'FECHA DE TERMINACIÓN' => 'Fecha de Terminación',
+                'ENTIDAD SALUD' => 'Entidad Salud',
+                'ENTIDAD PENSIÓN' => 'Entidad Pensión',
+                'ENTIDAD ARL' => 'Entidad ARL',
+            ];
+
+            foreach ($requiredFields as $field => $label) {
+                if (empty($data[$field])) {
+                    return response()->json(['success' => false, 'message' => "El campo '$label' es obligatorio."], 422);
+                }
             }
+
+            $numContrato = $data['NUMERO DE CONTRATO'];
 
             // 2. Validar unicidad
             if (Contrato::where('numero_contrato', $numContrato)->exists()) {
@@ -579,7 +601,7 @@ class CuentaCobroController extends Controller
 
                 // Determinar bloque y estado actual basado en el formulario (de mayor a menor importancia)
                 $bloqueId = $this->getBlockIdByCode('REV1');
-                $estadoId = $this->getStateIdByCode('REV1_RES'); // Default: RESERVA
+                $estadoId = $this->getStateIdByCode('REV1_REV'); // Default: RESERVA
 
                 if (!empty($data['RADICADA EN HACIENDA'])) {
                     $bloqueId = $this->getBlockIdByCode('HAC');
@@ -600,7 +622,7 @@ class CuentaCobroController extends Controller
                 } elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
                     $bloqueId = $this->getBlockIdByCode('REV1');
                     $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
-                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_RES');
+                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_REV');
                 }
 
                 $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($data['RADICADA EN HACIENDA'] ?? '') === 'SI'));
@@ -623,7 +645,7 @@ class CuentaCobroController extends Controller
                     'numero_pagos_totales' => $pagosTotales,
                     'numero_facturas_radicadas' => $ultimaFacturaHacienda ?? $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
 
-                    'porcentaje_cuentas' => ($pagosTotales > 0 && $numeroCuenta > 0) ? (($numeroCuenta / $pagosTotales) * 100) : 0,
+                    'porcentaje_cuentas' => ($pagosTotales > 0) ? ((($ultimaFacturaHacienda ?? $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0) / $pagosTotales) * 100) : 0,
                     'radicado_por' => $data['RADICADO POR'] ?? null,
                     'bloque_actual_id' => $bloqueId,
                     'estado_actual_id' => $estadoId,
@@ -672,17 +694,22 @@ class CuentaCobroController extends Controller
                 'estadosBloques.estadoActual'
             ])->findOrFail($id);
 
+            /** @var \App\Models\RegistroPresupuestal $rp */
+            $rp = $cuenta->contrato->registrosPresupuestales->first();
+            /** @var \App\Models\Contrato $contrato */
+            $contrato = $cuenta->contrato;
+
             // Preparar datos para el formulario
             $data = [
-                'NUMERO DE CONTRATO' => $cuenta->contrato->numero_contrato,
-                'CONTRATISTA' => $cuenta->contrato->contratista->razon_social,
-                'CEDULA' => $cuenta->contrato->contratista->nit,
-                'RP' => $cuenta->contrato->registrosPresupuestales->first()?->numero_rp,
-                'FECHA RP' => $cuenta->contrato->registrosPresupuestales->first()?->fecha_rp?->format('Y-m-d'),
-                'VALOR RP' => $cuenta->contrato->registrosPresupuestales->first()?->valor_rp,
-                'FECHA DE INICIO' => $cuenta->contrato->fecha_inicio?->format('Y-m-d'),
-                'FECHA DE TERMINACIÓN' => $cuenta->contrato->fecha_fin?->format('Y-m-d'),
-                'SUPERVISOR' => $cuenta->contrato->supervisor->nombres, // Asumiendo que solo se guardan nombres en este campo simple
+                'NUMERO DE CONTRATO' => $contrato->numero_contrato,
+                'CONTRATISTA' => $contrato->contratista->razon_social,
+                'CEDULA' => $contrato->contratista->nit,
+                'RP' => $rp?->numero_rp,
+                'FECHA RP' => ($rp && $rp->fecha_rp instanceof \Carbon\Carbon) ? $rp->fecha_rp->format('Y-m-d') : null,
+                'VALOR RP' => $rp?->valor_rp,
+                'FECHA DE INICIO' => ($contrato->fecha_inicio instanceof \Carbon\Carbon) ? $contrato->fecha_inicio->format('Y-m-d') : null,
+                'FECHA DE TERMINACIÓN' => ($contrato->fecha_fin instanceof \Carbon\Carbon) ? $contrato->fecha_fin->format('Y-m-d') : null,
+                'SUPERVISOR' => $contrato->supervisor->nombres, // Asumiendo que solo se guardan nombres en este campo simple
                 'NUMERO DE CUENTA EN PROCESO DE CUENTAS' => $cuenta->numero_cuenta,
                 'NUMERO DE PAGOS TOTALES' => $cuenta->numero_pagos_totales,
                 'N° DE FACTURAS RADICADA HACIENDA' => $cuenta->numero_facturas_radicadas,
@@ -786,8 +813,8 @@ class CuentaCobroController extends Controller
                     'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion,
                     'numero_pagos_totales' => $pagosTotales,
                     'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
-                    
-                    'porcentaje_cuentas' => ($pagosTotales > 0) ? ((($data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta) / $pagosTotales) * 100) : 0,
+
+                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($data['N° DE FACTURAS RADICADA HACIENDA'] / $pagosTotales) * 100) : 0,
                     'radicado_por' => $data['RADICADO POR'] ?? $cuenta->radicado_por,
                     'observaciones' => $data['OBSERVACIONES'] ?? null,
                     'ultima_factura_hacienda' => $data['ULTIMA FACTURA RADICADA HACIENDA'] ?? null,
@@ -892,9 +919,10 @@ class CuentaCobroController extends Controller
             // Si es un objeto ya (como Carbon o DateTime)
             if ($value instanceof \DateTimeInterface) return Carbon::instance($value);
 
-            // Si es numérico y parece fecha Excel
+            // Si es numérico y parece fecha Excel (días desde 1900-01-01)
             if (is_numeric($value) && $value > 40000 && $value < 60000) {
-                return Carbon::instance(\PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($value));
+                // Conversión manual para evitar dependencia de PhpSpreadsheet si no está instalado
+                return Carbon::create(1899, 12, 30)->addDays($value);
             }
 
             return Carbon::parse($value);
@@ -922,6 +950,7 @@ class CuentaCobroController extends Controller
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('REV1_REV'),
                     'fecha_ingreso_bloque' => $cuenta->fecha_radicacion ?? $cuenta->updated_at ?? now(),
                     'fecha_completado_bloque' => $fechaRev,
+                    'fecha_ultima_actualizacion' => now(),
                     'bloque_completado' => !empty($fechaRev),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
@@ -941,6 +970,7 @@ class CuentaCobroController extends Controller
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('SAP_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DEVUELTA DE REVISIÓN O ENVIADA A SAP'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaSap,
+                    'fecha_ultima_actualizacion' => now(),
                     'bloque_completado' => !empty($fechaSap),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
@@ -960,6 +990,7 @@ class CuentaCobroController extends Controller
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('FAC_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DE ENVIO A FACTURACIÓN O DEVUELTA A CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaFac,
+                    'fecha_ultima_actualizacion' => now(),
                     'bloque_completado' => !empty($fechaFac),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
@@ -979,6 +1010,7 @@ class CuentaCobroController extends Controller
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('FIR_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE GENERA FACURACIÓN'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaFir,
+                    'fecha_ultima_actualizacion' => now(),
                     'bloque_completado' => !empty($fechaFir),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
@@ -998,7 +1030,22 @@ class CuentaCobroController extends Controller
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('HAC_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE DEJAN PARA FIRMA DEL SECRETARIO'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaHac,
+                    'fecha_ultima_actualizacion' => now(),
                     'bloque_completado' => !empty($fechaHac),
+                    'responsable_id' => $cuenta->responsable_actual_id,
+                ]
+            );
+        }
+
+        // ASEGURAR QUE EL BLOQUE ACTUAL TENGA UN REGISTRO (Para el cronómetro en el Dashboard)
+        if ($cuenta->bloque_actual_id) {
+            EstadoBloqueCuenta::updateOrCreate(
+                ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $cuenta->bloque_actual_id],
+                [
+                    'estado_actual_id' => $cuenta->estado_actual_id,
+                    'fecha_ingreso_bloque' => $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
+                    'fecha_ultima_actualizacion' => now(),
+                    'bloque_completado' => $cuenta->finalizada,
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );

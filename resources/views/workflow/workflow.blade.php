@@ -12,8 +12,8 @@
 
         <!-- Filtros -->
         <form action="{{ route('workflow') }}" method="GET" class="filter-bar">
-            <div class="row g-3">
-                <div class="col-md-3">
+            <div class="row g-2">
+                <div class="col-md-2">
                     <label class="filter-label">Supervisor</label>
                     <div class="filter-input-group">
                         <i class="fas fa-user-tie filter-icon"></i>
@@ -36,8 +36,8 @@
                             placeholder="Nombre o NIT..." value="{{ request('contratista') }}">
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="filter-label">Estado Específico</label>
+                <div class="col-md-2">
+                    <label class="filter-label">Estado</label>
                     <div class="filter-input-group">
                         <i class="fas fa-tag filter-icon"></i>
                         <select name="estado_nombre" class="form-select filter-control">
@@ -49,6 +49,14 @@
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <label class="filter-label">N° Cuenta</label>
+                    <div class="filter-input-group">
+                        <i class="fas fa-list-ol filter-icon"></i>
+                        <input type="number" name="numero_cuenta" class="form-control filter-control" placeholder="Ej: 3"
+                            value="{{ request('numero_cuenta') }}">
                     </div>
                 </div>
                 <div class="col-md-3 d-flex align-items-end gap-2">

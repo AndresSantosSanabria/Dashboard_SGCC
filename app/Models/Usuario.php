@@ -169,54 +169,46 @@ class Usuario extends Authenticatable
      */
     public function bloquesPermitidos()
     {
-        // 1. Check individual user permisos (priority over role)
+        // 1. Check individual user permisos
         $bloquesUsuario = $this->permisos['bloques_permitidos'] ?? null;
-        
-        if ($bloquesUsuario !== null && $bloquesUsuario !== false) {
-            // If explicitly set to true, allow all
-            if ($bloquesUsuario === true) {
-                return true;
-            }
-            
-            // If it's an array, validate it has valid entries
-            if (is_array($bloquesUsuario)) {
-                $filteredBloques = array_filter($bloquesUsuario, function($b) {
-                    return $b !== null && $b !== '' && $b !== false;
-                });
-                
-                if (count($filteredBloques) > 0) {
-                    return array_values($filteredBloques); // Return re-indexed array
-                }
-                // Empty filtered array = all blocks
-                return true;
-            }
-        }
 
         // 2. Admin bypass (admins see all blocks by default)
         if ($this->isAdmin()) {
             return true;
         }
 
-        // 3. Fallback to role permisos
+        // 3. Fallback to role permisos if individual is null OR if individual is 'true' but we want to check role restrictions
+        // Logic: Individual ARRAY (explicit restriction) > Role (any) > Individual TRUE (all) > TRUE (default)
+
+        // If user has specific individual blocks assigned, use those (highest priority)
+        if (is_array($bloquesUsuario)) {
+            $filteredBloques = array_filter($bloquesUsuario, function ($b) {
+                return $b !== null && $b !== '' && $b !== false;
+            });
+            return array_values($filteredBloques);
+        }
+
+        // If no individual array, check the role
         if ($this->rol && isset($this->rol->permisos['bloques_permitidos'])) {
             $bloquesRole = $this->rol->permisos['bloques_permitidos'];
-            
+
             if ($bloquesRole === true) {
                 return true;
             }
-            
+
             if (is_array($bloquesRole)) {
-                $filteredBloques = array_filter($bloquesRole, function($b) {
+                $filteredBloques = array_filter($bloquesRole, function ($b) {
                     return $b !== null && $b !== '' && $b !== false;
                 });
-                
-                if (count($filteredBloques) > 0) {
-                    return array_values($filteredBloques);
-                }
-                return true;
+                return array_values($filteredBloques);
             }
         }
-        
+
+        // If no role restrictions AND no individual array, fallback to individual 'true' or default true
+        if ($bloquesUsuario === true) {
+            return true;
+        }
+
         // 4. Default: all blocks
         return true;
     }

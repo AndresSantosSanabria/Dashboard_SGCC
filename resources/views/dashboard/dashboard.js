@@ -76,6 +76,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // AJAX Manual Entry
     if (btnSaveManual) {
         btnSaveManual.addEventListener("click", function () {
+            if (!manualForm.reportValidity()) {
+                return;
+            }
             const formData = new FormData(manualForm);
             const url = manualForm.dataset.url || "{{ route('dashboard.manual') }}";
 
@@ -440,6 +443,8 @@ window.editAccount = function (id) {
         "hidden.bs.modal",
         function () {
             form.reset();
+            const inputCuentaManual = form.querySelector('input[name="NUMERO DE CUENTA EN PROCESO DE CUENTAS"]');
+            if (inputCuentaManual) inputCuentaManual.value = 1;
             modalTitle.textContent = "Cargar Información Manualmente";
             btnSave.textContent = "Cargar Registro";
             form.dataset.url = "{{ route('dashboard.manual') }}";
@@ -463,6 +468,32 @@ window.editAccount = function (id) {
         },
         { once: true },
     );
+};
+
+window.startNextAccount = function (id, contrato, siguienteCuenta) {
+    if (confirm(`¿Desea iniciar formalmente el trámite para la cuenta #${siguienteCuenta} del contrato ${contrato}?`)) {
+        fetch(`/workflow/iniciar-siguiente-cuenta/${id}`, {
+            method: "POST",
+            headers: {
+                "X-Requested-With": "XMLHttpRequest",
+                "X-CSRF-TOKEN": document.querySelector('input[name="_token"]').value,
+                "Accept": "application/json"
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    showSnackbar("✅ " + data.message, "success");
+                    fetchFilteredData(); // Recargar tabla/dashboard
+                } else {
+                    showSnackbar("⚠️ " + data.message, "error");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showSnackbar("❌ Error al iniciar el siguiente ciclo", "error");
+            });
+    }
 };
 
 
