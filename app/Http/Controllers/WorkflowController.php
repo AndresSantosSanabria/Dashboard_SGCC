@@ -380,6 +380,12 @@ class WorkflowController extends Controller
         $tiempoEnEstadoMinutos = null;
         if ($ultimoHistorial) {
             $tiempoEnEstadoMinutos = now()->diffInMinutes($ultimoHistorial->fecha_transicion);
+        } else {
+            // Si es la primera transición, calcular tiempo desde radicación o creación
+            $inicio = $cuenta->fecha_radicacion ?? $cuenta->created_at;
+            if ($inicio) {
+                $tiempoEnEstadoMinutos = now()->diffInMinutes($inicio);
+            }
         }
 
         // 2. Create history record
@@ -445,6 +451,10 @@ class WorkflowController extends Controller
         // para que desaparezca del workflow. El usuario la reactivará desde el dashboard.
         if ($estadoDestino->bloque_id == 6 && $estadoDestino->tipo == 'APROBADO') {
             $cuenta->finalizada = true;
+
+            // ✅ INCREMENTAR facturas radicadas al FINALIZAR el ciclo
+            $cuenta->numero_facturas_radicadas = ($cuenta->numero_facturas_radicadas ?? 0) + 1;
+            Log::info("Cuenta {$cuenta->id} FINALIZADA. Facturas radicadas incrementadas a: {$cuenta->numero_facturas_radicadas}");
         } else {
             // Si sale de finalizada (vuelve atrás), le quitamos el flag de finalizada
             $cuenta->finalizada = false;
@@ -467,7 +477,7 @@ class WorkflowController extends Controller
 
         // LÓGICA ESPECIAL: Incrementar factura cuando se marca como "Radicada" en Hacienda
         if ($estadoDestino->codigo === 'HAC_OK') {
-            // SOLO asignar si no tiene número (IDEMPOTENCIA)
+            // SOLO asignar número de factura si no tiene (IDEMPOTENCIA)
             if (empty($cuenta->ultima_factura_hacienda) || $cuenta->ultima_factura_hacienda === 'N/A') {
                 // Obtener el siguiente número de factura para este contrato
                 $maxInvoice = \App\Models\CuentaCobro::where('contrato_id', $cuenta->contrato_id)
@@ -478,13 +488,13 @@ class WorkflowController extends Controller
 
                 $nextInvoiceNumber = ($maxInvoice ?? 0) + 1;
 
-                // Actualizar ambos campos
+                // Solo asignar el número de factura, NO incrementar facturas_radicadas aquí
+                // El incremento de facturas_radicadas ocurre al FINALIZAR el ciclo (bloque 6)
                 $cuenta->update([
                     'ultima_factura_hacienda' => $nextInvoiceNumber,
-                    'numero_facturas_radicadas' => $nextInvoiceNumber
                 ]);
 
-                Log::info("Invoice incremented for cuenta {$cuenta->id}: Next number = {$nextInvoiceNumber}");
+                Log::info("Invoice number assigned for cuenta {$cuenta->id}: {$nextInvoiceNumber}");
             }
         }
 
@@ -597,6 +607,7 @@ class WorkflowController extends Controller
      */
     public function getHistorial($cuentaId)
     {
+        $cuenta = \App\Models\CuentaCobro::findOrFail($cuentaId);
         $historial = \App\Models\HistorialWorkflow::with([
             'bloque',
             'estadoOrigen',
@@ -609,7 +620,9 @@ class WorkflowController extends Controller
 
         return response()->json([
             'success' => true,
-            'historial' => $historial
+            'historial' => $historial,
+            'tiempo_total' => $cuenta->tiempo_total_ejecucion,
+            'fecha_inicio' => $historial->count() > 0 ? $historial->first()->fecha_transicion->format('d/m/Y H:i') : null
         ]);
     }
 
@@ -679,8 +692,9 @@ class WorkflowController extends Controller
             // 1. Aumentar número de cuenta
             $cuenta->numero_cuenta = ($cuenta->numero_cuenta ?? 0) + 1;
 
-            // 2. Reiniciar flags
+            // 2. Reiniciar flags y fecha para el cronómetro
             $cuenta->finalizada = false;
+            $cuenta->fecha_radicacion = now(); // REINICIO DEL TIEMPO TOTAL
             $cuenta->ultima_factura_hacienda = null; // Reset para el nuevo ciclo
             $cuenta->save();
 

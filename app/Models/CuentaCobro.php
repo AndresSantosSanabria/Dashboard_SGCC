@@ -146,4 +146,42 @@ class CuentaCobro extends Model
         // Fallback to stored value or 0
         return $value ?? 0;
     }
+
+    /**
+     * Calcula el tiempo total que lleva la cuenta en el workflow
+     * Debe ser el tiempo global desde su creación/radicación, no desde el último cambio.
+     */
+    public function getTiempoTotalEjecucionAttribute()
+    {
+        // Priorizar fecha_radicacion (fecha real de ingreso de documentos) o created_at
+        $primera = $this->fecha_radicacion ?? $this->created_at;
+        
+        if (!$primera) return '0s';
+
+        // Si la cuenta está finalizada, el tiempo se cuenta hasta la última transición en el historial
+        // de lo contrario, se cuenta hasta el momento actual (now)
+        $ultima = $this->finalizada 
+            ? ($this->historialWorkflow()->max('fecha_transicion') ?? now()) 
+            : now();
+        
+        $ultima = \Carbon\Carbon::parse($ultima);
+        $primera = \Carbon\Carbon::parse($primera);
+
+        // Diferencia absoluta para el tiempo global
+        $diff = $primera->diff($ultima);
+
+        $partes = [];
+        if ($diff->y > 0) $partes[] = $diff->y . 'a';
+        if ($diff->m > 0) $partes[] = $diff->m . 'mes';
+        if ($diff->d > 0) $partes[] = $diff->d . 'd';
+        if ($diff->h > 0) $partes[] = $diff->h . 'h';
+        if ($diff->i > 0) $partes[] = $diff->i . 'm';
+        
+        // Siempre mostrar segundos si el tiempo es muy corto
+        if (empty($partes) || $diff->s > 0) {
+            $partes[] = $diff->s . 's';
+        }
+
+        return implode(' ', $partes);
+    }
 }

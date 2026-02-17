@@ -269,6 +269,10 @@ window.showHistory = function (cuentaId, contratoNum) {
     empty.style.display = "none";
     content.innerHTML = "";
 
+    // Ocultar tiempo total previo
+    const timeBadge = document.getElementById("historyTotalTimeBadge");
+    if (timeBadge) timeBadge.style.display = "none";
+
     modal.show();
 
     fetch(`/workflow/historial/${cuentaId}`)
@@ -276,24 +280,28 @@ window.showHistory = function (cuentaId, contratoNum) {
         .then((data) => {
             spinner.style.display = "none";
 
+            // Mostrar tiempo total siempre
+            const timeBadge = document.getElementById("historyTotalTimeBadge");
+            const timeSpan = document.getElementById("historyTotalTime");
+            if (data.tiempo_total && timeBadge && timeSpan) {
+                timeSpan.textContent = data.tiempo_total;
+                timeBadge.style.display = "inline-block";
+            }
+
             if (data.success && data.historial.length > 0) {
                 content.style.display = "block";
 
                 data.historial.forEach((h) => {
-                    const date = new Date(h.fecha_transicion).toLocaleString(
-                        "es-ES",
-                        {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: true,
-                        },
-                    );
-
-                    const item = document.createElement("div");
-                    item.className = "timeline-item";
+                    const dateObj = new Date(h.fecha_transicion);
+                    const dateStr = dateObj.toLocaleDateString("es-ES", {
+                        day: "2-digit",
+                        month: "2-digit",
+                    });
+                    const timeStr = dateObj.toLocaleTimeString("es-ES", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                    });
 
                     // Determinar color de badge por tipo de estado destino
                     let badgeClass = "bg-info";
@@ -305,31 +313,40 @@ window.showHistory = function (cuentaId, contratoNum) {
                     )
                         badgeClass = "bg-success";
 
+                    const item = document.createElement("div");
+                    item.className = "timeline-item-premium";
+
                     item.innerHTML = `
-                        <div class="timeline-marker-wrapper">
-                            <div class="timeline-marker bg-primary">
-                                <i class="fas fa-exchange-alt"></i>
-                            </div>
-                            <div class="timeline-line"></div>
+                        <div class="item-left">
+                            <div class="item-date fw-bold text-dark" style="font-size: 0.85rem;">${dateStr}</div>
+                            <div class="item-time">${timeStr}</div>
                         </div>
-                        <div class="timeline-content">
-                            <div class="timeline-header">
-                                <div class="timeline-title">${h.bloque?.nombre ?? "Bloque"}</div>
-                                <div class="timeline-date font-weight-bold">${date}</div>
+                        <div class="item-center">
+                            <div class="item-dot"></div>
+                            <div class="item-line"></div>
+                        </div>
+                        <div class="item-right">
+                            <div class="item-header">
+                                <div class="item-title">${h.bloque?.nombre ?? "Bloque"}</div>
+                                <span class="badge ${badgeClass}" style="font-size: 0.7rem; border-radius: 6px;">
+                                    ${h.estado_destino?.nombre ?? "N/A"}
+                                </span>
                             </div>
-                            <div class="timeline-transition">
-                                <strong>${h.estado_origen?.nombre ?? "Inicio"}</strong> 
-                                <i class="fas fa-arrow-right mx-2 text-muted" style="font-size: 0.7rem;"></i> 
-                                <span class="badge ${badgeClass}">${h.estado_destino?.nombre ?? "N/A"}</span>
+                            <div class="item-transition">
+                                <span class="text-muted small">Origen:</span> 
+                                <span class="fw-bold">${h.estado_origen?.nombre ?? "Inicio"}</span> 
+                                <i class="fas fa-long-arrow-alt-right mx-2 text-primary opacity-50"></i> 
+                                <span class="text-muted small">Destino:</span> 
+                                <span class="fw-bold">${h.estado_destino?.nombre ?? "N/A"}</span>
                             </div>
-                            <div class="timeline-meta">
-                                <span><i class="fas fa-user me-1"></i> ${h.usuario_accion?.primer_nombre ?? "Sistema"}</span>
-                                ${h.accion ? `<span><i class="fas fa-tag me-1"></i> ${h.accion}</span>` : ""}
+                            <div class="item-meta">
+                                <span><i class="fas fa-user-circle me-1 text-primary"></i> ${h.usuario_accion?.primer_nombre ?? "Sistema"}</span>
+                                ${h.accion ? `<span><i class="fas fa-tag me-1 text-primary"></i> ${h.accion}</span>` : ""}
                             </div>
                             ${h.comentarios
                             ? `
-                                <div class="timeline-comment">
-                                    "${h.comentarios}"
+                                <div class="item-comment">
+                                    <i class="fas fa-quote-left me-2 opacity-25"></i>${h.comentarios}
                                 </div>
                             `
                             : ""

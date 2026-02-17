@@ -139,6 +139,11 @@ class Usuario extends Authenticatable
         return $this->tienePermiso('acceder_consolidado') || $this->tienePermiso('acceder_dashboard');
     }
 
+    public function puedeAccederAnalitica(): bool
+    {
+        return $this->tienePermiso('acceder_analitica') || $this->isAdmin();
+    }
+
     public function puedeEditarWorkflow(): bool
     {
         return $this->tienePermiso('editar_workflow');

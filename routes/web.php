@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/plantilla', [CuentaCobroController::class, 'exportTemplate'])->name('dashboard.plantilla');
     Route::get('/dashboard/editar/{id}', [CuentaCobroController::class, 'edit'])->name('dashboard.editar');
     Route::put('/dashboard/actualizar/{id}', [CuentaCobroController::class, 'update'])->name('dashboard.actualizar');
+    Route::get('/analitica', [\App\Http\Controllers\AnaliticaController::class, 'index'])->name('analitica');
 });
 
 // Workflow (protected)

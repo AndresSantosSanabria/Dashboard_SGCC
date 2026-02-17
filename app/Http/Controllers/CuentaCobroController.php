@@ -807,14 +807,17 @@ class CuentaCobroController extends Controller
                 $pagosTotales = (int)($data['NUMERO DE PAGOS TOTALES'] ?? 12);
                 if ($pagosTotales <= 0) $pagosTotales = 12;
 
+                // Preservar numero_facturas_radicadas actual: NO sobrescribir con el valor del formulario
+                $facturasRadicadasActual = $cuenta->numero_facturas_radicadas ?? 0;
+
                 $cuenta->update([
                     'numero_cuenta' => $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta,
                     'valor_cobro' => $valorRP / $pagosTotales,
                     'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion,
                     'numero_pagos_totales' => $pagosTotales,
-                    'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
+                    'numero_facturas_radicadas' => $facturasRadicadasActual,
 
-                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($data['N° DE FACTURAS RADICADA HACIENDA'] / $pagosTotales) * 100) : 0,
+                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($facturasRadicadasActual / $pagosTotales) * 100) : 0,
                     'radicado_por' => $data['RADICADO POR'] ?? $cuenta->radicado_por,
                     'observaciones' => $data['OBSERVACIONES'] ?? null,
                     'ultima_factura_hacienda' => $data['ULTIMA FACTURA RADICADA HACIENDA'] ?? null,
@@ -836,9 +839,10 @@ class CuentaCobroController extends Controller
                         $nextNum = $this->getNextInvoiceNumber($cuenta->contrato_id);
                         Log::info("Generating Next Num: $nextNum");
 
+                        // Solo asignar número de factura, NO incrementar facturas_radicadas aquí
+                        // El incremento de facturas_radicadas ocurre al FINALIZAR el ciclo en el workflow
                         $cuenta->update([
                             'ultima_factura_hacienda' => $nextNum,
-                            'numero_facturas_radicadas' => $nextNum
                         ]);
                     } else {
                         Log::info("Skipping generation: Current factura is present and valid.");

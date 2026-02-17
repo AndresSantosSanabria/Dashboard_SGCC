@@ -121,8 +121,16 @@
                             <span class="result-value">${data.contratista}</span>
                         </div>
                         <div class="result-item">
+                            <span class="result-label">Contrato #</span>
+                            <span class="result-value">${data.numero_contrato}</span>
+                        </div>
+                        <div class="result-item" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px;">
+                            <span class="result-label" style="color: #fbfbfbff; opacity: 1;">Cuenta de Cobro #</span>
+                            <span class="result-value" style="color: #ffffffff; font-size: 1.4rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${data.numero_cuenta}</span>
+                        </div>
+                        <div class="result-item">
                             <span class="result-label">Estado Actual</span>
-                            <span class="status-badge">${data.estado}</span>
+                            <span class="status-badge" style="background: #2563eb;">${data.estado}</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Bloque</span>

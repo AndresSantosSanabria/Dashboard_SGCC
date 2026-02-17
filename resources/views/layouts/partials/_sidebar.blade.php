@@ -31,6 +31,15 @@
                 </a>
             </li>
         @endif
+        @if (auth()->user()->puedeAccederAnalitica())
+            <li>
+                <a href="{{ route('analitica') }}"
+                    class="nav-link text-white {{ request()->routeIs('analitica') ? 'active bg-primary' : '' }}">
+                    <i class="bi bi-graph-up me-2 fs-5"></i>
+                    <span class="sidebar-text">Analitica</span>
+                </a>
+            </li>
+        @endif
         @if (auth()->user()->isAdmin())
             <li>
                 <a href="{{ route('configuracion.index') }}"

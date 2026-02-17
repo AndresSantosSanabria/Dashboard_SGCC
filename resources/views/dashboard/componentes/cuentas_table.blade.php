@@ -213,14 +213,16 @@
                     <td>{{ $cuenta->observacion_hacienda ?? 'N/A' }}</td>
                     <td class="text-center">{{ $cuenta->diferencia_cuentas }}</td>
                     <td class="text-center">
-                        @if ($cuenta->finalizada && $cuenta->numero_cuenta < $cuenta->numero_pagos_totales)
-                            <button type="button" class="btn btn-sm btn-govco btn-outline-primary"
-                                onclick="startNextAccount({{ $cuenta->id }}, '{{ $contrato->numero_contrato }}', {{ $cuenta->numero_cuenta + 1 }})"
-                                title="Iniciar Cuenta #{{ $cuenta->numero_cuenta + 1 }}">
-                                Iniciar Cuenta #{{ $cuenta->numero_cuenta + 1 }}
-                            </button>
-                        @elseif($cuenta->numero_cuenta >= $cuenta->numero_pagos_totales)
-                            <span class="badge bg-success">Contrato Completado</span>
+                        @if ($cuenta->finalizada)
+                            @if ($cuenta->numero_cuenta < $cuenta->numero_pagos_totales)
+                                <button type="button" class="btn btn-sm btn-govco btn-outline-primary"
+                                    onclick="startNextAccount({{ $cuenta->id }}, '{{ $contrato->numero_contrato }}', {{ $cuenta->numero_cuenta + 1 }})"
+                                    title="Iniciar Cuenta #{{ $cuenta->numero_cuenta + 1 }}">
+                                    Iniciar Cuenta #{{ $cuenta->numero_cuenta + 1 }}
+                                </button>
+                            @else
+                                <span class="badge bg-success">Contrato Completado</span>
+                            @endif
                         @else
                             <span class="text-muted">En proceso de flujo</span>
                         @endif
