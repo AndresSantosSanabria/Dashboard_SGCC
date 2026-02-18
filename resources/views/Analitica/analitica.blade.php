@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/apexcharts/dist/apexcharts.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider/dist/nouislider.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 @endpush
 
 @section('page-content')
@@ -16,25 +17,62 @@
 
     <div class="container-fluid py-4 contents-container">
         <!-- Dashboard Header -->
-        <div class="d-flex justify-content-between align-items-start mb-4 header-content flex-wrap gap-3">
+        <div class="d-flex justify-content-between align-items-center mb-4 header-content flex-wrap gap-3">
             <div>
-                <h2 class="fw-bold mb-1">Tablero Analítico</h2>
-                <p class="header-subtitle mb-2">Inteligencia de Negocio — Gestión de Cuentas de Cobro</p>
-                <span class="header-date-badge">
-                    <i class="bi bi-calendar3"></i> {{ \Carbon\Carbon::now()->translatedFormat('d \\d\\e F, Y') }}
-                </span>
+                <h2 class="fw-bold mb-1 animate-in">Tablero Analítico</h2>
+                <p class="header-subtitle mb-2 animate-in">Inteligencia de Negocio — Gestión de Cuentas de Cobro</p>
+                <div class="header-date-selector animate-in" id="dateRangePicker">
+                    <i class="bi bi-calendar3"></i>
+                    <span id="dateDisplay">
+                        @if(request('fecha_desde') && request('fecha_hasta'))
+                            {{ \Carbon\Carbon::parse(request('fecha_desde'))->format('d M') }} - {{ \Carbon\Carbon::parse(request('fecha_hasta'))->format('d M, Y') }}
+                        @else
+                            {{ \Carbon\Carbon::now()->translatedFormat('d \\d\\e F, Y') }}
+                        @endif
+                    </span>
+                    <i class="bi bi-chevron-down ms-1" style="font-size: 0.7rem;"></i>
+                </div>
             </div>
-            <div class="d-flex gap-2 flex-wrap">
-                <button id="btnExportPDF" class="btn btn-glass">
-                    <i class="bi bi-file-earmark-pdf me-1"></i>Exportar PDF
+            
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <div class="hero-indicator-mini animate-in">
+                    <div class="mini-label">Valor total RP</div>
+                    <div class="mini-value">${{ number_format($indicadorTotalUnico, 0, ',', '.') }}</div>
+                </div>
+                <button id="btnExportPDF" class="btn btn-glass h-100">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>PDF
                 </button>
             </div>
         </div>
 
-        <div id="captureArea">
+        <div id="captureArea" class="position-relative premium-loading-container">
+            @include('layouts.partials._premium_loader')
+            
+            <!-- Header para el PDF (Oculto en web) -->
+            <div id="pdfHeader" class="d-none">
+                <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3" style="border-bottom: 2px solid #004884 !important;">
+                    <div class="d-flex align-items-center gap-3">
+                        <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo" style="height: 60px;">
+                        <div>
+                            <h3 style="margin:0; color:#004884; font-weight:800;">REPORTE ANALÍTICO BI</h3>
+                            <p style="margin:0; font-size:12px; color:#666;">Sistema de Gestión de Cuentas de Cobro — SGCC</p>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-4">
+                        <div id="pdfIndicators" class="d-flex gap-2"></div>
+                        <div class="text-end">
+                            <p style="margin:0; font-size:10px; font-weight:700; color:#004884; letter-spacing: 0.5px;">FECHA DE GENERACIÓN</p>
+                            <p style="margin:0; font-size:12px; color:#333;">{{ \Carbon\Carbon::now()->format('d/m/Y h:i A') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ===== FILTERS ===== -->
-            <div class="filter-bar mb-4 no-print">
+            <div class="filter-bar mb-4 no-print animate-in">
                 <form action="{{ route('analitica') }}" method="GET" class="row g-3 align-items-end" id="filterForm">
+                    <input type="hidden" name="fecha_desde" id="fecha_desde" value="{{ request('fecha_desde') }}">
+                    <input type="hidden" name="fecha_hasta" id="fecha_hasta" value="{{ request('fecha_hasta') }}">
                     <div class="col-lg-2 col-md-4 col-6">
                         <label class="form-label">N° Contrato</label>
                         <input type="text" name="contrato" class="form-control" placeholder="Ej: 119-2025" value="{{ request('contrato') }}">
@@ -74,9 +112,9 @@
                             <button type="submit" class="btn btn-filter flex-grow-1">
                                 <i class="bi bi-funnel me-1"></i>Filtrar
                             </button>
-                            <a href="{{ route('analitica') }}" class="btn btn-reset" title="Limpiar filtros">
+                            <button type="button" id="btnReset" class="btn btn-reset" title="Limpiar filtros">
                                 <i class="bi bi-arrow-counterclockwise"></i>
-                            </a>
+                            </button>
                         </div>
                     </div>
                 </form>
@@ -90,7 +128,7 @@
                     <div class="kpi-value">{{ number_format($contratistasUnicos) }}</div>
                     <div class="kpi-label">Contratistas</div>
                     <div class="kpi-trend text-govco-blue">
-                        <i class="bi bi-receipt-cutoff"></i> {{ number_format($totalCuentas) }} cuentas activas
+                        <i class="bi bi-receipt-cutoff"></i> {{ number_format($totalCuentas) }} cuentas
                     </div>
                 </div>
                 <div class="kpi-card kpi-amber animate-in">
@@ -105,10 +143,19 @@
                 <div class="kpi-card kpi-green animate-in">
                     <div class="kpi-accent"></div>
                     <div class="kpi-icon-wrap"><i class="bi bi-check-circle-fill"></i></div>
-                    <div class="kpi-value">{{ number_format($cuentasFinalizadas) }}</div>
+                    <div class="kpi-value">{{ number_format($cuentasRadicadas) }}</div>
                     <div class="kpi-label">Finalizadas</div>
                     <div class="kpi-trend text-govco-green">
-                        <i class="bi bi-bank2"></i> {{ number_format($cuentasRadicadas) }} radicadas
+                        <i class="bi bi-info-circle"></i> Pagos radicados
+                    </div>
+                </div>
+                <div class="kpi-card kpi-red animate-in">
+                    <div class="kpi-accent"></div>
+                    <div class="kpi-icon-wrap"><i class="bi bi-exclamation-circle-fill"></i></div>
+                    <div class="kpi-value">{{ number_format(max(0, $pagosTotales - $cuentasRadicadas)) }}</div>
+                    <div class="kpi-label">Faltantes por radicar</div>
+                    <div class="kpi-trend text-govco-red">
+                        <i class="bi bi-info-circle"></i> Brecha de ejecución
                     </div>
                 </div>
                 <div class="kpi-card kpi-indigo animate-in">
@@ -116,9 +163,6 @@
                     <div class="kpi-icon-wrap"><i class="bi bi-bullseye"></i></div>
                     <div class="kpi-value">{{ number_format($pagosTotales) }}</div>
                     <div class="kpi-label">Meta Total</div>
-                    <div class="kpi-trend" style="color: #4f46e5;">
-                        <i class="bi bi-cash-stack"></i> ${{ number_format($montoTotal / 1000000, 1) }}M gestionados
-                    </div>
                 </div>
                 <div class="kpi-card kpi-teal animate-in">
                     <div class="kpi-accent"></div>
@@ -131,72 +175,59 @@
                         </div>
                     </div>
                 </div>
+                
             </div>
 
-            <!-- ===== ROW 1: Gauge + Gap + Donut ===== -->
-            <div class="section-title">Visión General</div>
+            <!-- ===== ROW 1: Distribución + Cumplimiento ===== -->
+            <div class="section-title animate-in">Resumen General</div>
             <div class="row g-3 mb-4">
-                <div class="col-xl-3 col-lg-4 animate-in">
-                    <div class="card h-100 card-premium">
-                        <div class="card-header bg-transparent border-0">
-                            <h6>
-                                <span class="chart-icon" style="background:rgba(0,72,132,.08); color:var(--govco-blue);">
-                                    <i class="bi bi-speedometer2"></i>
-                                </span>
-                                Eficiencia Global
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="gaugeChart"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-6 col-lg-8 animate-in">
-                    <div class="card h-100 card-premium">
-                        <div class="card-header bg-transparent border-0">
-                            <h6>
-                                <span class="chart-icon" style="background:rgba(79,70,229,.08); color:#4f46e5;">
-                                    <i class="bi bi-bar-chart-steps"></i>
-                                </span>
-                                Cumplimiento de Metas
-                            </h6>
-                            <span class="chart-badge" style="background:rgba(0,72,132,.06); color:var(--govco-blue);">META vs REAL</span>
-                        </div>
-                        <div class="card-body">
-                            <div id="gapChart"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-3 col-lg-4 animate-in">
+                <div class="col-lg-4 animate-in">
                     <div class="card h-100 card-premium">
                         <div class="card-header bg-transparent border-0">
                             <h6>
                                 <span class="chart-icon" style="background:rgba(10,135,84,.08); color:var(--govco-green);">
                                     <i class="bi bi-pie-chart-fill"></i>
                                 </span>
-                                Distribución
+                                Estado de Cuentas
                             </h6>
                         </div>
-                        <div class="card-body">
+                        <div class="card-body d-flex align-items-center">
                             <div id="donutChart"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-8 animate-in">
+                    <div class="card h-100 card-premium">
+                        <div class="card-header bg-transparent border-0">
+                            <h6>
+                                <span class="chart-icon" style="background:rgba(79,70,229,.08); color:#4f46e5;">
+                                    <i class="bi bi-funnel"></i>
+                                </span>
+                                Estado del Pipeline (Carga por Etapa)
+                            </h6>
+                            <span class="chart-badge" style="background:rgba(0,72,132,.06); color:var(--govco-blue);">VOLUMEN DE CONTRATOS</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="gapChart"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ===== ROW 2: Demora + Estados ===== -->
-            <div class="section-title">Análisis Operativo</div>
+            <!-- ===== ROW 2: Demora + Actividad ===== -->
+            <div class="section-title animate-in">Análisis de Tiempos y Operación</div>
             <div class="row g-3 mb-4">
                 <div class="col-lg-6 animate-in">
-                    <div class="card card-premium">
+                    <div class="card h-100 card-premium">
                         <div class="card-header bg-transparent border-0">
                             <h6>
                                 <span class="chart-icon" style="background:rgba(245,158,11,.1); color:#d97706;">
                                     <i class="bi bi-clock-history"></i>
                                 </span>
-                                Demora por Etapa
-                                <i class="bi bi-info-circle text-muted ms-1" style="font-size:.75rem" data-bs-toggle="tooltip" title="Tiempo promedio en horas que permanecen los contratos en cada fase del proceso."></i>
+                                Demora Promedio por Etapa
+                                <i class="bi bi-info-circle text-muted ms-1" style="font-size:.75rem" data-bs-toggle="tooltip" title="Promedio de horas que permanecen los contratos en cada bloque antes de avanzar."></i>
                             </h6>
+                            <span class="chart-badge" style="background:rgba(245,158,11,.06); color:#d97706;">TIEMPO EN HORAS Y MINUTOS</span>
                         </div>
                         <div class="card-body">
                             <div id="delayChart"></div>
@@ -204,186 +235,61 @@
                     </div>
                 </div>
                 <div class="col-lg-6 animate-in">
-                    <div class="card card-premium">
-                        <div class="card-header bg-transparent border-0">
-                            <h6>
-                                <span class="chart-icon" style="background:rgba(0,72,132,.08); color:var(--govco-blue);">
-                                    <i class="bi bi-diagram-3-fill"></i>
-                                </span>
-                                Estados más Frecuentes
-                                <i class="bi bi-info-circle text-muted ms-1" style="font-size:.75rem" data-bs-toggle="tooltip" title="Muestra en qué estados se concentran más cuentas actualmente."></i>
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="statesChart"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== ROW 3: Heatmap + Diferencia ===== -->
-            <div class="section-title">Rendimiento y Brechas</div>
-            <div class="row g-3 mb-4">
-                <div class="col-lg-6 animate-in">
-                    <div class="card card-premium">
-                        <div class="card-header bg-transparent border-0">
-                            <h6>
-                                <span class="chart-icon" style="background:rgba(13,148,136,.08); color:#0d9488;">
-                                    <i class="bi bi-person-lines-fill"></i>
-                                </span>
-                                Carga por Responsable
-                                <i class="bi bi-info-circle text-muted ms-1" style="font-size:.75rem" data-bs-toggle="tooltip" title="Cantidad de cuentas asignadas por responsable, incluyendo devueltas."></i>
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="heatmapChart"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-6 animate-in">
-                    <div class="card card-premium">
-                        <div class="card-header bg-transparent border-0">
-                            <h6>
-                                <span class="chart-icon" style="background:rgba(214,13,13,.08); color:var(--govco-red);">
-                                    <i class="bi bi-exclamation-triangle-fill"></i>
-                                </span>
-                                Contratos con Mayor Brecha
-                                <i class="bi bi-info-circle text-muted ms-1" style="font-size:.75rem" data-bs-toggle="tooltip" title="Diferencia entre pagos pactados y cuentas radicadas. Mayor barra = mayor rezago."></i>
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="barChartDiferencia"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== ROW 4: Timeline + SLA ===== -->
-            <div class="section-title">Tendencias y Cumplimiento</div>
-            <div class="row g-3 mb-4">
-                <div class="col-lg-6 animate-in">
-                    <div class="card card-premium">
+                    <div class="card h-100 card-premium">
                         <div class="card-header bg-transparent border-0">
                             <h6>
                                 <span class="chart-icon" style="background:rgba(79,70,229,.08); color:#4f46e5;">
                                     <i class="bi bi-graph-up-arrow"></i>
                                 </span>
-                                Actividad (Últimos 30 días)
+                                Actividad Reciente (30 días)
                             </h6>
-                            <span class="chart-badge" style="background:rgba(79,70,229,.06); color:#4f46e5;">TENDENCIA</span>
                         </div>
                         <div class="card-body">
                             <div id="timelineChart"></div>
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-6 animate-in">
-                    <div class="card card-premium">
-                        <div class="card-header bg-transparent border-0">
-                            <h6>
-                                <span class="chart-icon" style="background:rgba(10,135,84,.08); color:var(--govco-green);">
-                                    <i class="bi bi-shield-check"></i>
-                                </span>
-                                Cumplimiento SLA
-                                <i class="bi bi-info-circle text-muted ms-1" style="font-size:.75rem" data-bs-toggle="tooltip" title="Porcentaje de transiciones que se completaron dentro del SLA definido por bloque."></i>
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="slaChart"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ===== ROW 5: Supervisor + Distribución Bloques ===== -->
-            <div class="section-title">Gestión por Equipo</div>
-            <div class="row g-3 mb-4">
-                <div class="col-lg-7 animate-in">
-                    <div class="card card-premium">
-                        <div class="card-header bg-transparent border-0">
-                            <h6>
-                                <span class="chart-icon" style="background:rgba(0,72,132,.08); color:var(--govco-blue);">
-                                    <i class="bi bi-person-workspace"></i>
-                                </span>
-                                Rendimiento por Supervisor
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="supervisorChart"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-5 animate-in">
-                    <div class="card card-premium">
-                        <div class="card-header bg-transparent border-0">
-                            <h6>
-                                <span class="chart-icon" style="background:rgba(245,158,11,.1); color:#d97706;">
-                                    <i class="bi bi-layers-fill"></i>
-                                </span>
-                                Distribución por Bloque
-                            </h6>
-                        </div>
-                        <div class="card-body">
-                            <div id="bloqueChart"></div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <!-- ===== ALERT TABLE ===== -->
-            <div class="section-title">Alertas del Sistema</div>
+            <div class="section-title animate-in">Detalle por Contrato</div>
             <div class="card card-premium mb-4 animate-in">
                 <div class="card-header bg-transparent border-0">
                     <h6>
-                        <span class="chart-icon" style="background:rgba(214,13,13,.08); color:var(--govco-red);">
-                            <i class="bi bi-bell-fill"></i>
+                        <span class="chart-icon" style="background:rgba(0,72,132,.08); color:var(--govco-blue);">
+                            <i class="bi bi-table"></i>
                         </span>
-                        Contratos con Brecha Pendiente
+                        Contratos — Avance y Pendientes
                     </h6>
-                    <span class="chart-badge badge-danger-soft">{{ $cuentas->filter(fn($c) => ($c->numero_pagos_totales ?? 0) - ($c->radicadas_bi ?? 0) > 0)->count() }} alertas</span>
+                    @php $alertCount = $cuentas->filter(fn($c) => ($c->numero_pagos_totales ?? 0) - ($c->radicadas_bi ?? 0) > 0)->count(); @endphp
+                    @if($alertCount > 0)
+                        <span class="chart-badge badge-danger-soft">{{ $alertCount }} con brecha</span>
+                    @else
+                        <span class="chart-badge badge-success-soft">Todo al día</span>
+                    @endif
+                    <button id="btnResetColumns" class="btn btn-sm btn-outline-primary ms-auto btn-reset-columns" style="display: none;" onclick="resetColumns()">
+                        <i class="bi bi-layout-three-columns me-1"></i> Mostrar Todo
+                    </button>
                 </div>
                 <div class="card-body px-3 pb-3 pt-0">
                     <div class="table-responsive">
                         <table id="alertTable" class="table table-premium table-hover align-middle mb-0">
                             <thead>
                                 <tr>
-                                    <th>N° Contrato</th>
-                                    <th>Contratista</th>
-                                    <th>Bloque</th>
-                                    <th>Estado</th>
-                                    <th class="text-center">Meta</th>
-                                    <th class="text-center">Radicadas</th>
-                                    <th class="text-center">Diferencia</th>
-                                    <th>Avance</th>
+                                    @foreach(['N° Contrato', 'Contratista', 'Etapa Actual', 'Estado', 'Meta', 'Radicadas', 'Pendientes', 'Avance'] as $h)
+                                    <th class="{{ in_array($h, ['Meta', 'Radicadas', 'Pendientes']) ? 'text-center' : '' }}">
+                                        <div class="d-flex align-items-center justify-content-between gap-2">
+                                            <span>{{ $h }}</span>
+                                            <button type="button" class="btn btn-sm btn-link p-0 toggle-col-btn" title="Minimizar">
+                                                <i class="bi bi-dash-lg"></i>
+                                            </button>
+                                        </div>
+                                    </th>
+                                    @endforeach
                                 </tr>
                             </thead>
-                            <tbody>
-                                @foreach($cuentas as $c)
-                                    @php $diff = ($c->numero_pagos_totales ?? 0) - ($c->radicadas_bi ?? 0); @endphp
-                                    <tr class="{{ $diff > 0 ? 'table-alert' : '' }}">
-                                        <td class="fw-bold text-govco-blue">{{ $c->contrato->numero_contrato ?? 'N/A' }}</td>
-                                        <td><small>{{ $c->contrato->contratista->nombre_completo ?? 'N/A' }}</small></td>
-                                        <td><small class="badge" style="background:rgba(0,72,132,.08); color:var(--govco-blue); font-weight:600;">{{ $c->bloqueActual->nombre ?? 'N/A' }}</small></td>
-                                        <td><small>{{ $c->estadoActual->nombre ?? 'N/A' }}</small></td>
-                                        <td class="text-center fw-semibold">{{ $c->numero_pagos_totales ?? 0 }}</td>
-                                        <td class="text-center fw-semibold">{{ $c->radicadas_bi ?? 0 }}</td>
-                                        <td class="text-center">
-                                            @if($diff > 0)
-                                                <span class="badge badge-danger-soft">-{{ $diff }}</span>
-                                            @else
-                                                <span class="badge badge-success-soft"><i class="bi bi-check2"></i> OK</span>
-                                            @endif
-                                        </td>
-                                        <td style="min-width: 120px;">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <div class="progress-slim flex-grow-1">
-                                                    <div class="progress-bar" style="width: {{ min($c->avance_bi, 100) }}%"></div>
-                                                </div>
-                                                <small class="text-muted fw-semibold" style="font-size:.72rem;">{{ number_format($c->avance_bi, 1) }}%</small>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
+                            <tbody id="tableBody">
+                                @include('Analitica.componentes.tabla_contratos', ['cuentas' => $cuentas])
                             </tbody>
                         </table>
                     </div>
@@ -406,6 +312,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
     <script src="https://cdn.jsdelivr.net/npm/nouislider/dist/nouislider.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/es.js"></script>
 
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>

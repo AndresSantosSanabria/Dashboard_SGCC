@@ -67,6 +67,7 @@
         </div>
 
         <div class="d-grid gap-2 mt-4">
+            <button type="submit" class="btn btn-primary" data-bs-dismiss="offcanvas">Aplicar Filtros</button>
             <a href="{{ route('dashboard') }}" class="btn btn-secondary">Limpiar filtros</a>
         </div>
     </div>

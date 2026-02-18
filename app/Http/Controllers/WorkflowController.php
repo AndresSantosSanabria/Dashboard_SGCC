@@ -411,6 +411,17 @@ class WorkflowController extends Controller
         $bloqueNuevoId = $estadoDestino->bloque_id;
         $esDevolucion = $this->esDevolucionDeBloque($bloqueAnteriorId, $bloqueNuevoId);
 
+        // **CERRAR BLOQUE ANTERIOR SI CAMBIA DE BLOQUE (AVANCE)**
+        if ($bloqueAnteriorId != $bloqueNuevoId && !$esDevolucion) {
+            \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)
+                ->where('bloque_id', $bloqueAnteriorId)
+                ->update([
+                    'bloque_completado' => true,
+                    'fecha_completado_bloque' => now(),
+                    'fecha_ultima_actualizacion' => now()
+                ]);
+        }
+
         // **MARCAR BLOQUE ANTERIOR COMO DEVUELTO SI ES DEVOLUCIÓN**
         if ($esDevolucion) {
             $this->marcarBloqueComoDevuelto($cuenta->id, $bloqueAnteriorId, $comentario);
@@ -460,7 +471,9 @@ class WorkflowController extends Controller
             $cuenta->finalizada = false;
         }
 
-        // Si el bloque cambia o no existía el registro, actualizamos fecha de ingreso (Timer reset)
+        // LÓGICA DE TIEMPOS:
+        // 1. fecha_ultima_actualizacion: Se actualiza en CADA movimiento (Resetea el reloj de la tarjeta).
+        // 2. fecha_ingreso_bloque: Solo se actualiza al ENTRAR al bloque (Mantiene el tiempo total de la fase para analítica).
         if ($estadoDestino->bloque_id != $cuenta->bloque_actual_id || !$existeRegistro) {
             $updateData['fecha_ingreso_bloque'] = now();
             $cuenta->bloque_actual_id = $estadoDestino->bloque_id;

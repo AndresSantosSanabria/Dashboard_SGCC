@@ -1,23 +1,21 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const chartData = window.chartData || {};
-    const avanceGlobal = window.avanceGlobal || 0;
+    let chartData = window.chartData || {};
+    let charts = {};
 
-    // Paleta de colores premium
+    // Paleta de colores
     const P = {
         blue: '#004884',
         blueLt: '#0070cc',
-        blueUltra: '#3b82f6',
         indigo: '#4f46e5',
         teal: '#0d9488',
         green: '#0a8754',
         greenLt: '#10b981',
         amber: '#d97706',
-        yellow: '#F6CA1F',
+        orange: '#f97316',
         red: '#D60D0D',
         redLt: '#ef4444',
         gray: '#64748b',
         grayLt: '#94a3b8',
-        surface: '#f1f5f9',
         muted: '#e2e8f0',
     };
 
@@ -25,520 +23,546 @@ document.addEventListener('DOMContentLoaded', function () {
     const noToolbar = { show: false };
 
     // ==============================
-    // 1. GAUGE – Eficiencia Global
+    // INITIALIZE CHARTS
     // ==============================
-    new ApexCharts(document.querySelector("#gaugeChart"), {
-        series: [Math.min(avanceGlobal, 100)],
-        chart: { height: 280, type: 'radialBar' },
-        plotOptions: {
-            radialBar: {
-                startAngle: -135,
-                endAngle: 135,
-                hollow: { size: '68%', background: 'transparent' },
-                track: { background: P.muted, strokeWidth: '100%' },
-                dataLabels: {
-                    name: { fontSize: '12px', color: P.gray, offsetY: 85, fontWeight: 600 },
-                    value: {
-                        offsetY: 45,
-                        fontSize: '2.2rem',
-                        fontWeight: '800',
-                        color: P.blue,
-                        ...baseFont,
-                        formatter: val => parseFloat(val).toFixed(1) + "%"
-                    }
-                }
-            }
-        },
-        fill: {
-            type: 'gradient',
-            gradient: {
-                shade: 'dark',
-                type: 'horizontal',
-                shadeIntensity: 0.5,
-                gradientToColors: [P.teal],
-                stops: [0, 100]
-            }
-        },
-        stroke: { lineCap: 'round' },
-        labels: ['EFICIENCIA GLOBAL'],
-    }).render();
-
-    // ==============================
-    // 2. GAP – Cumplimiento de Metas
-    // ==============================
-    if (chartData.gap_chart && chartData.gap_chart.labels.length > 0) {
-        new ApexCharts(document.querySelector("#gapChart"), {
-            series: [{
-                name: 'Radicadas',
-                data: chartData.gap_chart.reales
-            }, {
-                name: 'Faltante',
-                data: chartData.gap_chart.metas.map((m, i) => Math.max(0, m - chartData.gap_chart.reales[i]))
-            }],
-            chart: { type: 'bar', height: 320, stacked: true, toolbar: noToolbar, ...baseFont },
-            plotOptions: {
-                bar: { horizontal: false, columnWidth: '55%', borderRadius: 6, borderRadiusApplication: 'end' },
-            },
-            colors: [P.blue, P.muted],
-            xaxis: {
-                categories: chartData.gap_chart.labels,
-                labels: { rotate: -45, style: { fontSize: '10px', colors: P.grayLt, ...baseFont } }
-            },
-            yaxis: {
-                title: { text: 'N° de Cuentas', style: { fontSize: '11px', color: P.gray, ...baseFont } },
-                labels: { formatter: val => Math.round(val), style: { colors: P.grayLt } }
-            },
-            legend: {
-                position: 'top',
-                horizontalAlign: 'right',
-                fontSize: '11px',
-                markers: { radius: 3 },
-                itemMargin: { horizontal: 10 }
-            },
-            tooltip: {
-                y: {
-                    formatter: function (val, { seriesIndex, dataPointIndex }) {
-                        if (seriesIndex === 0) return val + " radicadas";
-                        const meta = chartData.gap_chart.metas[dataPointIndex];
-                        return "Faltan " + val + " para llegar a " + meta;
-                    }
-                }
-            },
-            dataLabels: {
-                enabled: true,
-                formatter: function (val, { seriesIndex, dataPointIndex }) {
-                    if (seriesIndex === 1) return chartData.gap_chart.metas[dataPointIndex];
-                    return val > 0 ? val : '';
+    function initCharts(data) {
+        // 1. DONUT – Estado de Cuentas
+        if (data.estado_anillos) {
+            if (charts.donut) charts.donut.destroy();
+            charts.donut = new ApexCharts(document.querySelector("#donutChart"), {
+                series: data.estado_anillos.series,
+                chart: { type: 'donut', height: 320, ...baseFont },
+                labels: data.estado_anillos.labels,
+                colors: [P.amber, P.redLt],
+                legend: {
+                    position: 'bottom',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    markers: { radius: 4 },
+                    itemMargin: { horizontal: 12, vertical: 4 }
                 },
-                style: { colors: ['#fff', P.gray], fontSize: '10px', fontWeight: 700 }
-            },
-            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
-        }).render();
-    }
-
-    // ==============================
-    // 3. DONUT – Distribución
-    // ==============================
-    new ApexCharts(document.querySelector("#donutChart"), {
-        series: chartData.estado_anillos.series,
-        chart: { type: 'donut', height: 300, ...baseFont },
-        labels: chartData.estado_anillos.labels,
-        colors: [P.amber, P.blue, P.redLt],
-        legend: { position: 'bottom', fontSize: '11px', markers: { radius: 3 } },
-        plotOptions: {
-            pie: {
-                donut: {
-                    size: '65%',
-                    labels: {
-                        show: true,
-                        total: {
-                            show: true,
-                            label: 'Total',
-                            fontSize: '13px',
-                            fontWeight: 700,
-                            color: P.gray,
-                            formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '62%',
+                            labels: {
+                                show: true,
+                                total: {
+                                    show: true,
+                                    label: 'Total',
+                                    fontSize: '13px',
+                                    fontWeight: 700,
+                                    color: P.gray,
+                                    formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
+                                },
+                                value: {
+                                    fontSize: '1.8rem',
+                                    fontWeight: 800,
+                                    color: P.blue,
+                                }
+                            }
                         }
                     }
-                }
-            }
-        },
-        dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 700 } },
-        stroke: { width: 3, colors: ['#fff'] },
-    }).render();
+                },
+                dataLabels: { enabled: true, style: { fontSize: '12px', fontWeight: 700 } },
+                stroke: { width: 3, colors: ['#fff'] },
+            });
+            charts.donut.render();
+        }
 
-    // ==============================
-    // 4. DELAY – Demora por Etapa
-    // ==============================
-    if (chartData.demora_bloques && chartData.demora_bloques.length > 0) {
-        new ApexCharts(document.querySelector("#delayChart"), {
-            series: [{
-                name: 'Promedio (h)',
-                data: chartData.demora_bloques.map(d => d.promedio_horas)
-            }],
-            chart: { type: 'bar', height: 350, toolbar: noToolbar, ...baseFont },
-            plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '55%' } },
-            colors: [P.amber],
-            fill: {
-                type: 'gradient',
-                gradient: { shade: 'light', type: 'horizontal', shadeIntensity: 0.2, gradientToColors: [P.yellow], stops: [0, 100] }
-            },
-            xaxis: {
-                categories: chartData.demora_bloques.map(d => d.bloque),
-                labels: { style: { fontSize: '11px', colors: P.grayLt } }
-            },
-            yaxis: { labels: { style: { fontSize: '11px', colors: P.gray, fontWeight: 600 } } },
-            tooltip: { y: { formatter: val => val + " horas promedio" } },
-            dataLabels: {
-                enabled: true,
-                formatter: val => val + "h",
-                style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] },
-                offsetX: 5
-            },
-            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
-        }).render();
-    } else {
-        document.querySelector("#delayChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-inbox"></i>Sin datos de demora</div>';
-    }
+        // 1.5 DELAY – Demora por Etapa
+        if (data.demora_bloques && data.demora_bloques.length > 0) {
+            const promedios = data.demora_bloques.map(d => d.promedio_horas);
+            const maxTime = Math.max(...promedios);
+            const minTime = Math.min(...promedios);
+            const range = maxTime - minTime;
 
-    // ==============================
-    // 5. STATES – Estados Frecuentes
-    // ==============================
-    if (chartData.estados_uso && chartData.estados_uso.length > 0) {
-        new ApexCharts(document.querySelector("#statesChart"), {
-            series: chartData.estados_uso.map(d => d.cantidad),
-            chart: { type: 'polarArea', height: 350, ...baseFont },
-            labels: chartData.estados_uso.map(d => d.estado),
-            fill: { opacity: 0.85 },
-            stroke: { width: 2, colors: ['#fff'] },
-            colors: [P.blue, P.blueLt, P.teal, P.green, P.amber, P.indigo, P.grayLt, P.redLt],
-            legend: { position: 'bottom', fontSize: '10px', markers: { radius: 3 } },
-            plotOptions: { polarArea: { rings: { strokeWidth: 1, strokeColor: '#f1f5f9' } } },
-            yaxis: { show: false },
-        }).render();
-    } else {
-        document.querySelector("#statesChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-inbox"></i>Sin datos de estados</div>';
-    }
+            const delayColors = data.demora_bloques.map(d => {
+                const h = d.promedio_horas;
+                if (range < 0.1) return P.green;
+                const band1 = minTime + (range * 0.33);
+                const band2 = minTime + (range * 0.66);
+                if (h <= band1) return P.green;
+                if (h <= band2) return P.orange;
+                return P.red;
+            });
 
-    // ==============================
-    // 6. HEATMAP – Carga por Responsable
-    // ==============================
-    if (chartData.heatmap && chartData.heatmap.length > 0) {
-        new ApexCharts(document.querySelector("#heatmapChart"), {
-            series: [{
-                name: 'En Trámite',
-                data: chartData.heatmap.map(d => ({ x: d.name, y: d.tramite }))
-            }, {
-                name: 'Devueltas',
-                data: chartData.heatmap.map(d => ({ x: d.name, y: d.devueltas }))
-            }, {
-                name: 'Finalizadas',
-                data: chartData.heatmap.map(d => ({ x: d.name, y: d.finalizadas }))
-            }],
-            chart: { height: 350, type: 'heatmap', toolbar: noToolbar, ...baseFont },
-            dataLabels: { enabled: true, style: { fontSize: '11px', fontWeight: 700 } },
-            plotOptions: {
-                heatmap: {
-                    radius: 4,
-                    colorScale: {
-                        ranges: [
-                            { from: 0, to: 0, color: '#f8fafc', name: 'Ninguna' },
-                            { from: 1, to: 2, color: '#bfdbfe', name: 'Baja' },
-                            { from: 3, to: 5, color: '#60a5fa', name: 'Media' },
-                            { from: 6, to: 100, color: P.blue, name: 'Alta' }
-                        ]
+            if (charts.delay) charts.delay.destroy();
+            charts.delay = new ApexCharts(document.querySelector("#delayChart"), {
+                series: [{
+                    name: 'Promedio (Horas)',
+                    data: data.demora_bloques.map(d => d.promedio_horas)
+                }],
+                chart: { type: 'bar', height: 280, toolbar: noToolbar, ...baseFont },
+                plotOptions: {
+                    bar: { horizontal: true, borderRadius: 6, barHeight: '50%', distributed: true }
+                },
+                colors: delayColors,
+                xaxis: {
+                    categories: data.demora_bloques.map(d => d.bloque),
+                    labels: { style: { fontSize: '11px', colors: P.grayLt } }
+                },
+                yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.gray } } },
+                tooltip: {
+                    y: {
+                        formatter: val => {
+                            const h = Math.floor(val);
+                            const m = Math.round((val - h) * 60);
+                            return `${h}h ${m}m en promedio`;
+                        }
                     }
-                }
-            },
-            stroke: { width: 2, colors: ['#fff'] },
-            xaxis: { labels: { style: { fontSize: '10px' } } },
-        }).render();
-    } else {
-        document.querySelector("#heatmapChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-inbox"></i>Sin datos de carga</div>';
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: val => {
+                        const h = Math.floor(val);
+                        const m = Math.round((val - h) * 60);
+                        return m > 0 ? `${h}h ${m}m` : `${h}h`;
+                    },
+                    style: { fontSize: '11px', fontWeight: 700, colors: ['#fff'] },
+                    offsetX: 5
+                },
+                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+                legend: { show: false }
+            });
+            charts.delay.render();
+        } else {
+            document.querySelector("#delayChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-clock"></i>Sin datos de demora históricos</div>';
+        }
+
+        // 2. PIPELINE – Carga por Etapa
+        if (data.gap_chart && data.gap_chart.labels.length > 0) {
+            if (charts.gap) charts.gap.destroy();
+            charts.gap = new ApexCharts(document.querySelector("#gapChart"), {
+                series: [{ name: 'Contratos', data: data.gap_chart.series }],
+                chart: { type: 'bar', height: 320, toolbar: noToolbar, ...baseFont },
+                plotOptions: {
+                    bar: { horizontal: true, borderRadius: 6, barHeight: '60%', distributed: true },
+                },
+                colors: [P.indigo, P.blue, P.teal, P.green, P.amber, P.red],
+                xaxis: {
+                    categories: data.gap_chart.labels,
+                    labels: { style: { fontSize: '11px', colors: P.grayLt, ...baseFont } }
+                },
+                yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.gray, ...baseFont } } },
+                legend: { show: false },
+                tooltip: { y: { formatter: val => val + " contratos en esta etapa" } },
+                dataLabels: {
+                    enabled: true,
+                    textAnchor: 'start',
+                    style: { colors: ['#fff'], fontSize: '12px', fontWeight: 800 },
+                    offsetX: 10
+                },
+                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+            });
+            charts.gap.render();
+        } else {
+            document.querySelector("#gapChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-bar-chart"></i>Sin datos en el pipeline</div>';
+        }
+
+        // 3. TIMELINE – Actividad últimos 30 días
+        if (data.timeline && data.timeline.labels.length > 0) {
+            if (charts.timeline) charts.timeline.destroy();
+            charts.timeline = new ApexCharts(document.querySelector("#timelineChart"), {
+                series: [{ name: 'Transiciones', data: data.timeline.series }],
+                chart: { type: 'area', height: 280, toolbar: noToolbar, ...baseFont },
+                colors: [P.indigo],
+                fill: {
+                    type: 'gradient',
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 95] }
+                },
+                stroke: { curve: 'smooth', width: 2.5 },
+                xaxis: {
+                    categories: data.timeline.labels,
+                    labels: { rotate: -45, style: { fontSize: '10px', colors: P.grayLt } }
+                },
+                yaxis: {
+                    title: { text: 'Transiciones', style: { fontSize: '11px', color: P.gray } },
+                    labels: { formatter: val => Math.round(val), style: { colors: P.grayLt } }
+                },
+                dataLabels: { enabled: false },
+                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+                markers: { size: 4, colors: [P.indigo], strokeWidth: 0, hover: { size: 7 } },
+                tooltip: { y: { formatter: val => val + " transiciones" } }
+            });
+            charts.timeline.render();
+        } else {
+            document.querySelector("#timelineChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-activity"></i>Sin actividad reciente (30 días)</div>';
+        }
     }
 
     // ==============================
-    // 7. BAR DIFERENCIA – Contratos con Mayor Brecha
+    // UI UPDATES
     // ==============================
-    if (chartData.diferencia_barras && chartData.diferencia_barras.length > 0) {
-        new ApexCharts(document.querySelector("#barChartDiferencia"), {
-            series: [{
-                name: 'Brecha',
-                data: chartData.diferencia_barras.map(d => d.diferencia)
-            }],
-            chart: { type: 'bar', height: 350, toolbar: noToolbar, ...baseFont },
-            plotOptions: { bar: { borderRadius: 6, horizontal: true, barHeight: '65%' } },
-            colors: [P.redLt],
-            fill: {
-                type: 'gradient',
-                gradient: { shade: 'dark', type: 'horizontal', shadeIntensity: 0.3, gradientToColors: [P.red], stops: [0, 100] }
-            },
-            dataLabels: {
-                enabled: true,
-                formatter: val => val > 0 ? val + " pend." : "OK",
-                style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] }
-            },
-            xaxis: {
-                categories: chartData.diferencia_barras.map(d => d.contrato),
-                labels: { style: { fontSize: '10px', colors: P.grayLt } }
-            },
-            yaxis: { labels: { style: { fontSize: '11px', colors: P.gray, fontWeight: 600 } } },
-            tooltip: {
-                y: { formatter: val => "Faltan " + val + " facturas por radicar" }
-            },
-            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
-        }).render();
-    }
+    function updateKPIs(data) {
+        const fmt = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+        const fmtDec = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-    // ==============================
-    // 8. TIMELINE – Actividad últimos 30 días
-    // ==============================
-    if (chartData.timeline && chartData.timeline.labels.length > 0) {
-        new ApexCharts(document.querySelector("#timelineChart"), {
-            series: [{
-                name: 'Transiciones',
-                data: chartData.timeline.series
-            }],
-            chart: {
-                type: 'area',
-                height: 350,
-                toolbar: noToolbar,
-                ...baseFont,
-                sparkline: { enabled: false }
-            },
-            colors: [P.indigo],
-            fill: {
-                type: 'gradient',
-                gradient: {
-                    shadeIntensity: 1,
-                    opacityFrom: 0.4,
-                    opacityTo: 0.05,
-                    stops: [0, 95]
-                }
-            },
-            stroke: { curve: 'smooth', width: 2.5 },
-            xaxis: {
-                categories: chartData.timeline.labels,
-                labels: { rotate: -45, style: { fontSize: '9px', colors: P.grayLt } }
-            },
-            yaxis: {
-                title: { text: 'Transiciones', style: { fontSize: '11px', color: P.gray } },
-                labels: { formatter: val => Math.round(val), style: { colors: P.grayLt } }
-            },
-            dataLabels: { enabled: false },
-            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
-            markers: { size: 3, colors: [P.indigo], strokeWidth: 0, hover: { size: 6 } },
-            tooltip: { y: { formatter: val => val + " transiciones" } }
-        }).render();
-    } else {
-        document.querySelector("#timelineChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-activity"></i>Sin actividad reciente (30 días)</div>';
-    }
+        // Hero indicator
+        const miniValue = document.querySelector('.mini-value');
+        if (miniValue) {
+            miniValue.style.opacity = '0';
+            setTimeout(() => {
+                miniValue.textContent = '$' + fmt.format(data.indicadorTotalUnico || 0);
+                miniValue.style.transition = 'opacity 0.5s ease';
+                miniValue.style.opacity = '1';
+            }, 300);
+        }
 
-    // ==============================
-    // 9. SLA COMPLIANCE
-    // ==============================
-    if (chartData.sla_compliance && chartData.sla_compliance.length > 0) {
-        new ApexCharts(document.querySelector("#slaChart"), {
-            series: [{
-                name: 'Cumple SLA',
-                data: chartData.sla_compliance.map(d => d.cumple)
-            }, {
-                name: 'Excede SLA',
-                data: chartData.sla_compliance.map(d => d.no_cumple)
-            }],
-            chart: { type: 'bar', height: 350, stacked: true, toolbar: noToolbar, ...baseFont },
-            plotOptions: { bar: { horizontal: false, columnWidth: '50%', borderRadius: 6, borderRadiusApplication: 'end' } },
-            colors: [P.green, P.redLt],
-            xaxis: {
-                categories: chartData.sla_compliance.map(d => d.bloque),
-                labels: { style: { fontSize: '10px', colors: P.grayLt } }
-            },
-            yaxis: {
-                title: { text: 'Transiciones', style: { fontSize: '11px', color: P.gray } },
-                labels: { style: { colors: P.grayLt } }
-            },
-            legend: {
-                position: 'top',
-                horizontalAlign: 'right',
-                fontSize: '11px',
-                markers: { radius: 3 }
-            },
-            dataLabels: {
-                enabled: true,
-                style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] }
-            },
-            tooltip: {
-                shared: true,
-                y: { formatter: val => val + " transiciones" }
-            },
-            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
-            annotations: {
-                yaxis: chartData.sla_compliance.map(d => ({
-                    y: 0,
-                    borderColor: 'transparent',
-                    label: {
-                        text: d.porcentaje + '% cumpl.',
-                        position: 'front',
-                        style: { fontSize: '9px', color: P.green, background: 'transparent' }
-                    }
-                }))
+        // KPI Cards
+        const kpiElements = document.querySelectorAll('.kpi-value');
+        kpiElements.forEach(el => {
+            el.style.opacity = '0';
+        });
+
+        setTimeout(() => {
+            if (kpiElements.length >= 6) {
+                kpiElements[0].textContent = fmt.format(data.contratistasUnicos);
+                kpiElements[1].textContent = fmt.format(data.cuentasTramite);
+                kpiElements[2].textContent = fmt.format(data.cuentasRadicadas);
+                kpiElements[3].textContent = fmt.format(Math.max(0, data.pagosTotales - data.cuentasRadicadas));
+                kpiElements[4].textContent = fmt.format(data.pagosTotales);
+                kpiElements[5].textContent = fmtDec.format(data.avanceGlobal) + '%';
             }
-        }).render();
-    } else {
-        document.querySelector("#slaChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-shield-x"></i>Sin datos de SLA configurados</div>';
+            kpiElements.forEach(el => {
+                el.style.transition = 'opacity 0.5s ease';
+                el.style.opacity = '1';
+            });
+        }, 300);
+
+        // Global progress bar
+        const globalProgress = document.querySelector('.kpi-indigo + .kpi-teal .progress-bar, .kpi-teal .progress-bar');
+        if (globalProgress) {
+            globalProgress.style.width = Math.min(data.avanceGlobal, 100) + '%';
+        }
+    }
+
+    function updateTable(html) {
+        const table = $('#alertTable').DataTable();
+        table.destroy();
+        document.getElementById('tableBody').innerHTML = html;
+        initDataTable();
+        applyMinimizedColumns();
     }
 
     // ==============================
-    // 10. SUPERVISOR PERFORMANCE
+    // AJAX REFRESH
     // ==============================
-    if (chartData.supervisor_perf && chartData.supervisor_perf.length > 0) {
-        new ApexCharts(document.querySelector("#supervisorChart"), {
-            series: [{
-                name: 'Finalizadas',
-                data: chartData.supervisor_perf.map(d => d.finalizadas)
-            }, {
-                name: 'Pendientes',
-                data: chartData.supervisor_perf.map(d => d.pendientes)
-            }],
-            chart: { type: 'bar', height: 350, stacked: true, toolbar: noToolbar, ...baseFont },
-            plotOptions: { bar: { horizontal: true, borderRadius: 5, barHeight: '55%' } },
-            colors: [P.teal, P.muted],
-            xaxis: {
-                categories: chartData.supervisor_perf.map(d => d.supervisor),
-                labels: { style: { fontSize: '10px', colors: P.grayLt } }
-            },
-            yaxis: { labels: { style: { fontSize: '10px', colors: P.gray, fontWeight: 600 } } },
-            legend: {
-                position: 'top',
-                horizontalAlign: 'right',
-                fontSize: '11px',
-                markers: { radius: 3 }
-            },
-            dataLabels: {
-                enabled: true,
-                style: { fontSize: '10px', fontWeight: 700 }
-            },
-            grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
-            tooltip: {
-                y: { formatter: (val, { seriesIndex }) => val + (seriesIndex === 0 ? " completadas" : " pendientes") }
-            }
-        }).render();
-    } else {
-        document.querySelector("#supervisorChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-person"></i>Sin datos de supervisores</div>';
+    async function refreshDashboard() {
+        const form = document.getElementById('filterForm');
+        const formData = new FormData(form);
+        const params = new URLSearchParams(formData);
+
+        // Mostrar loading state
+        const captureArea = document.getElementById('captureArea');
+        captureArea.classList.add('loading');
+
+        try {
+            const response = await fetch(form.action + '?' + params.toString(), {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await response.json();
+
+            // Update elements
+            updateKPIs(data);
+            initCharts(data.chartData);
+            updateTable(data.tableHtml);
+
+            // Update URL without reload
+            const newUrl = window.location.pathname + '?' + params.toString();
+            window.history.pushState({ path: newUrl }, '', newUrl);
+
+        } catch (error) {
+            console.error('Error refreshing dashboard:', error);
+        } finally {
+            captureArea.classList.remove('loading');
+        }
     }
 
     // ==============================
-    // 11. BLOQUE DISTRIBUTION (Treemap)
+    // INITIALIZATION
     // ==============================
-    if (chartData.bloque_distribucion && chartData.bloque_distribucion.length > 0) {
-        new ApexCharts(document.querySelector("#bloqueChart"), {
-            series: [{
-                data: chartData.bloque_distribucion.map(d => ({
-                    x: d.bloque,
-                    y: d.cantidad
-                }))
-            }],
-            chart: { type: 'treemap', height: 350, toolbar: noToolbar, ...baseFont },
-            colors: [P.blue, P.blueLt, P.teal, P.green, P.indigo, P.amber],
-            plotOptions: {
-                treemap: {
-                    distributed: true,
-                    enableShades: false,
-                    borderRadius: 4,
-                }
-            },
-            dataLabels: {
-                enabled: true,
-                style: { fontSize: '12px', fontWeight: 700 },
-                formatter: (text, op) => [text, op.value + ' cuentas'],
-                offsetY: -2
-            },
-            legend: { show: false },
-        }).render();
-    } else {
-        document.querySelector("#bloqueChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-layers"></i>Sin datos de bloques</div>';
+    const captureArea = document.getElementById('captureArea');
+    if (captureArea) captureArea.classList.remove('loading');
+
+    initCharts(chartData);
+    initDataTable();
+
+    function initDataTable() {
+        const table = $('#alertTable').DataTable({
+            pageLength: 10,
+            language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json' },
+            dom: 'Bfrtip',
+            buttons: [
+                { extend: 'excelHtml5', text: 'Excel', className: 'd-none', filename: 'BI_Report_2026' }
+            ],
+            order: [[6, 'desc']]
+        });
+        return table;
     }
 
     // ==============================
-    // BOOTSTRAP TOOLTIPS
+    // EVENT LISTENERS
     // ==============================
-    [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]')).forEach(el => {
-        new bootstrap.Tooltip(el);
+
+    // Intercept form submit
+    document.getElementById('filterForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        refreshDashboard();
     });
 
-    // ==============================
-    // RANGE SLIDER (NoUiSlider)
-    // ==============================
-    var slider = document.getElementById('rangeSlider');
+    // Reset button
+    $('#btnReset').on('click', function () {
+        const form = document.getElementById('filterForm');
+        form.reset();
+
+        // Clear hidden inputs manually since reset() doesn't always clear value=""
+        $(form).find('input[type="hidden"]').val('');
+
+        // Reset date display
+        const dateDisplay = document.getElementById('dateDisplay');
+        if (dateDisplay) {
+            dateDisplay.textContent = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+        }
+
+        // Reset flatpickr if exists
+        const fp = document.getElementById('dateRangePicker')?._flatpickr;
+        if (fp) fp.clear();
+
+        // Specific resets for third party plugins
+        if (slider && slider.noUiSlider) slider.noUiSlider.set([0, 100]);
+
+        refreshDashboard();
+    });
+
+    // Auto-refresh on select change
+    $('#filterForm select').on('change', function () {
+        refreshDashboard();
+    });
+
+    // Range Slider
+    const slider = document.getElementById('rangeSlider');
     if (slider) {
-        var minValInput = document.getElementById('minVal');
-        var maxValInput = document.getElementById('maxVal');
+        const minValInput = document.getElementById('minVal');
+        const maxValInput = document.getElementById('maxVal');
 
-        noUiSlider.create(slider, {
-            start: [parseInt(minValInput.value), parseInt(maxValInput.value)],
-            connect: true,
-            range: { 'min': 0, 'max': 100 },
-            step: 1,
-            tooltips: true,
-            format: {
-                to: val => Math.round(val),
-                from: val => val
+        if (!slider.noUiSlider) {
+            noUiSlider.create(slider, {
+                start: [parseInt(minValInput.value), parseInt(maxValInput.value)],
+                connect: true,
+                range: { 'min': 0, 'max': 100 },
+                step: 1,
+                tooltips: true,
+                format: { to: val => Math.round(val), from: val => val }
+            });
+
+            slider.noUiSlider.on('change', function () {
+                refreshDashboard();
+            });
+
+            slider.noUiSlider.on('update', function (values) {
+                minValInput.value = values[0];
+                maxValInput.value = values[1];
+            });
+        }
+    }
+
+    // Flatpickr
+    const dateRangePicker = document.getElementById('dateRangePicker');
+    if (dateRangePicker) {
+        flatpickr(dateRangePicker, {
+            mode: "range",
+            dateFormat: "Y-m-d",
+            locale: "es",
+            defaultDate: [
+                document.getElementById('fecha_desde').value,
+                document.getElementById('fecha_hasta').value
+            ],
+            onChange: function (selectedDates, dateStr, instance) {
+                if (selectedDates.length === 2) {
+                    const start = instance.formatDate(selectedDates[0], "Y-m-d");
+                    const end = instance.formatDate(selectedDates[1], "Y-m-d");
+
+                    document.getElementById('fecha_desde').value = start;
+                    document.getElementById('fecha_hasta').value = end;
+
+                    const displayStart = instance.formatDate(selectedDates[0], "d M");
+                    const displayEnd = instance.formatDate(selectedDates[1], "d M, Y");
+                    document.getElementById('dateDisplay').textContent = `${displayStart} - ${displayEnd}`;
+
+                    refreshDashboard();
+                }
             }
-        });
-
-        slider.noUiSlider.on('update', function (values) {
-            minValInput.value = values[0];
-            maxValInput.value = values[1];
         });
     }
 
-    // ==============================
-    // DATATABLES
-    // ==============================
-    var table = $('#alertTable').DataTable({
-        pageLength: 10,
-        language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json' },
-        dom: 'Bfrtip',
-        buttons: [
-            { extend: 'excelHtml5', text: 'Excel', className: 'd-none', filename: 'BI_Report_2026' }
-        ],
-        order: [[6, 'desc']] // Ordenar por diferencia descendente
-    });
-
-    $('#btnExportExcel').on('click', () => table.button('.buttons-excel').trigger());
-
-    // ==============================
-    // PDF EXPORT
-    // ==============================
+    // PDF Export mapping
     $('#btnExportPDF').on('click', function () {
         const btn = $(this);
         const originalContent = btn.html();
-        btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando...');
+        const table = $('#alertTable').DataTable();
+
+        if (!window.jspdf) {
+            alert('Error: La librería de PDF no está lista.');
+            return;
+        }
+
+        btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando reporte...');
         btn.prop('disabled', true);
 
+        const originalLength = table.page.len();
+        table.page.len(-1).draw();
+
         const element = document.getElementById('captureArea');
+        element.classList.add('is-exporting');
+        window.scrollTo(0, 0);
 
         setTimeout(() => {
             html2canvas(element, {
                 scale: 2,
                 useCORS: true,
+                allowTaint: true,
                 logging: false,
-                backgroundColor: "#f1f5f9",
-                scrollY: -window.scrollY,
-                windowWidth: document.documentElement.offsetWidth,
-                windowHeight: element.scrollHeight + 100
+                backgroundColor: "#ffffff",
+                windowWidth: 1400,
+                width: 1400,
+                // Removido height fijo para permitir que capture contenido desplazado por los shifts
+                onclone: (clonedDoc) => {
+                    const header = clonedDoc.getElementById('pdfHeader');
+                    if (header) {
+                        header.classList.remove('d-none');
+                        header.style.display = 'block';
+
+                        const rpValue = document.querySelector('.mini-value')?.textContent || '';
+                        const indicators = clonedDoc.getElementById('pdfIndicators');
+                        if (indicators) {
+                            indicators.innerHTML = `
+                                <div style="background: #001a3d; padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(218, 165, 32, 0.4);">
+                                    <div style="font-size: 8px; color: #daa520; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Valor total RP</div>
+                                    <div style="font-size: 20px; color: #ffffff; font-weight: 800; line-height: 1;">${rpValue}</div>
+                                </div>
+                            `;
+                        }
+                    }
+
+                    const charts = clonedDoc.querySelectorAll('.apexcharts-canvas');
+                    charts.forEach(c => c.style.background = '#ffffff');
+
+                    // LÓGICA PARA EVITAR CORTES:
+                    const pageHeightPx = 980;
+                    const cards = clonedDoc.querySelectorAll('.card, .kpi-card, .chart-container, .card-premium');
+
+                    cards.forEach(card => {
+                        const rect = card.getBoundingClientRect();
+                        let top = 0;
+                        let curr = card;
+                        const container = clonedDoc.getElementById('captureArea');
+
+                        // Usamos offsetTop acumulado para mayor precisión en clones
+                        while (curr && curr !== container && curr !== clonedDoc.body) {
+                            top += curr.offsetTop;
+                            curr = curr.offsetParent;
+                        }
+
+                        const bottom = top + rect.height;
+                        const pageNumAtTop = Math.floor(top / pageHeightPx);
+                        const pageNumAtBottom = Math.floor(bottom / pageHeightPx);
+
+                        // Si la tarjeta cruza una frontera de página y no es excesivamente larga
+                        if (pageNumAtTop !== pageNumAtBottom && rect.height < pageHeightPx * 0.9) {
+                            const neededShift = (pageNumAtBottom * pageHeightPx) - top;
+                            card.style.marginTop = (neededShift + 25) + 'px';
+                        }
+                    });
+                }
             }).then(canvas => {
-                const imgData = canvas.toDataURL('image/png');
                 const { jsPDF } = window.jspdf;
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-                const pdf = new jsPDF('p', 'mm', 'a4');
+                const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
+
                 const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+                const pdfHeight = pdf.internal.pageSize.getHeight();
 
-                let heightLeft = pdfHeight;
+                const imgWidth = pdfWidth;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+                let heightLeft = imgHeight;
                 let position = 0;
-                const pageHeight = pdf.internal.pageSize.getHeight();
 
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-                heightLeft -= pageHeight;
+                // Página 1
+                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+                heightLeft -= pdfHeight;
 
-                while (heightLeft >= 0) {
-                    position = heightLeft - pdfHeight;
+                // Páginas subsiguientes
+                while (heightLeft > 0) {
+                    position = heightLeft - imgHeight;
                     pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-                    heightLeft -= pageHeight;
+                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+                    heightLeft -= pdfHeight;
                 }
 
-                pdf.save(`Reporte_Analitica_${new Date().toISOString().split('T')[0]}.pdf`);
-
-                btn.html(originalContent);
-                btn.prop('disabled', false);
+                pdf.save(`SGCC_Reporte_Analitico_${new Date().toISOString().split('T')[0]}.pdf`);
+                table.page.len(originalLength).draw();
+                element.classList.remove('is-exporting');
+                btn.html(originalContent).prop('disabled', false);
             }).catch(err => {
-                console.error('Error PDF:', err);
-                alert('No se pudo generar el PDF.');
-                btn.html(originalContent);
-                btn.prop('disabled', false);
+                console.error(err);
+                table.page.len(originalLength).draw();
+                element.classList.remove('is-exporting');
+                btn.html(originalContent).prop('disabled', false);
             });
-        }, 500);
+        }, 800);
+    });
+
+    // --- Lógica de Ocultar Columnas ---
+    let minimizedColumns = new Set();
+
+    window.resetColumns = function () {
+        minimizedColumns.clear();
+        applyMinimizedColumns();
+    };
+
+    function toggleColumn(index) {
+        if (minimizedColumns.has(index)) {
+            minimizedColumns.delete(index);
+        } else {
+            minimizedColumns.add(index);
+        }
+        applyMinimizedColumns();
+    }
+
+    function applyMinimizedColumns() {
+        const table = document.getElementById('alertTable');
+        const resetBtn = document.getElementById('btnResetColumns');
+        if (!table) return;
+
+        // Resetear todo
+        table.querySelectorAll('.column-hidden').forEach(el => el.classList.remove('column-hidden'));
+
+        // Ocultar columnas seleccionadas
+        minimizedColumns.forEach(index => {
+            const cells = table.querySelectorAll(`tr > *:nth-child(${index + 1})`);
+            cells.forEach(cell => {
+                cell.classList.add('column-hidden');
+            });
+        });
+
+        // Mostrar/Ocultar botón de reset
+        if (resetBtn) {
+            resetBtn.style.display = minimizedColumns.size > 0 ? 'inline-flex' : 'none';
+        }
+    }
+
+    // Listener delegado para los botones de ocultar
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.toggle-col-btn');
+        if (btn) {
+            const th = btn.closest('th');
+            if (th) {
+                const index = Array.from(th.parentNode.children).indexOf(th);
+                toggleColumn(index);
+            }
+        }
     });
 });

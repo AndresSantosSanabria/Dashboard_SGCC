@@ -7,11 +7,13 @@
 @endpush
 
 @section('page-content')
-    <div class="container-fluid workflow-container" data-can-edit="{{ $canEdit ? 'true' : 'false' }}">
-        <h1 class="mb-4 text-center fw-bold">Gestión de Flujo de Trabajo (Kanban)</h1>
+    <div class="container-fluid workflow-container position-relative premium-loading-container" data-can-edit="{{ $canEdit ? 'true' : 'false' }}">
+        @include('layouts.partials._premium_loader', ['text' => 'Gestionando Procesos'])
+        
+        <h1 class="mb-4 text-center fw-bold animate-in">Gestión de Flujo de Trabajo (Kanban)</h1>
 
         <!-- Filtros -->
-        <form action="{{ route('workflow') }}" method="GET" class="filter-bar">
+        <form action="{{ route('workflow') }}" method="GET" class="filter-bar animate-in">
             <div class="row g-2">
                 <div class="col-md-2">
                     <label class="filter-label">Supervisor</label>

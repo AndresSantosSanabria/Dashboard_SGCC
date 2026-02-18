@@ -44,6 +44,7 @@ Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->
 
 // Public Consultation
 Route::post('/consultar-estado', [CuentaCobroController::class, 'publicConsultation'])->name('public.consultation');
+Route::get('/consultar-historial/{cuenta}', [CuentaCobroController::class, 'publicHistorial'])->name('public.historial');
 
 // Dashboard y Cuentas de Cobro (protected)
 Route::middleware('auth')->group(function () {

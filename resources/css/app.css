@@ -9,7 +9,6 @@ body {
 
 /* Sidebar Custom Styles */
 .bg-govco-navbar {
-    background-color: var(--govcolor-cobalt) !important; 
     background-color: var(--govcolor-cobalt) !important;
 }
 
@@ -25,8 +24,14 @@ body {
 #sidebar.collapsed .nav-link span,
 #sidebar.collapsed .sidebar-header-text,
 #sidebar.collapsed .dropdown-toggle strong,
-#sidebar.collapsed .dropdown-toggle i.bi-chevron-down {
-    display: none;
+#sidebar.collapsed .dropdown-toggle i.bi-chevron-down,
+#sidebar.collapsed .sidebar-text,
+#sidebar.collapsed .sidebar-logo-link {
+    display: none !important;
+}
+
+#sidebar.collapsed .sidebar-header {
+    justify-content: center !important;
 }
 
 #sidebar.collapsed .nav-link {
@@ -39,4 +44,18 @@ body {
     justify-content: center;
     padding-left: 0;
     padding-right: 0;
+}
+
+#sidebar.collapsed .user-sidebar-section {
+    flex-direction: column !important;
+    gap: 12px;
+    justify-content: center !important;
+}
+
+#sidebar.collapsed .user-profile-info {
+    margin-right: 0 !important;
+}
+
+#sidebar.collapsed .user-profile-info .rounded-circle {
+    margin-right: 0 !important;
 }

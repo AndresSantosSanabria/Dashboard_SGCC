@@ -124,9 +124,16 @@ document.addEventListener("DOMContentLoaded", function () {
                 .catch((error) => {
                     showSnackbar("❌ Error: " + error.message, "error");
                     btnSaveManual.disabled = false;
+                    const isUpdate = (manualForm.dataset.url || "").includes("actualizar");
                     btnSaveManual.textContent = isUpdate ? "Actualizar Registro" : "Cargar Registro";
                 });
         });
+    }
+
+    // Remove loading state on page load
+    const container = document.querySelector('.premium-loading-container');
+    if (container) {
+        setTimeout(() => container.classList.remove('loading'), 100);
     }
 });
 
@@ -182,6 +189,8 @@ const fetchFilteredData = () => {
 
             // Re-vincular eventos de paginación AJAX
             bindPagination();
+            // Re-aplicar estado de columnas
+            applyMinimizedColumns();
         })
         .catch((error) => {
             if (error.name === "AbortError") return;
@@ -192,31 +201,14 @@ const fetchFilteredData = () => {
         });
 };
 
-const debouncedSearch = debounce(fetchFilteredData, 250);
-
-// Prevenir envío tradicional del formulario
+// El refresco automático ha sido eliminado a petición del usuario.
+// Ahora se requiere pulsar el botón "Filtrar" o presionar Enter.
 if (filtersForm) {
     filtersForm.addEventListener("submit", function (e) {
         e.preventDefault();
         fetchFilteredData();
     });
 }
-
-// Delegación de eventos para los inputs de filtro
-document.addEventListener("input", function (e) {
-    if (e.target.classList.contains("filter-input")) {
-        debouncedSearch();
-    }
-});
-
-document.addEventListener("change", function (e) {
-    if (
-        e.target.classList.contains("filter-input") &&
-        e.target.tagName !== "INPUT"
-    ) {
-        fetchFilteredData();
-    }
-});
 
 // Manejo de paginación AJAX
 function bindPagination() {
@@ -244,6 +236,9 @@ function bindPagination() {
                     tableContainer.style.opacity = "1";
                     bindPagination();
 
+                    // Re-aplicar estado de columnas
+                    applyMinimizedColumns();
+
                     // Scroll top suave hacia la tabla
                     tableContainer.scrollIntoView({
                         behavior: "smooth",
@@ -254,6 +249,60 @@ function bindPagination() {
         });
     });
 }
+
+// --- Lógica de Ocultar Columnas ---
+let minimizedColumns = new Set();
+
+window.toggleColumn = function (index) {
+    if (minimizedColumns.has(index)) {
+        minimizedColumns.delete(index);
+    } else {
+        minimizedColumns.add(index);
+    }
+    applyMinimizedColumns();
+};
+
+window.resetColumns = function () {
+    minimizedColumns.clear();
+    applyMinimizedColumns();
+};
+
+function applyMinimizedColumns() {
+    const table = document.getElementById("cuentasTable");
+    const resetBtn = document.getElementById("btnResetColumns");
+    if (!table) return;
+
+    // Resetear todo
+    table.querySelectorAll(".column-hidden").forEach((el) => el.classList.remove("column-hidden"));
+
+    // Ocultar columnas seleccionadas
+    minimizedColumns.forEach((index) => {
+        const cells = table.querySelectorAll(`tr > *:nth-child(${index + 1})`);
+        cells.forEach((cell) => {
+            cell.classList.add("column-hidden");
+        });
+    });
+
+    // Mostrar/Ocultar botón de reset
+    if (resetBtn) {
+        resetBtn.style.display = minimizedColumns.size > 0 ? "inline-flex" : "none";
+    }
+}
+
+// Listener delegado para los botones de ocultar
+document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".toggle-col-btn");
+    if (btn) {
+        const th = btn.closest("th");
+        if (th) {
+            const index = Array.from(th.parentNode.children).indexOf(th);
+            toggleColumn(index);
+        }
+    }
+});
+
+// Inicializar estado al cargar
+document.addEventListener("DOMContentLoaded", applyMinimizedColumns);
 
 window.showHistory = function (cuentaId, contratoNum) {
     const modalElement = document.getElementById("historyModal");

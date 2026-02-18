@@ -1,8 +1,8 @@
 <div id="sidebar" class="d-flex flex-column flex-shrink-0 p-3 text-white bg-govco-navbar"
     style="width: 280px; height: 100vh; position: sticky; top: 0; z-index: 1000;">
     <div
-        class="d-flex align-items-center justify-content-between mb-3 mb-md-0 me-md-auto text-white text-decoration-none w-100">
-        <a href="/" class="d-flex align-items-center text-decoration-none">
+        class="sidebar-header d-flex align-items-center justify-content-between mb-3 mb-md-0 me-md-auto text-white text-decoration-none w-100">
+        <a href="/" class="d-flex align-items-center text-decoration-none sidebar-logo-link">
             <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo Gobernación" class="sidebar-logo"
                 style="max-width: 180px; height: auto;">
         </a>
@@ -50,24 +50,25 @@
             </li>
         @endif
     </ul>
-    <hr>
-    <div class="dropdown">
-        <a href="#" class="d-flex align-items-center text-white text-decoration-none dropdown-toggle"
-            id="dropdownUser1" data-bs-toggle="dropdown" aria-expanded="false">
-            <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-2"
-                style="width: 32px; height: 32px;">
-                <i class="bi bi-person-fill"></i>
+    <div class="">
+        <hr>
+        <div class="user-sidebar-section d-flex align-items-center justify-content-between px-1">
+            <div class="d-flex align-items-center text-white overflow-hidden user-profile-info">
+                <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-2"
+                    style="width: 38px; height: 38px; min-width: 38px;">
+                    <i class="bi bi-person-fill fs-5"></i>
+                </div>
+                <strong class="sidebar-text text-truncate">{{ auth()->user()->primer_nombre ?? 'Usuario' }}</strong>
             </div>
-            <strong class="sidebar-text">{{ auth()->user()->primer_nombre ?? 'Usuario' }}</strong>
-        </a>
-        <ul class="dropdown-menu dropdown-menu-dark text-small shadow" aria-labelledby="dropdownUser1">
-            <li>
-                <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button type="submit" class="dropdown-item">Cerrar sesión</button>
-                </form>
-            </li>
-        </ul>
+            
+            <form method="POST" action="{{ route('logout') }}" class="m-0 logout-form-sidebar">
+                @csrf
+                <button type="submit" class="btn btn-link text-white p-0 border-0 shadow-none d-flex align-items-center justify-content-center" 
+                    title="Cerrar sesión" style="width: 32px; height: 32px;">
+                    <i class="bi bi-box-arrow-right fs-4"></i>
+                </button>
+            </form>
+        </div>
     </div>
 </div>
 
@@ -85,9 +86,9 @@
             const icon = toggleBtn.querySelector('i');
             if (sidebar.classList.contains('collapsed')) {
                 icon.classList.remove('bi-list');
-                icon.classList.add('bi-box-arrow-right');
+                icon.classList.add('bi-chevron-right');
             } else {
-                icon.classList.remove('bi-box-arrow-right');
+                icon.classList.remove('bi-chevron-right');
                 icon.classList.add('bi-list');
             }
         });

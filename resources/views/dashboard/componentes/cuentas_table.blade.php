@@ -1,52 +1,73 @@
-<div class="table-responsive" style="max-height: 700px;">
-    <table class="table table-hover table-bordered mb-0" id="cuentasTable"
-        style="min-width: 3000px; font-size: 0.85rem; font-weight: 600;">
+<div class="table-responsive" style="max-height: 75vh;">
+    <table class="table mb-0" id="cuentasTable"
+        style="min-width: 3000px; font-size: 0.85rem;">
         <thead class="table-dark sticky-top">
             <tr>
-                <th class="sticky-col sticky-col-1">NUMERO DE CONTRATO</th>
-                <th class="sticky-col sticky-col-2">CONTRATISTA</th>
-                <th class="sticky-col sticky-col-3">CEDULA</th>
-                <th>ESTADO ACTUAL</th>
-                <th>RP</th>
-                <th>FECHA RP</th>
-                <th>VALOR RP</th>
-                <th>FECHA DE INICIO</th>
-                <th>FECHA DE TERMINACIÓN</th>
-                <th>SUPERVISOR</th>
-                <th>NUMERO DE CUENTA</th>
-                <th>PAGOS TOTALES</th>
-                <th>FACTURAS RADICADAS</th>
-                <th>% CUENTAS</th>
-                <th>ENTIDAD SALUD</th>
-                <th>ENTIDAD PENSIÓN</th>
-                <th>ENTIDAD ARL</th>
-                <th>SS ULTIMA CUENTA</th>
-                <th>RADICADO POR</th>
-                <th>FECHA RADICACIÓN</th>
-                <th>OBSERVACIONES</th>
-                <th>ESTADO 1ERA REVISIÓN</th>
-                <th>FECHA DEVUELTA/SAP</th>
-                <th>ENVIADA SAP</th>
-                <th>RESPONSABLE</th>
-                <th>FECHA ENVIO FACT/CORR</th>
-                <th>EN FACTURACIÓN</th>
-                <th>RESPONSABLE</th>
-                <th>FECHA FACTURACIÓN</th>
-                <th>FIRMA SECRETARIO</th>
-                <th>FECHA FIRMA</th>
-                <th>RADICADA HACIENDA</th>
-                <th>FECHA RAD. HACIENDA</th>
-                <th>ULTIMA FACTURA HACIENDA</th>
-                <th>OBS. DEVOLUCION</th>
-                <th>Diferencia Cuentas Totales - vs Cuentas Radicadas</th>
-                <th>TRÁMITE SIGUIENTE CUENTA</th>
+                @php
+                    $headers = [
+                        ['label' => 'NUMERO DE CONTRATO', 'class' => 'sticky-col sticky-col-1'],
+                        ['label' => 'CONTRATISTA', 'class' => 'sticky-col sticky-col-2'],
+                        ['label' => 'CEDULA', 'class' => 'sticky-col sticky-col-3'],
+                        ['label' => 'ESTADO ACTUAL', 'class' => ''],
+                        ['label' => 'RP', 'class' => ''],
+                        ['label' => 'FECHA RP', 'class' => ''],
+                        ['label' => 'VALOR RP', 'class' => ''],
+                        ['label' => 'FECHA DE INICIO', 'class' => ''],
+                        ['label' => 'FECHA DE TERMINACIÓN', 'class' => ''],
+                        ['label' => 'SUPERVISOR', 'class' => ''],
+                        ['label' => 'NUMERO DE CUENTA', 'class' => ''],
+                        ['label' => 'PAGOS TOTALES', 'class' => ''],
+                        ['label' => 'FACTURAS RADICADAS', 'class' => ''],
+                        ['label' => '% CUENTAS', 'class' => ''],
+                        ['label' => 'ENTIDAD SALUD', 'class' => ''],
+                        ['label' => 'ENTIDAD PENSIÓN', 'class' => ''],
+                        ['label' => 'ENTIDAD ARL', 'class' => ''],
+                        ['label' => 'SS ULTIMA CUENTA', 'class' => ''],
+                        ['label' => 'RADICADO POR', 'class' => ''],
+                        ['label' => 'FECHA RADICACIÓN', 'class' => ''],
+                        ['label' => 'OBSERVACIONES', 'class' => ''],
+                        ['label' => 'ESTADO 1ERA REVISIÓN', 'class' => ''],
+                        ['label' => 'FECHA DEVUELTA/SAP', 'class' => ''],
+                        ['label' => 'ENVIADA SAP', 'class' => ''],
+                        ['label' => 'RESPONSABLE', 'class' => ''],
+                        ['label' => 'FECHA ENVIO FACT/CORR', 'class' => ''],
+                        ['label' => 'EN FACTURACIÓN', 'class' => ''],
+                        ['label' => 'RESPONSABLE', 'class' => ''],
+                        ['label' => 'FECHA FACTURACIÓN', 'class' => ''],
+                        ['label' => 'FIRMA SECRETARIO', 'class' => ''],
+                        ['label' => 'FECHA FIRMA', 'class' => ''],
+                        ['label' => 'RADICADA HACIENDA', 'class' => ''],
+                        ['label' => 'FECHA RAD. HACIENDA', 'class' => ''],
+                        ['label' => 'ULTIMA FACTURA HACIENDA', 'class' => ''],
+                        ['label' => 'OBS. DEVOLUCION', 'class' => ''],
+                        ['label' => 'Diferencia Cuentas Totales - vs Cuentas Radicadas', 'class' => ''],
+                        ['label' => 'TRÁMITE SIGUIENTE CUENTA', 'class' => ''],
+                    ];
+                @endphp
+                @foreach($headers as $h)
+                    <th class="{{ $h['class'] }}">
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <span>{{ $h['label'] }}</span>
+                            <button type="button" class="btn btn-sm btn-link text-white p-0 toggle-col-btn" title="Minimizar">
+                                <i class="bi bi-dash-lg"></i>
+                            </button>
+                        </div>
+                    </th>
+                @endforeach
                 @if ($canEditDashboard)
-                    <th>ACCIÓN</th>
+                    <th>
+                        <div class="d-flex align-items-center justify-content-between gap-2">
+                            <span>ACCIÓN</span>
+                            <button type="button" class="btn btn-sm btn-link text-white p-0 toggle-col-btn" title="Minimizar">
+                                <i class="bi bi-dash-lg"></i>
+                            </button>
+                        </div>
+                    </th>
                 @endif
             </tr>
         </thead>
         <tbody>
-            @forelse ($cuentas as $cuenta)
+            @forelse ($cuentas as $index => $cuenta)
                 @php
                     $contrato = $cuenta->contrato;
                     $contratista = $contrato?->contratista;
@@ -61,7 +82,7 @@
                     $bloqueFirma = $cuenta->estadosBloques->where('bloque_id', 4)->first();
                     $bloqueHacienda = $cuenta->estadosBloques->where('bloque_id', 5)->first();
                 @endphp
-                <tr>
+                <tr style="--row-index: {{ $index }};">
                     <td class="sticky-col sticky-col-1"><strong>{{ $contrato->numero_contrato ?? 'N/A' }}</strong></td>
                     <td class="sticky-col sticky-col-2">
                         {{ $contratista->razon_social ?? ($contratista->representante_legal ?? 'N/A') }}</td>
@@ -217,28 +238,31 @@
                             @if ($cuenta->numero_cuenta < $cuenta->numero_pagos_totales)
                                 <button type="button" class="btn btn-sm btn-govco btn-outline-primary"
                                     onclick="startNextAccount({{ $cuenta->id }}, '{{ $contrato->numero_contrato }}', {{ $cuenta->numero_cuenta + 1 }})"
-                                    title="Iniciar Cuenta #{{ $cuenta->numero_cuenta + 1 }}">
-                                    Iniciar Cuenta #{{ $cuenta->numero_cuenta + 1 }}
+                                    title="Iniciar Cuenta #{{ $cuenta->numero_cuenta + 1 }}"
+                                    style="border-radius: 20px; font-size: 0.75rem; padding: 4px 12px;">
+                                    <i class="bi bi-play-fill me-1"></i> Siguiente #{{ $cuenta->numero_cuenta + 1 }}
                                 </button>
-                            @else
-                                <span class="badge bg-success">Contrato Completado</span>
-                            @endif
+@else
+    <span class="badge bg-success" style="padding: 8px 12px !important;"><i class="bi bi-check-all me-1"></i> Completado</span>
+@endif
                         @else
                             <span class="text-muted">En proceso de flujo</span>
                         @endif
                     </td>
                     @if ($canEditDashboard)
-                        <td>
-                            <button type="button" class="btn btn-sm btn-outline-primary"
-                                onclick="showHistory({{ $cuenta->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')">
-                                <!-- <i class="fas fa-history"></i> -->
-                                <span class="govco-svg govco-clock"></span>
-                            </button>
-                            <br>
-                            <button type="button" class="btn btn-sm btn-outline-primary"
-                                onclick="editAccount({{ $cuenta->id }})">
-                                <span class="govco-svg govco-edit"></span>
-                            </button>
+                        <td class="text-center">
+                            <div class="d-flex justify-content-center gap-2">
+                                <button type="button" class="btn-action-premium"
+                                    onclick="showHistory({{ $cuenta->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')"
+                                    title="Ver Historial">
+                                    <span class="govco-svg govco-clock"></span>
+                                </button>
+                                <button type="button" class="btn-action-premium"
+                                    onclick="editAccount({{ $cuenta->id }})"
+                                    title="Editar Cuenta">
+                                    <span class="govco-svg govco-edit"></span>
+                                </button>
+                            </div>
                         </td>
                     @endif
                 </tr>

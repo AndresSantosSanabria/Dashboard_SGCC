@@ -10,8 +10,10 @@
 thead th.sticky-col {
     background-color: var(--govcolor-matterhorn) !important;
     color: var(--govcolor-white) !important;
-    z-index: 15; /* Por encima de celdas sticky del body */
+    z-index: 15;
+    /* Por encima de celdas sticky del body */
 }
+
 /* ... (pagination omitted for brevity as it remains same) ... */
 /* Estilo para filas en hover para que las celdas sticky no tapen el efecto */
 .table-hover tbody tr:hover td.sticky-col {
@@ -23,12 +25,14 @@ thead th.sticky-col {
     position: relative;
     padding: 20px 0;
 }
+
 .timeline-item {
     display: flex;
     position: relative;
     margin-bottom: 25px;
     align-items: flex-start;
 }
+
 .timeline-marker-wrapper {
     position: relative;
     display: flex;
@@ -37,6 +41,7 @@ thead th.sticky-col {
     margin-right: 20px;
     min-width: 50px;
 }
+
 .timeline-marker {
     width: 40px;
     height: 40px;
@@ -51,6 +56,7 @@ thead th.sticky-col {
     flex-shrink: 0;
     background-color: var(--govcolor-cobalt);
 }
+
 .timeline-line {
     position: absolute;
     top: 40px;
@@ -60,9 +66,11 @@ thead th.sticky-col {
     height: calc(100% + 25px);
     background: var(--govcolor-silver);
 }
+
 .timeline-item:last-child .timeline-line {
     display: none;
 }
+
 .timeline-content {
     flex: 1;
     background: var(--govcolor-white);
@@ -70,26 +78,31 @@ thead th.sticky-col {
     padding: 15px;
     border: 1px solid var(--govcolor-silver);
 }
+
 .timeline-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
 }
+
 .timeline-title {
     font-weight: 700;
     font-size: 0.9rem;
     color: var(--govcolor-cobalt);
 }
+
 .timeline-date {
     font-size: 0.7rem;
     color: var(--govcolor-grey);
 }
+
 .timeline-transition {
     font-size: 0.8rem;
     color: var(--govcolor-matterhorn);
     margin-bottom: 5px;
 }
+
 .timeline-meta {
     display: flex;
     gap: 15px;
@@ -97,6 +110,7 @@ thead th.sticky-col {
     color: var(--govcolor-grey);
     margin-top: 8px;
 }
+
 .timeline-comment {
     background: var(--govcolor-white-smoke);
     border-radius: 6px;
@@ -106,4 +120,208 @@ thead th.sticky-col {
     border-left: 3px solid var(--govcolor-havelock-lue);
     margin-top: 10px;
     font-style: italic;
+}
+
+/* ===== COLUMN HIDING ===== */
+.column-hidden {
+    display: none !important;
+}
+
+.toggle-col-btn {
+    transition: all 0.2s ease;
+    cursor: pointer;
+    opacity: 0.6;
+}
+
+.toggle-col-btn:hover {
+    opacity: 1;
+    transform: scale(1.1);
+}
+
+.btn-reset-columns {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== REFINED GOV.CO TABLE STYLES ===== */
+:root {
+    --gov-blue-dark: #004884;
+    --gov-blue-light: #0066ff;
+    --gov-border: #E6E6E6;
+    --gov-bg-soft: #F2F5F7;
+}
+
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: #CCCCCC transparent;
+    border: 1px solid var(--gov-border);
+    border-radius: 4px;
+    background: white;
+}
+
+#cuentasTable {
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+}
+
+#cuentasTable thead th {
+    background-color: var(--gov-blue-dark) !important;
+    color: white !important;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    padding: 12px 10px !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
+    white-space: nowrap;
+}
+
+#cuentasTable tbody td {
+    padding: 10px 12px !important;
+    border-bottom: 1px solid var(--gov-border) !important;
+    border-right: 1px solid var(--gov-border) !important;
+    vertical-align: middle;
+    font-size: 0.8rem;
+    color: #333;
+}
+
+#cuentasTable tbody tr:hover td {
+    background-color: var(--gov-bg-soft) !important;
+}
+
+/* Fix Sticky Column Offsets to prevent overlapping */
+.sticky-col {
+    position: sticky !important;
+    background-color: white !important;
+    z-index: 5;
+}
+
+.sticky-col-1 {
+    left: 0;
+    width: 140px;
+    min-width: 140px;
+}
+
+.sticky-col-2 {
+    left: 140px;
+    width: 300px;
+    min-width: 300px;
+}
+
+.sticky-col-3 {
+    left: 440px;
+    width: 120px;
+    min-width: 120px;
+}
+
+thead th.sticky-col {
+    z-index: 10;
+    background-color: var(--gov-blue-dark) !important;
+}
+
+/* Modern Badges for Workflow */
+.badge {
+    padding: 5px 12px !important;
+    font-weight: 600 !important;
+    border-radius: 4px !important;
+    text-transform: none;
+    font-size: 0.75rem !important;
+}
+
+/* Gov Action Buttons */
+.btn-action-premium {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+    border: 1px solid var(--gov-border);
+    background: white;
+    color: var(--gov-blue-dark);
+}
+
+.btn-action-premium:hover {
+    background: var(--gov-bg-soft);
+    border-color: var(--gov-blue-light);
+    color: var(--gov-blue-light);
+    transform: scale(1.05);
+}
+
+.govco-svg {
+    transform: scale(1.2);
+}
+
+/* Custom Scrollbar for GOV theme */
+.table-responsive::-webkit-scrollbar {
+    height: 10px;
+    width: 8px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #CCC;
+    border-radius: 5px;
+}
+
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: #999;
+}
+
+/* Action Buttons */
+.btn-action-premium {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s;
+    border: 1px solid #e2e8f0;
+    background: white;
+    color: #64748b;
+}
+
+.btn-action-premium:hover {
+    background: var(--premium-light-blue);
+    color: white;
+    border-color: var(--premium-light-blue);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.btn-action-premium i,
+.btn-action-premium span {
+    font-size: 1rem;
+}
+
+/* Row Animation */
+@keyframes rowFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#cuentasTable tbody tr {
+    animation: rowFadeIn 0.3s ease forwards;
+    animation-delay: calc(var(--row-index) * 0.05s);
 }

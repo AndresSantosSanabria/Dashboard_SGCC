@@ -34,6 +34,10 @@ window.toggleBlockVisibility = function (btn, blockKey) {
 
 // Restore collapsed blocks on load
 document.addEventListener('DOMContentLoaded', function () {
+    // Remove loading state
+    const container = document.querySelector('.premium-loading-container');
+    if (container) container.classList.remove('loading');
+
     const collapsedBlocks = JSON.parse(localStorage.getItem('collapsedBlocks') || '{}');
     document.querySelectorAll('.workflow-block').forEach((block) => {
         const btn = block.querySelector('.btn-collapse');

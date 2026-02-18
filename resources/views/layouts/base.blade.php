@@ -16,6 +16,7 @@
 
     {{-- Assets locales procesados por Vite --}}
     @vite(['resources/css/app.css', 'resources/css/snackbar.css'])
+    <link rel="stylesheet" href="{{ asset('css/premium-bi.css') }}">
 
     @stack('styles')
 

@@ -67,6 +67,7 @@ class CuentaCobroController extends Controller
         }
 
         return response()->json([
+            'id' => $cuenta->id,
             'contratista' => $cuenta->contrato->contratista->razon_social,
             'numero_contrato' => $cuenta->contrato->numero_contrato,
             'numero_cuenta' => $cuenta->numero_cuenta,
@@ -75,6 +76,45 @@ class CuentaCobroController extends Controller
             'ultima_actualizacion' => $cuenta->updated_at->format('d/m/Y H:i A'),
         ]);
     }
+
+    /**
+     * Get history filtered by current account cycle (Public version)
+     * Shows ALL transitions of the current cycle (returns, block changes, etc.)
+     * Only excludes the internal "Inicio manual del ciclo" marker event.
+     */
+    public function publicHistorial($cuentaId)
+    {
+        $cuenta = CuentaCobro::findOrFail($cuentaId);
+
+        // The account's fecha_radicacion is reset each time a new cycle starts.
+        // Use it as the lower bound to only show the current cycle's history.
+        $fechaInicioActual = $cuenta->fecha_radicacion ?? $cuenta->created_at;
+
+        $query = \App\Models\HistorialWorkflow::with([
+            'bloque',
+            'estadoOrigen',
+            'estadoDestino',
+            'usuarioAccion'
+        ])
+        ->where('cuenta_cobro_id', $cuentaId)
+        // Only show events from the current cycle onwards
+        ->where('fecha_transicion', '>=', $fechaInicioActual)
+        // Exclude the internal cycle-start marker ("Inicio manual del ciclo - Cuenta #X")
+        ->where(function($q) {
+            $q->whereNull('comentarios')
+              ->orWhere('comentarios', 'not like', 'Inicio manual del ciclo%');
+        });
+
+        $historial = $query->orderBy('fecha_transicion', 'asc')->get();
+
+        return response()->json([
+            'success' => true,
+            'historial' => $historial,
+            'tiempo_total' => $cuenta->tiempo_total_ejecucion,
+            'fecha_inicio' => $historial->count() > 0 ? $historial->first()->fecha_transicion->format('d/m/Y H:i') : null
+        ]);
+    }
+
 
     private function getNextInvoiceNumber($contratoId)
     {
@@ -1047,7 +1087,7 @@ class CuentaCobroController extends Controller
                 ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $cuenta->bloque_actual_id],
                 [
                     'estado_actual_id' => $cuenta->estado_actual_id,
-                    'fecha_ingreso_bloque' => $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
+                    'fecha_ingreso_bloque' => now(), // Empieza sumando desde 0 al momento de la creación manual
                     'fecha_ultima_actualizacion' => now(),
                     'bloque_completado' => $cuenta->finalizada,
                     'responsable_id' => $cuenta->responsable_actual_id,

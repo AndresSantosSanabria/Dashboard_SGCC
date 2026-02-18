@@ -5,6 +5,17 @@
 @push('styles')
     @vite(['resources/views/login/login.css'])
     <link href="https://fonts.googleapis.com/css2?family=Work+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Fix for modal z-index over the premium login screen */
+        #historyModal {
+            z-index: 12000 !important;
+        }
+
+        .modal-backdrop {
+            z-index: 11999 !important;
+        }
+    </style>
 @endpush
 
 @section('page-content')
@@ -80,6 +91,9 @@
         </div>
     </div>
 
+    {{-- Modal must be OUTSIDE the premium-card (which has overflow:hidden) and outside login-full-screen --}}
+    @include('dashboard.componentes.history_modal')
+
     <script>
         document.getElementById('btn-consultar').addEventListener('click', function() {
             const nit = document.getElementById('consult-nit').value;
@@ -140,6 +154,11 @@
                             <span class="result-label">Última Actualización</span>
                             <span class="result-value" style="font-size: 0.8rem; opacity: 0.7;">${data.ultima_actualizacion}</span>
                         </div>
+                        <div class="result-item mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
+                            <button type="button" class="btn-search-prem w-100" onclick="showHistory(${data.id}, '${data.numero_contrato}')" style="font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); position: relative; z-index: 5;">
+                                <i class="fas fa-history me-2"></i> Ver Historial de Cuenta
+                            </button>
+                        </div>
                     `;
                     }
                     resultsArea.classList.remove('d-none');
@@ -152,5 +171,129 @@
                     resultsArea.classList.remove('d-none');
                 });
         });
+
+        let historyModalInstance = null;
+
+        // Initialize after everything is loaded (Bootstrap must be ready)
+        window.addEventListener('load', function() {
+            const modalElement = document.getElementById("historyModal");
+            if (modalElement) {
+                historyModalInstance = new bootstrap.Modal(modalElement, {
+                    backdrop: true,
+                    keyboard: true
+                });
+
+                // Cleanup when modal is hidden to prevent locking background
+                modalElement.addEventListener('hidden.bs.modal', function () {
+                    // Force remove any leftover backdrops
+                    document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                });
+            }
+        });
+
+        window.showHistory = function(cuentaId, contratoNum) {
+            if (!historyModalInstance) {
+                const modalElement = document.getElementById("historyModal");
+                if (modalElement) {
+                    const bootstrapObj = window.bootstrap || bootstrap;
+                    historyModalInstance = new bootstrapObj.Modal(modalElement);
+                } else {
+                    return;
+                }
+            }
+
+            document.getElementById("historyContratoNum").textContent = contratoNum;
+            const spinner = document.getElementById("historySpinner");
+            const content = document.getElementById("timelineContent");
+            const empty = document.getElementById("historyEmpty");
+
+            spinner.style.display = "block";
+            content.style.display = "none";
+            empty.style.display = "none";
+            content.innerHTML = "";
+
+            const timeBadge = document.getElementById("historyTotalTimeBadge");
+            if (timeBadge) timeBadge.style.display = "none";
+
+            historyModalInstance.show();
+
+            fetch(`/consultar-historial/${cuentaId}`)
+                .then((response) => response.json())
+                .then((data) => {
+                    spinner.style.display = "none";
+                    const timeBadge = document.getElementById("historyTotalTimeBadge");
+                    const timeSpan = document.getElementById("historyTotalTime");
+                    if (data.tiempo_total && timeBadge && timeSpan) {
+                        timeSpan.textContent = data.tiempo_total;
+                        timeBadge.style.display = "inline-block";
+                    }
+
+                    if (data.success && data.historial.length > 0) {
+                        content.style.display = "block";
+                        data.historial.forEach((h) => {
+                            const dateObj = new Date(h.fecha_transicion);
+                            const dateStr = dateObj.toLocaleDateString("es-ES", {
+                                day: "2-digit",
+                                month: "2-digit",
+                            });
+                            const timeStr = dateObj.toLocaleTimeString("es-ES", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                hour12: true,
+                            });
+
+                            let badgeClass = "bg-info";
+                            const estadoDestino = h.estado_destino || {};
+                            if (estadoDestino.tipo === "DEVUELTO") badgeClass = "bg-danger";
+                            if (estadoDestino.tipo === "APROBADO" || estadoDestino.tipo === "FINAL") badgeClass = "bg-success";
+
+                            const item = document.createElement("div");
+                            item.className = "timeline-item-premium";
+                            item.innerHTML = `
+                                <div class="item-left">
+                                    <div class="item-date fw-bold text-dark" style="font-size: 0.85rem;">${dateStr}</div>
+                                    <div class="item-time">${timeStr}</div>
+                                </div>
+                                <div class="item-center">
+                                    <div class="item-dot"></div>
+                                    <div class="item-line"></div>
+                                </div>
+                                <div class="item-right">
+                                    <div class="item-header">
+                                        <div class="item-title">${h.bloque?.nombre ?? "Bloque"}</div>
+                                        <span class="badge ${badgeClass}" style="font-size: 0.7rem; border-radius: 6px;">
+                                            ${estadoDestino.nombre ?? "N/A"}
+                                        </span>
+                                    </div>
+                                    <div class="item-transition">
+                                        <span class="text-muted small">Origen:</span> 
+                                        <span class="fw-bold">${h.estado_origen?.nombre ?? "Inicio"}</span> 
+                                        <i class="fas fa-long-arrow-alt-right mx-2 text-primary opacity-50"></i> 
+                                        <span class="text-muted small">Destino:</span> 
+                                        <span class="fw-bold">${estadoDestino.nombre ?? "N/A"}</span>
+                                    </div>
+                                    <div class="item-meta">
+                                        <span><i class="fas fa-user-circle me-1 text-primary"></i> ${h.usuario_accion?.primer_nombre ?? "Sistema"}</span>
+                                        ${h.accion ? `<span><i class="fas fa-tag me-1 text-primary"></i> ${h.accion}</span>` : ""}
+                                    </div>
+                                    ${h.comentarios ? `<div class="item-comment"><i class="fas fa-quote-left me-2 opacity-25"></i>${h.comentarios}</div>` : ""}
+                                </div>
+                            `;
+                            content.appendChild(item);
+                        });
+                    } else {
+                        empty.style.display = "block";
+                    }
+                })
+                .catch((err) => {
+                    console.error("Error fetching history:", err);
+                    spinner.style.display = "none";
+                    empty.style.display = "block";
+                    empty.querySelector("p").textContent = "Error al cargar el historial.";
+                });
+        };
     </script>
 @endsection

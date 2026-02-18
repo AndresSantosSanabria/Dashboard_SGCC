@@ -7,10 +7,13 @@
 @endpush
 
 @section('page-content')
-    <h1 style="margin-top: 20px; margin-bottom: 30px; color: #000000; text-align: center; font-weight: bold;">
-        Vista consolidada de cuentas de cobro
-    </h1>
-    <p class="text-muted mt-3">Bienvenido, <strong>{{ auth()->user()?->primer_nombre ?? 'Usuario' }}</strong>.</p>
+    <div class="position-relative premium-loading-container">
+        @include('layouts.partials._premium_loader', ['text' => 'Consolidando Cuentas'])
+        
+        <h1 class="animate-in" style="margin-top: 20px; margin-bottom: 30px; color: #000000; text-align: center; font-weight: bold;">
+            Vista consolidada de cuentas de cobro
+        </h1>
+        <p class="text-muted mt-3 animate-in">Bienvenido, <strong>{{ auth()->user()?->primer_nombre ?? 'Usuario' }}</strong>.</p>
 
 
     @if ($canEditDashboard)
@@ -65,25 +68,28 @@
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <div class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label fw-bold">Número de Contrato</label>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">No. Contrato</label>
                         <input type="text" name="searchContrato" value="{{ request('searchContrato') }}"
-                            class="form-control filter-input" placeholder="Buscar contrato...">
+                            class="form-control filter-input" placeholder="Buscar...">
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-3">
                         <label class="form-label fw-bold">Contratista</label>
                         <input type="text" name="searchContratista" value="{{ request('searchContratista') }}"
-                            class="form-control filter-input" placeholder="Nombre del contratista...">
+                            class="form-control filter-input" placeholder="Nombre...">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-bold">Cédula / NIT</label>
                         <input type="text" name="searchCedula" value="{{ request('searchCedula') }}"
-                            class="form-control filter-input" placeholder="Número de identificación...">
+                            class="form-control filter-input" placeholder="Identificación...">
                     </div>
-                    <div class="col-md-2 text-end">
+                    <div class="col-md-4 d-flex gap-2">
+                        <button class="btn btn-primary w-100" type="submit">
+                            <i class="bi bi-search me-1"></i> Filtrar
+                        </button>
                         <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="offcanvas"
                             data-bs-target="#offcanvasAdvancedFilters">
-                            Filtros Avanzados
+                            <i class="bi bi-funnel me-1"></i> Filtros
                         </button>
                     </div>
                 </div>
@@ -133,6 +139,9 @@
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
             <h5 class="mb-0">Gestión de Cuentas de Cobro</h5>
             <div class="d-flex align-items-center gap-3">
+                <button id="btnResetColumns" class="btn btn-sm btn-light text-primary btn-reset-columns" style="display: none;" onclick="resetColumns()">
+                    <i class="bi bi-layout-three-columns me-1"></i> Mostrar Todo
+                </button>
                 <div id="tableSpinner" style="display: none;" class="spinner-border spinner-border-sm text-white"
                     role="status">
                     <span class="visually-hidden">Cargando...</span>
@@ -151,4 +160,5 @@
     @push('scripts')
         @vite(['resources/views/dashboard/dashboard.js'])
     @endpush
+    </div>
 @endsection
