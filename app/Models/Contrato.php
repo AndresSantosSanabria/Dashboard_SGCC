@@ -25,6 +25,14 @@ class Contrato extends Model
         'fecha_inicio',
         'fecha_fin',
         'es_activo',
+        'link_secop',
+        'estudios_previos_status',
+        'idoneidad_status',
+        'clausulado_status',
+        'rpc_status',
+        'acta_inicio_status',
+        'delegacion_status',
+        'poliza_status',
     ];
 
     protected $casts = [

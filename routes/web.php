@@ -55,6 +55,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/editar/{id}', [CuentaCobroController::class, 'edit'])->name('dashboard.editar');
     Route::put('/dashboard/actualizar/{id}', [CuentaCobroController::class, 'update'])->name('dashboard.actualizar');
     Route::get('/analitica', [\App\Http\Controllers\AnaliticaController::class, 'index'])->name('analitica');
+
+    // Seguimiento SECOP - SIA OBSERVA
+    Route::get('/seguimiento', [\App\Http\Controllers\SeguimientoController::class, 'index'])->name('seguimiento.index');
+    Route::post('/seguimiento/status', [\App\Http\Controllers\SeguimientoController::class, 'updateStatus'])->name('seguimiento.update-status');
+    Route::post('/seguimiento/store', [\App\Http\Controllers\SeguimientoController::class, 'store'])->name('seguimiento.store');
 });
 
 // Workflow (protected)

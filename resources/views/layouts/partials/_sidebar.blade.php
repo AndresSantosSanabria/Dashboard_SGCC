@@ -31,6 +31,15 @@
                 </a>
             </li>
         @endif
+        @if (auth()->user()->puedeAccederSeguimiento())
+            <li>
+                <a href="{{ route('seguimiento.index') }}"
+                    class="nav-link text-white {{ request()->routeIs('seguimiento.*') ? 'active bg-primary' : '' }}">
+                    <i class="bi bi-file-earmark-check me-2 fs-5"></i>
+                    <span class="sidebar-text">Seguimiento SECOP</span>
+                </a>
+            </li>
+        @endif
         @if (auth()->user()->puedeAccederAnalitica())
             <li>
                 <a href="{{ route('analitica') }}"
@@ -60,10 +69,11 @@
                 </div>
                 <strong class="sidebar-text text-truncate">{{ auth()->user()->primer_nombre ?? 'Usuario' }}</strong>
             </div>
-            
+
             <form method="POST" action="{{ route('logout') }}" class="m-0 logout-form-sidebar">
                 @csrf
-                <button type="submit" class="btn btn-link text-white p-0 border-0 shadow-none d-flex align-items-center justify-content-center" 
+                <button type="submit"
+                    class="btn btn-link text-white p-0 border-0 shadow-none d-flex align-items-center justify-content-center"
                     title="Cerrar sesión" style="width: 32px; height: 32px;">
                     <i class="bi bi-box-arrow-right fs-4"></i>
                 </button>
