@@ -14,13 +14,13 @@
 
         <!-- Filtros -->
         <form action="{{ route('workflow') }}" method="GET" class="filter-bar animate-in">
-            <div class="row g-2">
-                <div class="col-md-2">
+            <div class="d-flex flex-wrap align-items-end gap-2">
+                <div style="flex: 1 1 150px; min-width: 130px;">
                     <label class="filter-label">Supervisor</label>
                     <div class="filter-input-group">
                         <i class="fas fa-user-tie filter-icon"></i>
                         <select name="supervisor_id" class="form-select filter-control">
-                            <option value="">Todos los supervisores</option>
+                            <option value="">Todos</option>
                             @foreach ($supervisores as $sup)
                                 <option value="{{ $sup->id }}"
                                     {{ request('supervisor_id') == $sup->id ? 'selected' : '' }}>
@@ -30,7 +30,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div style="flex: 2 1 180px; min-width: 150px;">
                     <label class="filter-label">Contratista</label>
                     <div class="filter-input-group">
                         <i class="fas fa-search filter-icon"></i>
@@ -38,7 +38,16 @@
                             placeholder="Nombre o NIT..." value="{{ request('contratista') }}">
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div style="flex: 2 1 160px; min-width: 140px;">
+                    <label class="filter-label">N° Contrato</label>
+                    <div class="filter-input-group">
+                        <i class="fas fa-file-contract filter-icon"></i>
+                        <input type="text" name="numero_contrato" id="filtro_numero_contrato" class="form-control filter-control"
+                            placeholder="Ej: STIC-CPS-001..." value="{{ request('numero_contrato') }}"
+                            autocomplete="off">
+                    </div>
+                </div>
+                <div style="flex: 1.5 1 150px; min-width: 130px;">
                     <label class="filter-label">Estado</label>
                     <div class="filter-input-group">
                         <i class="fas fa-tag filter-icon"></i>
@@ -53,7 +62,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="col-md-2">
+                <div style="flex: 0.8 1 100px; min-width: 90px;">
                     <label class="filter-label">N° Cuenta</label>
                     <div class="filter-input-group">
                         <i class="fas fa-list-ol filter-icon"></i>
@@ -61,12 +70,12 @@
                             value="{{ request('numero_cuenta') }}">
                     </div>
                 </div>
-                <div class="col-md-3 d-flex align-items-end gap-2">
-                    <button type="submit" class="btn btn-primary shadow-sm w-100" style="border-radius: 8px;">
-                        <i class="fas fa-filter me-2"></i>Filtrar
+                <div class="d-flex gap-2 align-items-end" style="flex: 0 0 auto;">
+                    <button type="submit" class="btn btn-primary shadow-sm" style="border-radius: 8px; white-space: nowrap;">
+                        <i class="fas fa-filter me-1"></i>Filtrar
                     </button>
-                    <a href="{{ route('workflow') }}" class="btn btn-outline-secondary w-100" style="border-radius: 8px;">
-                        <i class="fas fa-undo me-2"></i>Limpiar
+                    <a href="{{ route('workflow') }}" class="btn btn-outline-secondary" style="border-radius: 8px; white-space: nowrap;">
+                        <i class="fas fa-undo me-1"></i>Limpiar
                     </a>
                 </div>
             </div>
@@ -83,28 +92,44 @@
         @vite(['resources/views/workflow/workflow.js'])
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Auto-refresh logic
-                setInterval(function() {
-                    // Check if any modal is open to avoid refreshing while user is interacting
-                    if (document.querySelector('.modal.show')) {
-                        console.log('Skipping refresh: Modal is open');
-                        return;
-                    }
+                // ── Live search: Filtrar por número de contrato mientras se escribe ──
+                const inputContrato = document.getElementById('filtro_numero_contrato');
+                let debounceTimer = null;
 
-                    const currentUrl = window.location.href;
-                    fetch(currentUrl, {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
-                        .then(response => response.text())
-                        .then(html => {
-                            document.getElementById('kanban-container').innerHTML = html;
-                            // Re-initialize any necessary plugins or event listeners here if needed
-                            // For example, if you use tooltips or popovers, re-init them.
-                        })
-                        .catch(error => console.error('Error auto-refreshing workflow:', error));
-                }, 30000); // 30 seconds
+                if (inputContrato) {
+                    inputContrato.addEventListener('input', function() {
+                        clearTimeout(debounceTimer);
+                        debounceTimer = setTimeout(() => {
+                            recargarKanban();
+                        }, 400); // 400ms de espera tras dejar de escribir
+                    });
+                }
+
+                function recargarKanban() {
+                    const form = inputContrato.closest('form');
+                    const formData = new FormData(form);
+                    const params = new URLSearchParams(formData).toString();
+                    const url = `{{ route('workflow') }}?${params}`;
+
+                    // Actualizar la URL del navegador sin recargar la página
+                    window.history.replaceState(null, '', url);
+
+                    // Recargar el kanban vía AJAX
+                    fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(r => r.text())
+                    .then(html => {
+                        document.getElementById('kanban-container').innerHTML = html;
+                    })
+                    .catch(err => console.error('Error al filtrar:', err));
+                }
+
+                // ── Auto-refresh cada 30 segundos ──
+                setInterval(function() {
+                    if (document.querySelector('.modal.show')) return;
+                    recargarKanban();
+                }, 30000);
             });
         </script>
     @endpush

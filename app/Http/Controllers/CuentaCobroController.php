@@ -26,9 +26,8 @@ use Carbon\Carbon;
 
 class CuentaCobroController extends Controller
 {
-    private $entidadesCache = [];
-    private $blocksCache = [];
-    private $statesCache = [];
+    private $bloquesCache = [];
+    private $estadosCache = [];
 
     private function getBlockIdByCode(string $code): int
     {
@@ -379,10 +378,29 @@ class CuentaCobroController extends Controller
                             ]
                         );
 
-                        // 4. SUPERVISOR
-                        $supervisorNombre = $data['SUPERVISOR'] ?? 'PENDIENTE';
+                        // --- LÓGICA DEGuessing PARA EXCEL DESPLAZADO ---
+                        $rawFechaRP = $data['FECHA RP'] ?? null;
+                        $rawValorRP = $data['VALOR RP'] ?? $data['VALOR CONTRATO'] ?? null;
+                        
+                        $finalValorRP = $rawValorRP;
+                        $finalFechaRP = $rawFechaRP;
+
+                        // Si FECHA RP parece un precio (tiene $) y VALOR RP parece una fecha u vacío, intercambiamos
+                        if (is_string($rawFechaRP) && str_contains($rawFechaRP, '$')) {
+                            $finalValorRP = $rawFechaRP;
+                            $finalFechaRP = (is_string($rawValorRP) && !str_contains($rawValorRP, '$')) ? $rawValorRP : null;
+                        }
+
+                        // 4. SUPERVISOR (Fallback si viene desplazado a FECHA DE TERMINACIÓN)
+                        $supervisorNombre = $data['SUPERVISOR'] ?? '';
+                        $fechaTerminacionRaw = $data['FECHA DE TERMINACIÓN'] ?? '';
+                        
+                        if ((empty($supervisorNombre) || $supervisorNombre == 'PENDIENTE') && !empty($fechaTerminacionRaw) && !is_numeric($fechaTerminacionRaw) && !str_contains($fechaTerminacionRaw, '-')) {
+                            $supervisorNombre = $fechaTerminacionRaw;
+                        }
+
                         $supervisor = Supervisor::firstOrCreate(
-                            ['nombres' => $supervisorNombre, 'apellidos' => ''],
+                            ['nombres' => $supervisorNombre ?: 'PENDIENTE', 'apellidos' => ''],
                             ['cargo' => 'SUPERVISOR']
                         );
 
@@ -400,9 +418,9 @@ class CuentaCobroController extends Controller
                             'modalidad_id' => $modalidad->id,
                             'planta_id' => $planta->id,
                             'concepto_id' => $concepto->id,
-                            'fecha_inicio' => $this->parseDate($data['FECHA DE INICIO'] ?? $data['FECHA INICIO'] ?? null),
-                            'fecha_fin' => $this->parseDate($data['FECHA DE TERMINACIÓN'] ?? $data['FECHA FIN'] ?? null),
-                            'monto_total' => $this->parseAmount($data['VALOR RP'] ?? $data['VALOR CONTRATO'] ?? 0),
+                            'fecha_inicio' => $this->parseDate($data['FECHA DE INICIO'] ?? null),
+                            'fecha_fin' => $this->parseDate($data['FECHA DE TERMINACIÓN'] ?? null), // Solo si parece fecha
+                            'monto_total' => $this->parseAmount($finalValorRP ?? 0),
                         ]);
 
                         // 7. REGISTRO PRESUPUESTAL
@@ -411,8 +429,8 @@ class CuentaCobroController extends Controller
                             RegistroPresupuestal::create([
                                 'numero_rp' => $rpNum,
                                 'contrato_id' => $contrato->id,
-                                'fecha_rp' => $this->parseDate($data['FECHA RP'] ?? null),
-                                'valor_rp' => $this->parseAmount($data['VALOR RP'] ?? 0),
+                                'fecha_rp' => $this->parseDate($finalFechaRP),
+                                'valor_rp' => $this->parseAmount($finalValorRP ?? 0),
                             ]);
                         }
 
@@ -423,16 +441,17 @@ class CuentaCobroController extends Controller
                         Log::info("Fila $filaActual: Creando cuenta de cobro");
 
                         $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $data['N° CUENTA'] ?? $data['NUMERO CUENTA'] ?? 0;
-                        $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
-                        $pagosTotales = (int)($data['NUMERO DE PAGOS TOTALES'] ?? $data['TOTAL PAGOS'] ?? 12);
-                        if ($pagosTotales <= 0) $pagosTotales = 12;
+                        if (empty($numeroCuenta) || $numeroCuenta == 0) $numeroCuenta = 1;
+                        $valorRP = $this->parseAmount($finalValorRP ?? 0);
+                        $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? $data['TOTAL PAGOS'] ?? null;
+                        $pagosTotales = (!empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int)$pagosTotalesRaw : null;
 
                         // Determinar bloque actual basado en datos históricos
                         $radHacienda = strtoupper($data['RADICADA EN HACIENDA'] ?? '');
                         $estaFinalizada = ($radHacienda === 'SI' || $radHacienda === 'SÍ');
 
                         $bloqueId = $this->getBlockIdByCode('REV1');
-                        $estadoId = $this->getStateIdByCode('REV1_REV'); // DEFAULT: RESERVA
+                        $estadoId = $this->getStateIdByCode('REV1_SIN'); // DEFAULT: Sin tramite
 
                         if ($estaFinalizada) {
                             $bloqueId = $this->getBlockIdByCode('FIN');
@@ -453,21 +472,45 @@ class CuentaCobroController extends Controller
                             // Si viene dato en la columna REV1, buscarlo
                             $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
                                 ->where('bloque_id', $bloqueId)
-                                ->value('id') ?? $this->getStateIdByCode('REV1_REV');
+                                ->value('id') ?? $this->getStateIdByCode('REV1_SIN');
                         }
 
+                        // --- DETECTAR DESPLAZAMIENTO DE COLUMNAS (SHIFT) ---
+                        $valPorcentajeRaw = $data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? '';
+                        $isShifted = false;
+                        
+                        // Si en la columna de Facturas o Porcentaje viene texto (como SANITAS o REVISOR FISCAL)
+                        $checkShift = $data['PORCENTAJE DE CUENTAS'] ?? '';
+                        if (is_string($checkShift) && !empty($checkShift) && !is_numeric($checkShift) && !str_contains($checkShift, '%') && !str_contains($checkShift, ',')) {
+                            $isShifted = true;
+                        }
+
+                        $facturasRadVal = $this->parseAmount($valPorcentajeRaw);
+                        $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? $data['TOTAL PAGOS'] ?? null;
+                        $pagosTotales = (!empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int)$pagosTotalesRaw : null;
+
+                        $porcentajeCalculado = ($pagosTotales > 0) ? (($facturasRadVal / $pagosTotales) * 100) : 0;
+                        if ($porcentajeCalculado > 100) $porcentajeCalculado = 100; // Cap a 100%
+
                         $fechaRadicacionExcel = $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? $data['FECHA RADICACION'] ?? null);
+                        $radicadoPor = $data['RADICADO POR'] ?? null;
+                        
+                        // Si está desplazado, reasignar campos de auditoría y fechas
+                        if ($isShifted) {
+                            $radicadoPor = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? $radicadoPor;
+                            $fechaRadicacionExcel = $this->parseDate($data['RADICADO POR'] ?? null) ?: $fechaRadicacionExcel;
+                        }
 
                         $cuenta = CuentaCobro::create([
                             'contrato_id' => $contrato->id,
                             'numero_cuenta' => $numeroCuenta,
-                            'valor_cobro' => $valorRP / $pagosTotales,
-                            'fecha_radicacion' => $fechaRadicacionExcel, // Null if empty
+                            'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
+                            'fecha_radicacion' => $fechaRadicacionExcel, 
                             'numero_pagos_totales' => $pagosTotales,
-                            'numero_facturas_radicadas' => $data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? 0,
+                            'numero_facturas_radicadas' => $facturasRadVal,
 
-                            'porcentaje_cuentas' => ($pagosTotales > 0) ? ((($data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? 0) / $pagosTotales) * 100) : 0,
-                            'radicado_por' => $data['RADICADO POR'] ?? null,
+                            'porcentaje_cuentas' => $porcentajeCalculado,
+                            'radicado_por' => $radicadoPor,
                             'bloque_actual_id' => $bloqueId,
                             'estado_actual_id' => $estadoId,
                             'responsable_actual_id' => Auth::id(),
@@ -483,6 +526,10 @@ class CuentaCobroController extends Controller
 
                         // 11. PLANILLA SEGURIDAD SOCIAL
                         $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? $data['MES PLANILLA'] ?? 'RESERVA';
+                        if ($isShifted) {
+                            $mesPlanilla = $data['ENTIDAD ARL'] ?? 'RESERVA';
+                        }
+
                         if ($mesPlanilla && !empty($mesPlanilla)) {
                             PlanillaSeguridadSocial::create([
                                 'cuenta_cobro_id' => $cuenta->id,
@@ -554,13 +601,6 @@ class CuentaCobroController extends Controller
             // 1. Validar obligatorios (Server-side)
             $requiredFields = [
                 'NUMERO DE CONTRATO' => 'Número de Contrato',
-                'CONTRATISTA' => 'Contratista',
-                'CEDULA' => 'Cédula / NIT',
-                'FECHA DE INICIO' => 'Fecha de Inicio',
-                'FECHA DE TERMINACIÓN' => 'Fecha de Terminación',
-                'ENTIDAD SALUD' => 'Entidad Salud',
-                'ENTIDAD PENSIÓN' => 'Entidad Pensión',
-                'ENTIDAD ARL' => 'Entidad ARL',
             ];
 
             foreach ($requiredFields as $field => $label) {
@@ -635,13 +675,14 @@ class CuentaCobroController extends Controller
 
                 // 7. Cuenta de Cobro
                 $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? 0;
+                if (empty($numeroCuenta) || $numeroCuenta == 0) $numeroCuenta = 1;
                 $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
-                $pagosTotales = (int)($data['NUMERO DE PAGOS TOTALES'] ?? 12);
-                if ($pagosTotales <= 0) $pagosTotales = 12;
+                $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? null;
+                $pagosTotales = (!empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int)$pagosTotalesRaw : null;
 
                 // Determinar bloque y estado actual basado en el formulario (de mayor a menor importancia)
                 $bloqueId = $this->getBlockIdByCode('REV1');
-                $estadoId = $this->getStateIdByCode('REV1_REV'); // Default: RESERVA
+                $estadoId = $this->getStateIdByCode('REV1_SIN'); // Default: Sin tramite
 
                 if (!empty($data['RADICADA EN HACIENDA'])) {
                     $bloqueId = $this->getBlockIdByCode('HAC');
@@ -662,7 +703,7 @@ class CuentaCobroController extends Controller
                 } elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
                     $bloqueId = $this->getBlockIdByCode('REV1');
                     $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
-                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_REV');
+                        ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_SIN');
                 }
 
                 $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($data['RADICADA EN HACIENDA'] ?? '') === 'SI'));
@@ -677,15 +718,18 @@ class CuentaCobroController extends Controller
                     }
                 }
 
+                $facturasRad = $this->parseAmount($ultimaFacturaHacienda ?? $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0);
+
                 $cuenta = CuentaCobro::create([
                     'contrato_id' => $contrato->id,
                     'numero_cuenta' => $numeroCuenta,
-                    'valor_cobro' => $valorRP / $pagosTotales,
+                                        'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
+
                     'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null),
                     'numero_pagos_totales' => $pagosTotales,
-                    'numero_facturas_radicadas' => $ultimaFacturaHacienda ?? $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0,
+                    'numero_facturas_radicadas' => $facturasRad,
 
-                    'porcentaje_cuentas' => ($pagosTotales > 0) ? ((($ultimaFacturaHacienda ?? $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0) / $pagosTotales) * 100) : 0,
+                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($facturasRad / $pagosTotales) * 100) : 0,
                     'radicado_por' => $data['RADICADO POR'] ?? null,
                     'bloque_actual_id' => $bloqueId,
                     'estado_actual_id' => $estadoId,
@@ -844,15 +888,19 @@ class CuentaCobroController extends Controller
 
                 // 6. Cuenta de Cobro
                 $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
-                $pagosTotales = (int)($data['NUMERO DE PAGOS TOTALES'] ?? 12);
-                if ($pagosTotales <= 0) $pagosTotales = 12;
+                $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? null;
+                $pagosTotales = (!empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int)$pagosTotalesRaw : null;
 
                 // Preservar numero_facturas_radicadas actual: NO sobrescribir con el valor del formulario
                 $facturasRadicadasActual = $cuenta->numero_facturas_radicadas ?? 0;
 
+                $newNumCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta;
+                if (empty($newNumCuenta) || $newNumCuenta == 0) $newNumCuenta = 1;
+
                 $cuenta->update([
-                    'numero_cuenta' => $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta,
-                    'valor_cobro' => $valorRP / $pagosTotales,
+                    'numero_cuenta' => $newNumCuenta,
+                                        'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
+
                     'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion,
                     'numero_pagos_totales' => $pagosTotales,
                     'numero_facturas_radicadas' => $facturasRadicadasActual,
@@ -957,16 +1005,24 @@ class CuentaCobroController extends Controller
 
     private function parseDate($value)
     {
-        if (!$value || $value === '0' || $value === 'N/A') return null;
-        if ($value === '1') return now(); // Interpretar "1" como la fecha actual para no perder información de prueba
-        try {
-            // Si es un objeto ya (como Carbon o DateTime)
-            if ($value instanceof \DateTimeInterface) return Carbon::instance($value);
+        if (!$value || $value === '0' || $value === 'N/A' || $value === '') return null;
+        if ($value === '1') return now();
 
+        // Si es un objeto ya (como Carbon o DateTime)
+        if ($value instanceof \DateTimeInterface) return Carbon::instance($value);
+
+        if (is_string($value)) {
+            $value = trim($value);
+            // Si parece un monto (contiene $) no es una fecha válida
+            if (str_contains($value, '$')) return null;
+            // Si es algo como "15 MESES" tampoco es fecha
+            if (preg_match('/[0-9]+\s*MESES/i', $value)) return null;
+        }
+
+        try {
             // Si es numérico y parece fecha Excel (días desde 1900-01-01)
             if (is_numeric($value) && $value > 40000 && $value < 60000) {
-                // Conversión manual para evitar dependencia de PhpSpreadsheet si no está instalado
-                return Carbon::create(1899, 12, 30)->addDays($value);
+                return Carbon::create(1899, 12, 30)->addDays((int)$value);
             }
 
             return Carbon::parse($value);
@@ -1098,7 +1154,41 @@ class CuentaCobroController extends Controller
 
     private function parseAmount($value)
     {
-        return (float) str_replace([',', '$', ' '], '', $value);
+        if ($value instanceof \DateTimeInterface) return 0.0;
+        if (is_numeric($value)) return (float) $value;
+        if (empty($value)) return 0.0;
+
+        // Limpiar caracteres comunes
+        $clean = str_replace(['$', ' ', '%'], '', (string)$value);
+
+        // Si no hay números, retornar 0
+        if (!preg_match('/[0-9]/', $clean)) return 0.0;
+
+        // Caso especial: $80.591.600 (Puntos como miles)
+        // Si hay múltiples puntos, o si hay un punto y luego una coma
+        $dots = substr_count($clean, '.');
+        $commas = substr_count($clean, ',');
+
+        if ($dots > 1) {
+            $clean = str_replace('.', '', $clean);
+        }
+
+        if ($commas > 0) {
+            // Si tiene coma, asumimos que es el decimal (formato latino)
+            // A menos que tenga un punto después de la coma (raro)
+            if ($dots > 0 && strrpos($clean, '.') < strrpos($clean, ',')) {
+                $clean = str_replace('.', '', $clean);
+            }
+            $clean = str_replace(',', '.', $clean);
+        }
+
+        // Si después de limpiar múltiples puntos aún queda uno,
+        // verificamos si es decimal o miles. En este contexto ($80.591.600),
+        // si termina en .XXX es muy probable que sean miles si el número es grande.
+        // Pero para ser conservadores, solo removemos si count > 1.
+        // Si el usuario tiene "28.577.658.777", todos los puntos se irán. Correcto.
+
+        return (float) $clean;
     }
 
     private function obtenerOCrearEntidad(?string $nombre, string $tipo): ?int
@@ -1109,33 +1199,40 @@ class CuentaCobroController extends Controller
         $nombre = strtoupper(trim($nombre));
 
         // Filtrar casos especiales
-        $especiales = ['NA', 'N/A', 'NINGUNA', 'REVISOR FISCAL', 'PARAFISCALES Y CONTADOR'];
+        $especiales = ['NA', 'N/A', 'NINGUNA', 'REVISOR FISCAL', 'PARAFISCALES Y CONTADOR', 'SIN DATO', '0'];
         if (in_array($nombre, $especiales)) return null;
 
-        $cacheKey = "$tipo:$nombre";
-
-        // Revisar cache
-        if (isset($this->entidadesCache[$cacheKey])) {
-            return $this->entidadesCache[$cacheKey];
-        }
-
-        // Buscar o crear en BD
+        // Buscar o crear en BD (Sin cache global para evitar errores en transacciones fallidas)
         $entidad = EntidadSeguridadSocial::firstOrCreate(
             ['nombre' => $nombre],
             ['tipo' => $tipo, 'es_activa' => true]
         );
-
-        // Guardar en cache
-        $this->entidadesCache[$cacheKey] = $entidad->id;
 
         return $entidad->id;
     }
 
     private function crearSeguridadSocial(array $datos, Contratista $contratista): void
     {
-        $saludId = $this->obtenerOCrearEntidad($datos['ENTIDAD SALUD'] ?? null, 'SALUD');
-        $pensionId = $this->obtenerOCrearEntidad($datos['ENTIDAD PENSIÓN'] ?? null, 'PENSION');
-        $arlId = $this->obtenerOCrearEntidad($datos['ENTIDAD ARL'] ?? null, 'ARL');
+        // Detect shifted mapping
+        $isShifted = false;
+        $valCheck = $datos['PORCENTAJE DE CUENTAS'] ?? '';
+        if (is_string($valCheck) && !empty($valCheck) && !is_numeric($valCheck) && !str_contains($valCheck, '%')) {
+            $isShifted = true;
+        }
+
+        if ($isShifted) {
+            $salud = $datos['PORCENTAJE DE CUENTAS'] ?? null;
+            $pension = $datos['ENTIDAD SALUD'] ?? null;
+            $arl = $datos['ENTIDAD PENSIÓN'] ?? null;
+        } else {
+            $salud = $datos['ENTIDAD SALUD'] ?? null;
+            $pension = $datos['ENTIDAD PENSIÓN'] ?? null;
+            $arl = $datos['ENTIDAD ARL'] ?? null;
+        }
+
+        $saludId = $this->obtenerOCrearEntidad($salud, 'SALUD');
+        $pensionId = $this->obtenerOCrearEntidad($pension, 'PENSION');
+        $arlId = $this->obtenerOCrearEntidad($arl, 'ARL');
 
         if ($saludId || $pensionId || $arlId) {
             ContratistaSeguridadSocial::updateOrCreate(

@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/seguimiento', [\App\Http\Controllers\SeguimientoController::class, 'index'])->name('seguimiento.index');
     Route::post('/seguimiento/status', [\App\Http\Controllers\SeguimientoController::class, 'updateStatus'])->name('seguimiento.update-status');
     Route::post('/seguimiento/store', [\App\Http\Controllers\SeguimientoController::class, 'store'])->name('seguimiento.store');
+    Route::put('/seguimiento/{id}', [\App\Http\Controllers\SeguimientoController::class, 'update'])->name('seguimiento.update');
 });
 
 // Workflow (protected)
@@ -90,6 +91,10 @@ Route::middleware('auth')->prefix('configuracion')->group(function () {
     Route::get('/roles/editar/{id}', [\App\Http\Controllers\RoleController::class, 'edit'])->name('configuracion.roles.edit');
     Route::put('/roles/actualizar/{id}', [\App\Http\Controllers\RoleController::class, 'update'])->name('configuracion.roles.update');
     Route::post('/roles/toggle-status/{id}', [\App\Http\Controllers\RoleController::class, 'toggleStatus'])->name('configuracion.roles.toggle-status');
+
+    // Auditoría
+    Route::get('/auditoria', [\App\Http\Controllers\AuditoriaController::class, 'index'])->name('configuracion.auditoria.index');
+    Route::get('/auditoria/{id}', [\App\Http\Controllers\AuditoriaController::class, 'show'])->name('configuracion.auditoria.show');
 });
 
 Route::get('/debug-permisos', function () {

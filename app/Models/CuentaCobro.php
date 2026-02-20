@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Traits\Auditable;
+
 class CuentaCobro extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $table = 'cuentas_cobro';
 
@@ -119,7 +121,9 @@ class CuentaCobro extends Model
     // Accessors for Dashboard
     public function getDiferenciaCuentasAttribute()
     {
-        return ($this->numero_pagos_totales ?? 0) - ($this->numero_cuenta ?? 0);
+        $numeroCuenta = (int)($this->numero_cuenta ?? 0);
+        if ($numeroCuenta <= 0) $numeroCuenta = 1;
+        return (int)($this->numero_pagos_totales ?? 0) - $numeroCuenta;
     }
 
     public function getUltimaFacturaHaciendaAttribute($value)
@@ -153,8 +157,8 @@ class CuentaCobro extends Model
      */
     public function getTiempoTotalEjecucionAttribute()
     {
-        // Priorizar fecha_radicacion (fecha real de ingreso de documentos) o created_at
-        $primera = $this->fecha_radicacion ?? $this->created_at;
+        // Usar created_at como el inicio real del workflow en el sistema
+        $primera = $this->created_at;
         
         if (!$primera) return '0s';
 
@@ -183,5 +187,10 @@ class CuentaCobro extends Model
         }
 
         return implode(' ', $partes);
+    }
+
+    public function setNumeroCuentaAttribute($value)
+    {
+        $this->attributes['numero_cuenta'] = (empty($value) || $value <= 0) ? 1 : $value;
     }
 }

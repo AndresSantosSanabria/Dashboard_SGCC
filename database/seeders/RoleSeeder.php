@@ -29,8 +29,8 @@ class RoleSeeder extends Seeder
                     'acceder_consolidado' => true,   // Acceso a Vista Solo Lectura
                     'acceder_workflow' => true,
                     'editar_workflow' => true,
-                    'responsable_sap' => true,
-                    'responsable_facturacion' => true,
+                    'responsable_sap' => false,
+                    'responsable_facturacion' => false,
                     'editar_dashboard' => true,       // Permiso explícito para editar en dashboard
                     'reportes_exportar' => true,
                     'logs_ver' => true,

@@ -5,7 +5,7 @@
         <td><small>{{ $c->contrato->contratista->nombre_completo ?? 'N/A' }}</small></td>
         <td><small class="badge" style="background:rgba(0,72,132,.08); color:var(--govco-blue); font-weight:600;">{{ $c->bloqueActual->nombre ?? 'N/A' }}</small></td>
         <td><small>{{ $c->estadoActual->nombre ?? 'N/A' }}</small></td>
-        <td class="text-center fw-semibold">{{ $c->numero_pagos_totales ?? 0 }}</td>
+        <td class="text-center fw-semibold">{{ $c->numero_pagos_totales > 0 ? $c->numero_pagos_totales : '' }}</td>
         <td class="text-center fw-semibold">{{ $c->radicadas_bi ?? 0 }}</td>
         <td class="text-center">
             @if($diff > 0)

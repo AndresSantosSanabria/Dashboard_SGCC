@@ -65,7 +65,7 @@ class SeguimientoController extends Controller
         $request->validate([
             'id' => 'required|exists:contratos,id',
             'field' => 'required|string',
-            'status' => 'required|string|in:OK,PENDIENTE,ROJO,NA'
+            'status' => 'nullable|string|in:OK,PENDIENTE,ROJO,NA'
         ]);
 
         $contrato = Contrato::findOrFail($request->id);
@@ -81,7 +81,7 @@ class SeguimientoController extends Controller
             'numero_proceso' => 'nullable|string',
             'numero_contrato' => 'required|string|unique:contratos,numero_contrato',
             'modalidad_id' => 'nullable|exists:modalidades,id',
-            'contratista_id' => 'required|exists:contratistas,id',
+            'contratista_nombre' => 'required|string',
             'supervisor_id' => 'nullable|exists:supervisores,id',
             'objeto' => 'nullable|string',
             'monto_total' => 'required|numeric',
@@ -89,8 +89,57 @@ class SeguimientoController extends Controller
             // Default statuses will be handled by DB defaults, but can be passed here
         ]);
 
+        $contratistaInfo = trim($request->contratista_nombre);
+        $contratista = Contratista::where('razon_social', $contratistaInfo)
+            ->orWhere('representante_legal', $contratistaInfo)
+            ->first();
+
+        if (!$contratista) {
+            $contratista = Contratista::create([
+                'razon_social' => $contratistaInfo,
+                'tipo_persona' => 'NATURAL',
+            ]);
+        }
+
+        $validated['contratista_id'] = $contratista->id;
+        unset($validated['contratista_nombre']);
+
         Contrato::create($validated);
 
         return redirect()->back()->with('success', 'Contrato registrado exitosamente.');
+    }
+
+    public function update(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'numero_proceso' => 'nullable|string',
+            'numero_contrato' => 'required|string|unique:contratos,numero_contrato,' . $id,
+            'modalidad_id' => 'nullable|exists:modalidades,id',
+            'contratista_nombre' => 'required|string',
+            'supervisor_id' => 'nullable|exists:supervisores,id',
+            'objeto' => 'nullable|string',
+            'monto_total' => 'required|numeric',
+            'link_secop' => 'nullable|url',
+        ]);
+
+        $contratistaInfo = trim($request->contratista_nombre);
+        $contratista = Contratista::where('razon_social', $contratistaInfo)
+            ->orWhere('representante_legal', $contratistaInfo)
+            ->first();
+
+        if (!$contratista) {
+            $contratista = Contratista::create([
+                'razon_social' => $contratistaInfo,
+                'tipo_persona' => 'NATURAL',
+            ]);
+        }
+
+        $validated['contratista_id'] = $contratista->id;
+        unset($validated['contratista_nombre']);
+
+        $contrato = Contrato::findOrFail($id);
+        $contrato->update($validated);
+
+        return redirect()->back()->with('success', 'Contrato actualizado exitosamente.');
     }
 }

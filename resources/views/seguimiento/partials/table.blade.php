@@ -1,6 +1,7 @@
 <table class="table table-hover table-seguimiento mb-0">
     <thead>
         <tr>
+            <th class="text-center">Acciones</th>
             <th>Proceso</th>
             <th class="sticky-col">Contrato</th>
             <th>Modalidad</th>
@@ -24,6 +25,23 @@
     <tbody>
         @forelse($contratos as $c)
             <tr>
+                <td class="text-center align-middle">
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-circle shadow-sm btn-edit-contrato"
+                        data-bs-toggle="modal" data-bs-target="#modalEditarContrato"
+                        data-id="{{ $c->id }}" 
+                        data-numero_proceso="{{ $c->numero_proceso }}"
+                        data-numero_contrato="{{ $c->numero_contrato }}"
+                        data-modalidad_id="{{ $c->modalidad_id }}"
+                        data-contratista_nombre="{{ $c->contratista->razon_social ?: $c->contratista->representante_legal }}"
+                        data-supervisor_id="{{ $c->supervisor_id }}"
+                        data-objeto="{{ $c->objeto }}"
+                        data-monto_total="{{ $c->monto_total }}"
+                        data-link_secop="{{ $c->link_secop }}"
+                        style="width: 32px; height: 32px; padding: 4px;"
+                        title="Editar Contrato">
+                        <i class="bi bi-pencil fs-6"></i>
+                    </button>
+                </td>
                 <td><span class="text-muted small">#{{ $c->numero_proceso ?? 'N/A' }}</span></td>
                 <td class="sticky-col">
                     <span class="fw-bold text-dark">{{ $c->numero_contrato }}</span>
@@ -82,8 +100,9 @@
 
                 @foreach ($checklistFields as $field => $label)
                     <td style="min-width: 120px; padding: 0.8rem 0.4rem;">
-                        <select class="status-dropdown status-{{ strtolower($c->$field) }}"
+                        <select class="status-dropdown status-{{ strtolower($c->$field) ?: 'null' }}"
                             data-id="{{ $c->id }}" data-field="{{ $field }}">
+                            <option value="" {{ empty($c->$field) || $c->$field == '-' ? 'selected' : '' }}>-</option>
                             <option value="OK" {{ $c->$field == 'OK' ? 'selected' : '' }}>OK</option>
                             <option value="PENDIENTE" {{ $c->$field == 'PENDIENTE' ? 'selected' : '' }}>PENDIENTE
                             </option>
@@ -95,7 +114,7 @@
             </tr>
         @empty
             <tr>
-                <td colspan="18" class="text-center py-5">
+                <td colspan="19" class="text-center py-5">
                     <div class="d-flex flex-column align-items-center opacity-50">
                         <i class="bi bi-search fs-1 mb-2"></i>
                         <p class="fw-semibold">No se encontraron resultados para los filtros aplicados</p>

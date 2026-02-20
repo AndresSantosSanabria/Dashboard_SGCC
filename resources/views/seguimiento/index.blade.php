@@ -259,12 +259,12 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label text-danger">Contratista *</label>
-                    <select name="contratista_id" class="form-select" required>
-                        <option value="">Seleccione contratista</option>
+                    <input type="text" name="contratista_nombre" class="form-control" list="contratistasList" required placeholder="Nombre o Razón Social del Contratista">
+                    <datalist id="contratistasList">
                         @foreach ($contratistas as $c)
-                            <option value="{{ $c->id }}">{{ $c->nombre_completo }}</option>
+                            <option value="{{ $c->nombre_completo }}"></option>
                         @endforeach
-                    </select>
+                    </datalist>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Supervisor</label>
@@ -304,6 +304,86 @@
             </form>
         </div>
     </div>
+
+    <!-- Modal Editar Contrato -->
+    <div class="modal fade" id="modalEditarContrato" tabindex="-1" aria-labelledby="modalEditarContratoLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-govco-navbar text-white">
+                    <h5 class="modal-title fw-bold" id="modalEditarContratoLabel"><i class="bi bi-pencil-square me-2"></i> Editar Contrato</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formEditarContrato" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="contrato_id" id="edit_contrato_id">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Número de Proceso</label>
+                                <input type="text" name="numero_proceso" id="edit_numero_proceso" class="form-control" placeholder="Ej: SED-LP-001-2024">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-danger">Número de Contrato *</label>
+                                <input type="text" name="numero_contrato" id="edit_numero_contrato" class="form-control" required placeholder="Ej: 1234-2024">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Modalidad de Contratación</label>
+                                <select name="modalidad_id" id="edit_modalidad_id" class="form-select">
+                                    <option value="">Seleccione modalidad</option>
+                                    @foreach ($modalidades as $m)
+                                        <option value="{{ $m->id }}">{{ $m->nombre }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-danger">Contratista *</label>
+                                <input type="text" name="contratista_nombre" id="edit_contratista_nombre" class="form-control" list="contratistasListEdit" required placeholder="Nombre o Razón Social del Contratista">
+                                <datalist id="contratistasListEdit">
+                                    @foreach ($contratistas as $c)
+                                        <option value="{{ $c->nombre_completo }}"></option>
+                                    @endforeach
+                                </datalist>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Supervisor</label>
+                                <select name="supervisor_id" id="edit_supervisor_id" class="form-select">
+                                    <option value="">Seleccione supervisor</option>
+                                    @foreach ($supervisores as $s)
+                                        <option value="{{ $s->id }}">{{ $s->nombre_completo }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Objeto del Contrato</label>
+                                <textarea name="objeto" id="edit_objeto" class="form-control" rows="3" placeholder="Descripción breve del contrato..."></textarea>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label text-danger">Valor del Contrato *</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" step="0.01" name="monto_total" id="edit_monto_total" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <label class="form-label">Link SECOP</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+                                    <input type="url" name="link_secop" id="edit_link_secop" class="form-control" placeholder="https://www.secop.gov.co/...">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-govco-primary px-4">
+                                <i class="bi bi-save me-2"></i> Guardar Cambios
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
@@ -335,6 +415,7 @@
                         tableContainer.innerHTML = html;
                         attachStatusListeners();
                         attachPaginationListeners();
+                        attachEditListeners();
                     });
             };
 
@@ -402,6 +483,56 @@
                             });
                     });
                 });
+            };
+
+            // Listener para cuando se abre el modal
+            const editModalElement = document.getElementById('modalEditarContrato');
+            if (editModalElement) {
+                editModalElement.addEventListener('show.bs.modal', function(event) {
+                    // El botón que disparó el evento
+                    const btn = event.relatedTarget;
+                    if (!btn) return;
+                    
+                    const dataset = btn.dataset;
+                    
+                    document.getElementById('edit_contrato_id').value = dataset.id || '';
+                    document.getElementById('edit_numero_proceso').value = dataset.numero_proceso || '';
+                    document.getElementById('edit_numero_contrato').value = dataset.numero_contrato || '';
+                    document.getElementById('edit_modalidad_id').value = dataset.modalidad_id || '';
+                    document.getElementById('edit_contratista_nombre').value = dataset.contratista_nombre || '';
+                    document.getElementById('edit_supervisor_id').value = dataset.supervisor_id || '';
+                    document.getElementById('edit_objeto').value = dataset.objeto || '';
+                    document.getElementById('edit_monto_total').value = dataset.monto_total || '';
+                    document.getElementById('edit_link_secop').value = dataset.link_secop || '';
+
+                    const formEdit = document.getElementById('formEditarContrato');
+                    formEdit.action = `{{ url('seguimiento') }}/${dataset.id}`;
+                });
+            }
+
+            // Re-vincular después de actualizar la tabla
+            const originalUpdateTable = updateTable;
+            updateTable = (url = null) => {
+                const formData = new FormData(filterForm);
+                const params = new URLSearchParams();
+
+                for (const [key, value] of formData.entries()) {
+                    if (value) params.append(key, value);
+                }
+
+                const fetchUrl = url || `{{ route('seguimiento.index') }}?${params.toString()}`;
+
+                fetch(fetchUrl, {
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        tableContainer.innerHTML = html;
+                        attachStatusListeners();
+                        attachPaginationListeners();
+                    });
             };
 
             // Inicializar listeners

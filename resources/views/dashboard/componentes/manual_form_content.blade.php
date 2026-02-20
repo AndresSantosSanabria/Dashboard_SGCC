@@ -4,12 +4,12 @@
     <input type="text" name="NUMERO DE CONTRATO" class="form-control" required>
 </div>
 <div class="col-md-4">
-    <label class="form-label fw-bold">CONTRATISTA *</label>
-    <input type="text" name="CONTRATISTA" class="form-control" required>
+    <label class="form-label">CONTRATISTA</label>
+    <input type="text" name="CONTRATISTA" class="form-control">
 </div>
 <div class="col-md-4">
-    <label class="form-label fw-bold">CÉDULA / NIT *</label>
-    <input type="text" name="CEDULA" class="form-control" required>
+    <label class="form-label">CÉDULA / NIT</label>
+    <input type="text" name="CEDULA" class="form-control">
 </div>
 
 {{-- Fila 2 --}}
@@ -28,12 +28,12 @@
 
 {{-- Fila 3 --}}
 <div class="col-md-4">
-    <label class="form-label fw-bold">FECHA DE INICIO *</label>
-    <input type="date" name="FECHA DE INICIO" class="form-control" required>
+    <label class="form-label">FECHA DE INICIO</label>
+    <input type="date" name="FECHA DE INICIO" class="form-control">
 </div>
 <div class="col-md-4">
-    <label class="form-label fw-bold">FECHA DE TERMINACIÓN *</label>
-    <input type="date" name="FECHA DE TERMINACIÓN" class="form-control" required>
+    <label class="form-label">FECHA DE TERMINACIÓN</label>
+    <input type="date" name="FECHA DE TERMINACIÓN" class="form-control">
 </div>
 <div class="col-md-4">
     <label class="form-label">SUPERVISOR</label>
@@ -61,18 +61,18 @@
     <input type="number" step="0.01" name="PORCENTAJE DE CUENTAS" class="form-control">
 </div>
 <div class="col-md-4">
-    <label class="form-label fw-bold">ENTIDAD SALUD *</label>
-    <input type="text" name="ENTIDAD SALUD" class="form-control" required>
+    <label class="form-label">ENTIDAD SALUD</label>
+    <input type="text" name="ENTIDAD SALUD" class="form-control">
 </div>
 <div class="col-md-4">
-    <label class="form-label fw-bold">ENTIDAD PENSIÓN *</label>
-    <input type="text" name="ENTIDAD PENSIÓN" class="form-control" required>
+    <label class="form-label">ENTIDAD PENSIÓN</label>
+    <input type="text" name="ENTIDAD PENSIÓN" class="form-control">
 </div>
 
 {{-- Fila 6 --}}
 <div class="col-md-4">
-    <label class="form-label fw-bold">ENTIDAD ARL *</label>
-    <input type="text" name="ENTIDAD ARL" class="form-control" required>
+    <label class="form-label">ENTIDAD ARL</label>
+    <input type="text" name="ENTIDAD ARL" class="form-control">
 </div>
 <div class="col-md-4">
     <label class="form-label">ULTIMA PLANILLA SS</label>

@@ -23,15 +23,5 @@ class UsuarioSeeder extends Seeder
             'rol_id' => $adminRole->id,
             'es_activo' => true,
         ]);
-
-        // Crear Visualizador
-        Usuario::create([
-            'primer_nombre' => 'Juan',
-            'primer_apellido' => 'Consulta',
-            'user' => 'viewer',
-            'password' => Hash::make('password123'),
-            'rol_id' => $viewerRole->id,
-            'es_activo' => true,
-        ]);
     }
 }

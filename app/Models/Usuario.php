@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+use App\Traits\Auditable;
+
 class Usuario extends Authenticatable
 {
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, Auditable;
 
     protected $table = 'usuarios';
 
@@ -233,14 +235,13 @@ class Usuario extends Authenticatable
     {
         return $query->where('es_activo', true)
             ->where(function ($q) {
-                $q->where('permisos->es_admin', true)
-                    ->orWhere('permisos->responsable_sap', true)
+                // Usuario con permiso individual explícito
+                $q->where('permisos->responsable_sap', true)
                     ->orWhere(function ($sq) {
+                        // Sin permiso individual explícito, heredar del rol (solo responsable_sap, NO es_admin)
                         $sq->whereNull('permisos->responsable_sap')
-                            ->whereNull('permisos->es_admin')
                             ->whereHas('rol', function ($r) {
-                                $r->where('permisos->responsable_sap', true)
-                                    ->orWhere('permisos->es_admin', true);
+                                $r->where('permisos->responsable_sap', true);
                             });
                     });
             });
@@ -250,14 +251,13 @@ class Usuario extends Authenticatable
     {
         return $query->where('es_activo', true)
             ->where(function ($q) {
-                $q->where('permisos->es_admin', true)
-                    ->orWhere('permisos->responsable_facturacion', true)
+                // Usuario con permiso individual explícito
+                $q->where('permisos->responsable_facturacion', true)
                     ->orWhere(function ($sq) {
+                        // Sin permiso individual explícito, heredar del rol (solo responsable_facturacion, NO es_admin)
                         $sq->whereNull('permisos->responsable_facturacion')
-                            ->whereNull('permisos->es_admin')
                             ->whereHas('rol', function ($r) {
-                                $r->where('permisos->responsable_facturacion', true)
-                                    ->orWhere('permisos->es_admin', true);
+                                $r->where('permisos->responsable_facturacion', true);
                             });
                     });
             });

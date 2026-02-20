@@ -9,6 +9,9 @@
                 <i class="fas fa-users-cog me-2"></i>Gestión de Usuarios
             </h1>
             <div class="d-flex gap-2">
+                <a href="{{ route('configuracion.auditoria.index') }}" class="btn btn-dark">
+                    <i class="fas fa-history me-2"></i>Historial de Auditoría
+                </a>
                 <a href="{{ route('configuracion.roles.index') }}" class="btn btn-secondary">
                     <i class="fas fa-user-shield me-2"></i>Gestionar Roles
                 </a>

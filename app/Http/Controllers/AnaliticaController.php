@@ -58,8 +58,7 @@ class AnaliticaController extends Controller
 
         // Lógica de Negocio BI
         $cuentas = $cuentas->transform(function ($c) {
-            $nCuenta = (int)($c->numero_cuenta ?? 1);
-            $c->radicadas_bi = $c->finalizada ? $nCuenta : max(0, $nCuenta - 1);
+            $c->radicadas_bi = (int)($c->numero_facturas_radicadas ?? 0);
             $meta = (int)($c->numero_pagos_totales ?? 1);
             $c->avance_bi = $meta > 0 ? round(($c->radicadas_bi / $meta) * 100, 2) : 0;
             return $c;

@@ -17,12 +17,15 @@ class UpdateWorkflowStatesSeeder extends Seeder
         DB::beginTransaction();
 
         try {
-            // 1. Limpiar datos existentes
+            // 1. Limpiar datos existentes y capturar para migración
             echo "📝 Limpiando datos existentes...\n";
+            // Guardar mapping antiguo para restaurar correctamente las cuentas
+            $estadosAntiguos = DB::table('estados_workflow')->pluck('codigo', 'id')->toArray();
+
             DB::table('transiciones_permitidas')->delete();
             DB::table('estados_workflow')->delete();
             DB::table('bloques_workflow')->delete();
-            echo "✓ Datos limpiados\n\n";
+            echo "✓ Datos limpiados (y mapeo antiguo capturado)\n\n";
 
             // 2. Crear Bloques
             echo "📦 Creando bloques...\n";
@@ -42,7 +45,8 @@ class UpdateWorkflowStatesSeeder extends Seeder
             // Estructura de estados 
             $estadosPorBloque = [
                 1 => [
-                    ['nombre' => 'en revision', 'codigo' => 'REV1_REV', 'tipo' => 'INICIAL', 'es_inicial' => 1],
+                    ['nombre' => 'Sin tramite', 'codigo' => 'REV1_SIN', 'tipo' => 'INICIAL', 'es_inicial' => 1],
+                    ['nombre' => 'en revision', 'codigo' => 'REV1_REV', 'tipo' => 'EN_PROCESO'],
                     ['nombre' => 'en espera firma jaime moncaleano', 'codigo' => 'REV1_ESP_MON', 'tipo' => 'EN_PROCESO'],
                     ['nombre' => 'pasa', 'codigo' => 'REV1_PASA', 'tipo' => 'APROBADO', 'es_final' => 1],
                     ['nombre' => 'devuelta', 'codigo' => 'REV1_DEV', 'tipo' => 'DEVUELTO'],
@@ -109,6 +113,57 @@ class UpdateWorkflowStatesSeeder extends Seeder
 
             echo "✅ ¡Actualización completada exitosamente!\n\n";
             $this->showSummary();
+
+            // ── Reparar referencias en cuentas_cobro ──────────────────────────
+            echo "\n🔧 Reparando referencias de estado en cuentas_cobro...\n";
+
+            // Obtener el nuevo mapa de código => ID después de recrear las tablas
+            $nuevosEstados = DB::table('estados_workflow')->pluck('id', 'codigo')->toArray();
+
+            $cuentas = DB::table('cuentas_cobro')
+                ->whereNotNull('bloque_actual_id')
+                ->get(['id', 'bloque_actual_id', 'estado_actual_id']);
+
+            $reparadas = 0;
+            foreach ($cuentas as $cuenta) {
+                // Si el ID antiguo ya no existe, usamos el mapping guardado al inicio del script
+                // Pero necesitamos asegurarnos de que la cuenta tenga el estado correcto.
+                // $estadosAntiguos lo vamos a guardar ANTES de limpiar los datos (ver próximo paso).
+                
+                // Por defecto, si algo sale mal o si no hay estado antiguo mapeable o es un contrato
+                // nuevo (estado_actual_id null pero bloque_actual_id 1), asignamos el inicial:
+                $nuevoId = null;
+
+                if (isset($estadosAntiguos[$cuenta->estado_actual_id])) {
+                    $codigoAntiguo = $estadosAntiguos[$cuenta->estado_actual_id];
+                    // Si el estado antiguo era REV1_REV (el viejo inicial), lo pasamos al nuevo REV1_SIN
+                    if ($codigoAntiguo === 'REV1_REV') {
+                        $codigoAntiguo = 'REV1_SIN';
+                    }
+                    if (isset($nuevosEstados[$codigoAntiguo])) {
+                        $nuevoId = $nuevosEstados[$codigoAntiguo];
+                    }
+                }
+
+                if (!$nuevoId) {
+                    $inicial = DB::table('estados_workflow')
+                        ->where('bloque_id', $cuenta->bloque_actual_id)
+                        ->where('es_inicial', 1)
+                        ->first();
+                    if ($inicial) {
+                        $nuevoId = $inicial->id;
+                    }
+                }
+
+                if ($nuevoId && $nuevoId !== $cuenta->estado_actual_id) {
+                    DB::table('cuentas_cobro')
+                        ->where('id', $cuenta->id)
+                        ->update(['estado_actual_id' => $nuevoId]);
+                    $reparadas++;
+                }
+            }
+            echo "✓ {$reparadas} cuentas reparadas o actualizadas con el nuevo estado inicial\n";
+            // ──────────────────────────────────────────────────────────────────
         } catch (\Exception $e) {
             DB::rollBack();
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
@@ -138,10 +193,16 @@ class UpdateWorkflowStatesSeeder extends Seeder
             // 1. Transiciones INTERNAS (Todo con todo dentro del mismo bloque)
             $mismoBloque = $estadosByBloque->get($origen->bloque_id);
             foreach ($mismoBloque as $destino) {
-                // Solo permitimos cambios internos si NO es hacia un estado de tipo DEVUELTO
-                // Esto elimina el botón de devolución interna en cualquier bloque
-                if ($origen->id != $destino->id && $destino->tipo !== 'DEVUELTO') {
-                    $this->insertTransition($origen, $destino, 'CAMBIAR_ESTADO');
+                if ($origen->id != $destino->id) {
+                    // En el Bloque 1 (REV1) sí se permite transicionar al estado 'devuelta' interno
+                    // porque no hay bloque anterior al que devolver
+                    $esDevueltaInterna = $destino->tipo === 'DEVUELTO';
+                    $esBloque1 = $origen->bloque_id == 1;
+
+                    if (!$esDevueltaInterna || $esBloque1) {
+                        $accion = $esDevueltaInterna ? 'DEVOLVER' : 'CAMBIAR_ESTADO';
+                        $this->insertTransition($origen, $destino, $accion);
+                    }
                 }
             }
 

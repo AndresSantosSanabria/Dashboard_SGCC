@@ -64,6 +64,12 @@ class WorkflowController extends Controller
             $query->where('numero_cuenta', $request->numero_cuenta);
         }
 
+        if ($request->filled('numero_contrato')) {
+            $query->whereHas('contrato', function ($q) use ($request) {
+                $q->where('numero_contrato', 'like', '%' . $request->numero_contrato . '%');
+            });
+        }
+
         $cuentas = $query->get();
 
         $bloquesPermitidos = $user->bloquesPermitidos();
@@ -379,12 +385,12 @@ class WorkflowController extends Controller
 
         $tiempoEnEstadoMinutos = null;
         if ($ultimoHistorial) {
-            $tiempoEnEstadoMinutos = now()->diffInMinutes($ultimoHistorial->fecha_transicion);
+            $tiempoEnEstadoMinutos = (int) abs(now()->diffInMinutes($ultimoHistorial->fecha_transicion));
         } else {
-            // Si es la primera transición, calcular tiempo desde radicación o creación
-            $inicio = $cuenta->fecha_radicacion ?? $cuenta->created_at;
+            // Si es la primera transición, calcular tiempo desde creación digital
+            $inicio = $cuenta->created_at;
             if ($inicio) {
-                $tiempoEnEstadoMinutos = now()->diffInMinutes($inicio);
+                $tiempoEnEstadoMinutos = (int) abs(now()->diffInMinutes($inicio));
             }
         }
 
