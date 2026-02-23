@@ -1,0 +1,215 @@
+/* =============================================
+   SISTEMA DE DISEÑO DASHBOARD SAAS (ANTIGRAVITY)
+   ============================================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-app: #F8FAFC;
+  --primary: #004884; /* Azul Institucional */
+  --primary-light: rgba(0, 72, 132, 0.1);
+  --accent: #2B7CFC;
+  --white: #ffffff;
+  --text-main: #1E293B;
+  --text-muted: #64748B;
+  --border: #E2E8F0;
+  --radius: 12px;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+body {
+  background-color: var(--bg-app);
+  font-family: 'Inter', sans-serif;
+  color: var(--text-main);
+  scroll-behavior: smooth;
+}
+
+/* ── LAYOUT ── */
+.dashboard-container {
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* ── HEADER ── */
+.db-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+.db-header h1 { font-weight: 700; font-size: 1.875rem; color: #000; margin: 0; }
+.db-header p { color: var(--text-muted); margin: 0; font-size: 0.875rem; }
+
+/* ── BUTTONS ── */
+.btn-saas-primary {
+  background: var(--primary); color: #fff; border: none;
+  padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 500;
+  transition: all 0.2s; box-shadow: var(--shadow-sm);
+}
+.btn-saas-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); filter: brightness(1.1); }
+
+.btn-saas-secondary {
+  background: var(--white); color: var(--text-main); border: 1px solid var(--border);
+  padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 500;
+}
+.btn-saas-secondary:hover { background: var(--bg-app); border-color: #cbd5e1; }
+
+/* ── KPI CARDS ── */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.kpi-card {
+  background: var(--white); padding: 1.5rem; border-radius: var(--radius);
+  border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  transition: transform 0.2s;
+}
+.kpi-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+.kpi-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+.kpi-label { font-size: 0.875rem; font-weight: 500; color: var(--text-muted); }
+.kpi-value { font-size: 1.5rem; font-weight: 700; margin: 0.25rem 0; }
+.kpi-trend { font-size: 0.75rem; font-weight: 600; }
+.trend-up { color: #10B981; }
+.trend-down { color: #EF4444; }
+
+/* ── CHARTS SECTION ── */
+.analytics-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem; margin-bottom: 2rem;
+}
+.chart-card {
+  background: var(--white); padding: 1.5rem; border-radius: var(--radius);
+  border: 1px solid var(--border); min-height: 350px;
+}
+.chart-title { font-size: 1rem; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1rem; }
+
+/* ── FILTERS CARD ── */
+.filter-card-saas {
+  background: var(--white); padding: 1.25rem; border-radius: var(--radius);
+  border: 1px solid var(--border); margin-bottom: 2rem; display: flex; gap: 1rem; align-items: flex-end;
+}
+.form-group-saas { flex: 1; }
+.form-group-saas label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; }
+.input-saas {
+  width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+}
+
+/* ── TABLE DESIGN ── */
+.table-card-saas {
+  background: var(--white); border-radius: var(--radius); border: 1px solid var(--border);
+  overflow: hidden; box-shadow: var(--shadow-sm);
+}
+.saas-table { width: 100%; border-collapse: collapse; min-width: 2000px; }
+.saas-table thead th {
+  background: #F1F5F9; padding: 1rem; text-align: left; font-size: 0.75rem;
+  font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.saas-table tbody td {
+  padding: 1rem; font-size: 0.875rem; border-bottom: 1px solid #f8fafc;
+}
+.saas-table tbody tr:hover { background: #F8FAFC; }
+
+/* ── NEW STATUS BADGES (PILLS) ── */
+.badge-pill-saas {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    border: 1px solid transparent;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.badge-ok { background: #DCFCE7; color: #166534; border-color: #BBF7D0; }
+.badge-pend { background: #FEF9C3; color: #854D0E; border-color: #FEF08A; }
+.badge-crit { background: #FEE2E2; color: #991B1B; border-color: #FECACA; }
+.badge-na { background: #F1F5F9; color: #475569; border-color: #E2E8F0; }
+.badge-vacio { background: #ffffff; color: #94A3B8; border: 1px dashed #CBD5E1; }
+
+.badge-pill-saas:hover { filter: brightness(0.95); transform: scale(1.02); }
+
+/* Global Risk Indicators */
+.risk-high { color: #DC2626; background: #FEF2F2; }
+.risk-med { color: #D97706; background: #FFFBEB; }
+.risk-low { color: #059669; background: #ECFDF5; }
+
+/* ── TABLE IMPROVEMENTS ── */
+.checklist-section-bg { background: #FEFCE8 !important; } /* Soft yellow for checklist th/td */
+
+.saas-table thead th {
+    height: 40px;
+}
+
+.saas-table tbody td {
+    vertical-align: middle;
+}
+
+/* Horizontal Scroll Bar Tooltip Fix */
+.table-scroll-container {
+    overflow-x: auto;
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+}
+.table-scroll-container::-webkit-scrollbar { height: 8px; }
+.table-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+/* ── STICKY COLUMNS SYSTEM ── */
+.stk-saas { 
+    position: sticky; 
+    left: 0; 
+    background: #fff !important; 
+    z-index: 10 !important; 
+    border-right: 1px solid var(--border); 
+}
+.saas-table thead th.stk-saas { 
+    background: #F1F5F9 !important; 
+    z-index: 11 !important; 
+}
+
+/* Precise offsets for 4-level sticky */
+.stk-gest { width: 60px; left: 0; }
+.stk-risk { width: 140px; left: 60px; }
+.stk-proc { width: 110px; left: 200px; }
+.stk-cont { width: 140px; left: 310px; border-right: 2px solid #cbd5e1 !important; }
+
+/* ── ANALYTICS KPI TOP ── */
+.analytics-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+.summary-mini-card {
+    background: #fff;
+    padding: 1.25rem;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: var(--shadow-sm);
+}
+.summary-mini-card .label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.025em; }
+.summary-mini-card .val { font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-top: 0.25rem; }
+.summary-mini-card .sub { font-size: 0.7rem; color: #94A3B8; margin-top: 0.25rem; }
+
+/* Animation */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn { animation: fadeInUp 0.4s ease forwards; }

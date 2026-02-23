@@ -1,543 +1,512 @@
 @extends('layouts.app')
 
-@section('title', 'Seguimiento SECOP - SIA OBSERVA')
+@section('title', 'Dashboard Ejecutivo SECOP')
 
 @push('styles')
-    <style>
-        :root {
-            --secop-primary: #004884;
-            --secop-secondary: #06916F;
-            --secop-bg: #f4f7f9;
-            --status-ok-bg: #d1e7dd;
-            --status-ok-text: #0f5132;
-            --status-pen-bg: #fff3cd;
-            --status-pen-text: #856404;
-            --status-err-bg: #f8d7da;
-            --status-err-text: #842029;
-            --status-na-bg: #e2e3e5;
-            --status-na-text: #41464b;
-        }
-
-        body {
-            background-color: var(--secop-bg);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-
-        .container-fluid {
-            padding: 2rem;
-        }
-
-        .page-header {
-            background: linear-gradient(135deg, var(--secop-primary) 0%, #002d52 100%);
-            color: white;
-            padding: 2.5rem 2rem;
-            border-radius: 0 0 2rem 2rem;
-            margin-bottom: -1rem;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            position: relative;
-            z-index: 25;
-        }
-
-        .page-header::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 400px;
-            height: 400px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 50%;
-            pointer-events: none;
-        }
-
-        .filters-panel {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
-            padding: 1.5rem;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
-            margin-bottom: 2rem;
-            transition: all 0.3s ease;
-        }
-
-        .filters-panel:hover {
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-        }
-
-        .table-card {
-            background: white;
-            border-radius: 20px;
-            overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
-            border: none;
-        }
-
-        .table-responsive {
-            max-height: calc(100vh - 350px);
-            scrollbar-width: thin;
-            scrollbar-color: #cbd5e0 #f7fafc;
-        }
-
-        .table-seguimiento thead th {
-            background: #f8fafc;
-            color: #4a5568;
-            font-weight: 700;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 1rem;
-            border: none;
-            position: sticky;
-            top: 0;
-            z-index: 20;
-        }
-
-        .table-seguimiento tbody tr {
-            transition: background 0.2s;
-        }
-
-        .table-seguimiento tbody tr:hover {
-            background-color: #f1f5f9;
-        }
-
-        .table-seguimiento td {
-            padding: 1rem;
-            vertical-align: middle;
-            border-bottom: 1px solid #f1f5f9;
-        }
-
-        .sticky-col {
-            position: sticky;
-            left: 0;
-            background: white !important;
-            z-index: 10;
-            border-right: 2px solid #edf2f7 !important;
-        }
-
-        .status-dropdown {
-            border-radius: 8px;
-            border: none;
-            padding: 0.5rem;
-            font-weight: 700;
-            font-size: 0.65rem;
-            width: 100%;
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
-            text-align: center;
-        }
-
-        .status-dropdown:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .status-ok {
-            background-color: var(--status-ok-bg) !important;
-            color: var(--status-ok-text) !important;
-        }
-
-        .status-pendiente {
-            background-color: var(--status-pen-bg) !important;
-            color: var(--status-pen-text) !important;
-        }
-
-        .status-rojo {
-            background-color: var(--status-err-bg) !important;
-            color: var(--status-err-text) !important;
-        }
-
-        .status-na {
-            background-color: var(--status-na-bg) !important;
-            color: var(--status-na-text) !important;
-        }
-
-        .btn-govco-primary {
-            background: #ffffff;
-            color: #004884;
-            border: none;
-            border-radius: 12px;
-            font-weight: 700;
-            padding: 0.8rem 1.5rem;
-            transition: all 0.3s;
-        }
-
-        .btn-govco-primary:hover {
-            background: #f8f9fa;
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .form-control,
-        .form-select {
-            border-radius: 10px;
-            border: 1px solid #e2e8f0;
-            padding: 0.6rem 1rem;
-        }
-
-        .form-control:focus {
-            box-shadow: 0 0 0 3px rgba(0, 72, 132, 0.1);
-            border-color: #004884;
-        }
-    </style>
+    @vite(['resources/views/seguimiento/seguimiento.css'])
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 @endpush
 
 @section('page-content')
-    <div class="container-fluid">
-        <div class="page-header d-flex justify-content-between align-items-center">
+    <div class="dashboard-container animate-fadeIn">
+
+        {{-- HEADER ESTRATÉGICO --}}
+        <header class="db-header">
             <div>
-                <h2 class="fw-bold mb-1">Seguimiento SECOP - SIA OBSERVA</h2>
-                <p class="mb-0 opacity-75">Control documental inteligente y gestión estratégica de cumplimiento</p>
+                <h1>Dashboard de Seguimiento SECOP</h1>
+                <p>Gestión de Contratación — SIA OBSERVA — Panel de Control Ejecutivo</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('dashboard') }}" class="btn btn-govco-primary py-2 px-4 shadow-sm fw-bold">
-                    <i class="bi bi-house-door me-2"></i> Dashboard
-                </a>
+                <button class="btn btn-saas-secondary" onclick="window.location.reload()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+                </button>
+            </div>
+        </header>
+
+        {{-- ANALÍTICA RESUMEN SUPERIOR --}}
+        <div class="analytics-summary animate-fadeIn">
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #16a34a !important;">
+                <span class="label text-success">Contratos OK</span>
+                <span class="val">{{ number_format($stats['ok_contratos']) }}</span>
+                <span class="sub">Checklist completo</span>
+            </div>
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #d97706 !important;">
+                <span class="label text-warning">Con Pendientes</span>
+                <span class="val">{{ number_format($stats['pend_contratos']) }}</span>
+                <span class="sub">Gestión en proceso</span>
+            </div>
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #dc2626 !important;">
+                <span class="label text-danger">Estado Crítico</span>
+                <span class="val">{{ number_format($stats['crit_contratos']) }}</span>
+                <span class="sub">Acción inmediata</span>
+            </div>
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #2563eb !important;">
+                <span class="label text-primary">Cumplimiento Global</span>
+                <div class="val">{{ number_format($stats['avg_cumplimiento'], 1) }}%</div>
+                <div class="progress mt-1" style="height: 6px; background: #e2e8f0;">
+                    <div class="progress-bar bg-primary" style="width: {{ $stats['avg_cumplimiento'] }}%"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Panel de Filtros -->
-        <div class="filters-panel py-4 px-4 bg-white shadow-sm rounded-4 mb-4 border-0">
-            <form id="filterForm" class="row align-items-end g-3">
-                <div class="col-md-8">
-                    <label class="form-label fw-bold text-dark mb-2">
-                        <i class="bi bi-search me-2 text-primary"></i> Búsqueda Directa
-                    </label>
-                    <div class="input-group input-group-lg shadow-sm rounded-3 overflow-hidden border">
-                        <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" name="search" id="searchInput" class="form-control border-0 bg-white"
-                            placeholder="Buscar por número de contrato, contratista o representante...">
-                    </div>
-                </div>
-                <div class="col-md-4 d-flex justify-content-end">
-                    <button type="button" id="resetFilters"
-                        class="btn btn-light btn-lg rounded-3 px-4 fw-semibold border shadow-sm transition-all hover-bg-light">
-                        <i class="bi bi-arrow-counterclockwise me-2"></i> Reiniciar
-                    </button>
-                </div>
-            </form>
+        {{-- FILTROS MODERNOS --}}
+        <div class="filter-card-saas shadow-sm animate-fadeIn">
+            <div class="form-group-saas">
+                <label>Nº de Contrato</label>
+                <input type="text" id="filterContrato" class="input-saas" placeholder="Buscar Nº...">
+            </div>
+            <div class="form-group-saas">
+                <label>Tipo de Contratista</label>
+                <input type="text" id="filterTipo" class="input-saas" placeholder="Persona Natural/Jurídica...">
+            </div>
+            <div class="form-group-saas">
+                <label>Supervisor</label>
+                <select class="input-saas" id="filterSup">
+                    <option value="">Todos</option>
+                    @foreach ($supervisores as $s)
+                        <option value="{{ $s->id }}">{{ $s->nombre_completo }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="form-group-saas" style="flex: 0 0 120px;">
+                <button class="btn btn-saas-primary w-100 py-2" onclick="applyAdvancedFilters()">Filtrar</button>
+            </div>
+            <div class="form-group-saas" style="flex: 0 0 50px;">
+                <button class="btn btn-link text-muted" onclick="window.location.href='{{ route('seguimiento.index') }}'"><i
+                        class="bi bi-x-circle"></i></button>
+            </div>
         </div>
 
-        <!-- Tabla de Datos -->
-        <div class="card table-card border-0 shadow-sm">
-            <div class="card-body p-0">
-                <div class="table-responsive" id="tableContainer">
-                    @include('seguimiento.partials.table')
-                </div>
+        {{-- TABLA MAESTRA INTEGRAL --}}
+        <div class="table-card-saas shadow-sm animate-fadeIn" style="animation-delay: 0.2s;">
+            <div class="table-scroll-container">
+                <table class="saas-table" id="masterTable">
+                    <thead>
+                        <tr style="height: 35px; background: #F8FAFC;">
+                            <th class="stk-saas stk-gest" style="z-index: 12 !important;"></th>
+                            <th class="stk-saas stk-risk" style="z-index: 12 !important;"></th>
+                            <th class="stk-saas stk-proc" style="z-index: 12 !important;"></th>
+                            <th class="stk-saas stk-cont" style="z-index: 12 !important; border-right: 2px solid #e2e8f0;">
+                                IDENTIFICACIÓN</th>
+
+                            <th colspan="9" style="border-right: 2px solid #e2e8f0; text-align: center;">INFORMACIÓN BASE
+                            </th>
+                            <th colspan="10"
+                                style="border-right: 2px solid #e2e8f0; text-align: center; background: #FEF9C3; color: #854D0E;">
+                                CHECKLIST TÉCNICO</th>
+                            <th colspan="2"
+                                style="border-right: 2px solid #e2e8f0; text-align: center; background: #F0FDF4; color: #166534;">
+                                GESTIÓN</th>
+                            <th colspan="24"
+                                style="border-right: 2px solid #e2e8f0; text-align: center; background: #F1F5F9;">EJECUCIÓN
+                                MENSUAL</th>
+                            <th colspan="6"
+                                style="border-right: 2px solid #e2e8f0; text-align: center; background: #EEF2FF; color: #1E40AF;">
+                                CIERRE CONTRACTUAL</th>
+                            <th colspan="6" style="text-align: center; background: #F8FAFC;">RESULTADOS Y RESPONSABLES
+                            </th>
+                        </tr>
+                        <tr>
+                            <th class="stk-saas stk-gest text-center">GESTIÓN</th>
+                            <th class="stk-saas stk-risk text-center">PROGRESO</th>
+                            <th class="stk-saas stk-proc text-center">PROCESO</th>
+                            <th class="stk-saas stk-cont text-center" style="border-right: 2px solid #e2e8f0;">CONTRATO</th>
+
+                            <th>TIPO CONTRATISTA</th>
+                            <th>CONTRATISTA</th>
+                            <th>SUPERVISOR</th>
+                            <th>OBJETO</th>
+                            <th>VALOR CONTRATO</th>
+                            <th>LINK SECOP</th>
+                            <th>NO PLANTA</th>
+                            <th>CONCEPTO PRECON.</th>
+                            <th style="border-right: 2px solid #e2e8f0">CDP</th>
+
+                            {{-- Checklist Técnico --}}
+                            <th>ESTUDIOS PREVIOS</th>
+                            <th>SOPORTES</th>
+                            <th>IDONEIDAD</th>
+                            <th>CONFIDEN.</th>
+                            <th>CLAUSULADO</th>
+                            <th>ACTA INICIO</th>
+                            <th>DELEGACIÓN</th>
+                            <th>ARL</th>
+                            <th>RP</th>
+                            <th style="border-right: 2px solid #e2e8f0">ESTADO SECOP</th>
+
+                            {{-- Gestión --}}
+                            <th>APROBADO Y PAGADO</th>
+                            <th style="border-right: 2px solid #e2e8f0">MODIF. Y CIERRE</th>
+
+                            {{-- Ejecución (1 a 12) --}}
+                            @for ($i = 1; $i <= 12; $i++)
+                                <th title="Mes {{ $i }}">PAGADO SEC {{ $i }}</th>
+                                <th title="Mes {{ $i }}"
+                                    style="{{ $i == 12 ? 'border-right: 2px solid #e2e8f0' : '' }}">CUENTA SIA
+                                    {{ $i }}</th>
+                            @endfor
+
+                            {{-- Cierre --}}
+                            <th>EVAL. PROV.</th>
+                            <th>ACTA CIERRE</th>
+                            <th>REQ. ACTA LIQ</th>
+                            <th>EN REPOS.</th>
+                            <th>LIQ SECOP</th>
+                            <th style="border-right: 2px solid #e2e8f0">LIQ SIA</th>
+
+                            {{-- Resultados --}}
+                            <th>SALDO</th>
+                            <th>OBS 1 RAZON</th>
+                            <th>OBS 2 ACCION</th>
+                            <th>RAZON NO LIQ</th>
+                            <th>ABOGADO</th>
+                            <th>CONTADOR</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        @foreach ($contratos as $c)
+                            @php
+                                $badgeMap = [
+                                    'OK' => ['class' => 'badge-ok', 'icon' => 'bi-check-circle-fill'],
+                                    'PENDIENTE' => ['class' => 'badge-pend', 'icon' => 'bi-hourglass-split'],
+                                    'RECHAZADO' => ['class' => 'badge-crit', 'icon' => 'bi-x-circle-fill'],
+                                    'CRÍTICO' => ['class' => 'badge-crit', 'icon' => 'bi-exclamation-triangle-fill'],
+                                    'N/A' => ['class' => 'badge-na', 'icon' => 'bi-dash-circle'],
+                                    '' => ['class' => 'badge-vacio', 'icon' => 'bi-circle'],
+                                ];
+
+                                $riskClass = match ($c->global_status) {
+                                    'EN PROGRESO' => 'risk-med text-primary',
+                                    'COMPLETO' => 'risk-low',
+                                    'PENDIENTES' => 'risk-med',
+                                    'CRÍTICO' => 'risk-high',
+                                    default => 'text-muted',
+                                };
+                            @endphp
+                            <tr class="contract-row">
+                                <td class="stk-saas stk-gest text-center">
+                                    <button class="btn btn-sm btn-light border p-1"
+                                        onclick='openEditModal({!! json_encode($c) !!})' title="Gestionar">
+                                        <i class="bi bi-pencil-square text-primary"></i>
+                                    </button>
+                                </td>
+                                <td class="stk-saas stk-risk text-center">
+                                    <div class="badge-pill-saas {{ $riskClass }} w-100 justify-content-center"
+                                        style="font-size: 0.6rem;">
+                                        {{ $c->global_status }}
+                                    </div>
+                                    <div class="progress mt-1 mx-auto" style="height: 3px; width: 80%;">
+                                        <div class="progress-bar bg-success" style="width: {{ $c->perc_cumplimiento }}%">
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="stk-saas stk-proc text-muted small text-center">{{ $c->numero_proceso ?: '-' }}
+                                </td>
+                                <td class="stk-saas stk-cont fw-bold text-primary text-center"
+                                    style="border-right: 2px solid #e2e8f0;">{{ $c->numero_contrato }}</td>
+
+                                <td class="small">{{ $c->tipo_contratista ?: '-' }}</td>
+                                <td>
+                                    <div class="fw-bold small" style="white-space:normal; min-width:180px">
+                                        {{ $c->contratista->nombre_completo ?? 'N/A' }}</div>
+                                </td>
+                                <td class="small text-muted text-center">{{ $c->supervisor->nombre_completo ?? 'N/A' }}
+                                </td>
+                                <td>
+                                    <div class="text-truncate small text-muted" style="max-width:120px"
+                                        title="{{ $c->objeto }}">{{ $c->objeto }}</div>
+                                </td>
+                                <td class="fw-bold text-success text-end small">
+                                    ${{ number_format($c->monto_total, 0, ',', '.') }}</td>
+                                <td class="text-center">
+                                    @if ($c->link_secop)
+                                        <a href="{{ $c->link_secop }}" target="_blank" class="text-primary"><i
+                                                class="bi bi-link-45deg"></i></a>
+                                    @endif
+                                </td>
+                                <td class="text-center small">{{ $c->no_planta }}</td>
+                                <td class="small">{{ $c->concepto_precontractual }}</td>
+                                <td class="small text-center" style="border-right: 2px solid #e2e8f0">
+                                    {{ $c->cdp_codigo }}</td>
+
+                                {{-- Checklist Técnico --}}
+                                @php $checklistFields = ['estudios_previos_status', 'soportes_status', 'idoneidad_status', 'acuerdo_confidencialidad_status', 'clausulado_status', 'acta_inicio_status', 'delegacion_status', 'arl_status', 'rpc_status', 'secop_estado_contrato']; @endphp
+                                @foreach ($checklistFields as $field)
+                                    @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
+                                    <td class="text-center">
+                                        <div class="dropdown">
+                                            <div class="badge-pill-saas {{ $b['class'] }} w-100"
+                                                data-bs-toggle="dropdown">
+                                                <i class="bi {{ $b['icon'] }}"></i>
+                                                {{ $c->$field ?: 'VACÍO' }}
+                                            </div>
+                                            <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
+                                                <li><a class="dropdown-item py-2" href="#"
+                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'OK', this)"><i
+                                                            class="bi bi-check-circle-fill text-success me-2"></i> OK</a>
+                                                </li>
+                                                <li><a class="dropdown-item py-2" href="#"
+                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)"><i
+                                                            class="bi bi-hourglass-split text-warning me-2"></i>
+                                                        PENDIENTE</a></li>
+                                                <li><a class="dropdown-item py-2" href="#"
+                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'RECHAZADO', this)"><i
+                                                            class="bi bi-x-circle-fill text-danger me-2"></i> RECHAZADO</a>
+                                                </li>
+                                                <li><a class="dropdown-item py-2" href="#"
+                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'N/A', this)"><i
+                                                            class="bi bi-dash-circle text-muted me-2"></i> N/A</a></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item py-2" href="#"
+                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', '', this)"><i
+                                                            class="bi bi-circle text-light me-2"></i> VACÍO</a></li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                @endforeach
+
+                                {{-- Gestión --}}
+                                <td class="small text-center">{{ $c->aprobado_y_pagado }}</td>
+                                <td class="small text-center" style="border-right: 2px solid #e2e8f0">
+                                    {{ $c->modificaciones_y_cierre }}</td>
+
+                                {{-- Ejecución Mensual --}}
+                                @for ($i = 1; $i <= 12; $i++)
+                                    @foreach (["cta{$i}_secop_status", "cta{$i}_sia_status"] as $field)
+                                        @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
+                                        <td class="text-center"
+                                            style="{{ $i == 12 && $field == 'cta12_sia_status' ? 'border-right: 2px solid #e2e8f0' : '' }}">
+                                            <div class="dropdown">
+                                                <div class="badge-pill-saas {{ $b['class'] }} w-100"
+                                                    data-bs-toggle="dropdown">
+                                                    {{ $c->$field ?: 'V' }}
+                                                </div>
+                                                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
+                                                    <li><a class="dropdown-item py-2" href="#"
+                                                            onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'OK', this)">OK</a>
+                                                    </li>
+                                                    <li><a class="dropdown-item py-2" href="#"
+                                                            onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)">PENDIENTE</a>
+                                                    </li>
+                                                    <li><a class="dropdown-item py-2" href="#"
+                                                            onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'N/A', this)">N/A</a>
+                                                    </li>
+                                                    <li><a class="dropdown-item py-2" href="#"
+                                                            onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', '', this)">VACÍO</a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    @endforeach
+                                @endfor
+
+                                {{-- Cierre --}}
+                                @php $cierreFields = ['evaluacion_proveedor_status', 'acta_cierre_expediente_status', 'requiere_acta_liq_status', 'acta_liq_repositorio_status', 'acta_liq_secop_status', 'acta_liq_sia_status']; @endphp
+                                @foreach ($cierreFields as $field)
+                                    @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
+                                    <td class="text-center"
+                                        style="{{ $field == 'acta_liq_sia_status' ? 'border-right: 2px solid #e2e8f0' : '' }}">
+                                        <div class="dropdown">
+                                            <div class="badge-pill-saas {{ $b['class'] }} w-100"
+                                                data-bs-toggle="dropdown">
+                                                <i class="bi {{ $b['icon'] }}"></i>
+                                                {{ $c->$field ?: 'VACÍO' }}
+                                            </div>
+                                            <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
+                                                <li><a class="dropdown-item py-2" href="#"
+                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'OK', this)">OK/SI</a>
+                                                </li>
+                                                <li><a class="dropdown-item py-2" href="#"
+                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)">NO/PEND</a>
+                                                </li>
+                                                <li><a class="dropdown-item py-2" href="#"
+                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'N/A', this)">N/A</a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                @endforeach
+
+                                {{-- Resultados --}}
+                                <td class="fw-bold text-danger text-end small">
+                                    ${{ number_format($c->saldo, 0, ',', '.') }}</td>
+                                <td class="small text-muted">
+                                    <div class="text-truncate" style="max-width:100px">
+                                        {{ $c->observacion_1_razon ?: '-' }}</div>
+                                </td>
+                                <td class="small text-muted">
+                                    <div class="text-truncate" style="max-width:100px">
+                                        {{ $c->observacion_2_accion ?: '-' }}</div>
+                                </td>
+                                <td class="small text-muted">
+                                    <div class="text-truncate" style="max-width:100px">
+                                        {{ $c->razon_no_liquidacion ?: '-' }}</div>
+                                </td>
+                                <td class="small text-muted text-center">{{ $c->abogado_responsable ?: '-' }}</td>
+                                <td class="small text-muted text-center">{{ $c->contador_responsable ?: '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- Formulario Lateral (Offcanvas) -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasNuevoContrato"
-        aria-labelledby="offcanvasNuevoContratoLabel">
-        <div class="offcanvas-header bg-govco-navbar text-white">
-            <h5 class="offcanvas-title fw-bold" id="offcanvasNuevoContratoLabel"><i
-                    class="bi bi-file-earmark-plus me-2"></i> Registrar Nuevo Contrato</h5>
-            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"
-                aria-label="Close"></button>
-        </div>
-        <div class="offcanvas-body">
-            <form action="{{ route('seguimiento.store') }}" method="POST">
-                @csrf
-                <div class="mb-3">
-                    <label class="form-label">Número de Proceso</label>
-                    <input type="text" name="numero_proceso" class="form-control" placeholder="Ej: SED-LP-001-2024">
+    {{-- MODAL GESTIÓN --}}
+    <div class="modal fade" id="modalManagement" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="mTitle">Gestión Contractual</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label text-danger">Número de Contrato *</label>
-                    <input type="text" name="numero_contrato" class="form-control" required placeholder="Ej: 1234-2024">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Modalidad de Contratación</label>
-                    <select name="modalidad_id" class="form-select">
-                        <option value="">Seleccione modalidad</option>
-                        @foreach ($modalidades as $m)
-                            <option value="{{ $m->id }}">{{ $m->nombre }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label text-danger">Contratista *</label>
-                    <input type="text" name="contratista_nombre" class="form-control" list="contratistasList" required placeholder="Nombre o Razón Social del Contratista">
-                    <datalist id="contratistasList">
-                        @foreach ($contratistas as $c)
-                            <option value="{{ $c->nombre_completo }}"></option>
-                        @endforeach
-                    </datalist>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Supervisor</label>
-                    <select name="supervisor_id" class="form-select">
-                        <option value="">Seleccione supervisor</option>
-                        @foreach ($supervisores as $s)
-                            <option value="{{ $s->id }}">{{ $s->nombre_completo }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Objeto del Contrato</label>
-                    <textarea name="objeto" class="form-control" rows="3" placeholder="Descripción breve del contrato..."></textarea>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label text-danger">Valor del Contrato *</label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input type="number" step="0.01" name="monto_total" class="form-control" required>
-                    </div>
-                </div>
-                <div class="mb-4">
-                    <label class="form-label">Link SECOP</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
-                        <input type="url" name="link_secop" class="form-control"
-                            placeholder="https://www.secop.gov.co/...">
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-govco-primary py-3">
-                        <i class="bi bi-save me-2"></i> Guardar Contrato
-                    </button>
-                    <button type="button" class="btn btn-light py-3" data-bs-dismiss="offcanvas">Cancelar</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Modal Editar Contrato -->
-    <div class="modal fade" id="modalEditarContrato" tabindex="-1" aria-labelledby="modalEditarContratoLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-govco-navbar text-white">
-                    <h5 class="modal-title fw-bold" id="modalEditarContratoLabel"><i class="bi bi-pencil-square me-2"></i> Editar Contrato</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formEditarContrato" method="POST">
+                <div class="modal-body p-4">
+                    <form id="mainForm" method="POST">
                         @csrf
-                        @method('PUT')
-                        <input type="hidden" name="contrato_id" id="edit_contrato_id">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Número de Proceso</label>
-                                <input type="text" name="numero_proceso" id="edit_numero_proceso" class="form-control" placeholder="Ej: SED-LP-001-2024">
+                        <input type="hidden" name="_method" id="mMethod" value="POST">
+                        <div class="row g-3">
+                            <div class="col-md-4"><label class="small fw-bold">Nº PROCESO</label><input type="text"
+                                    name="numero_proceso" id="mProceso" class="form-control"></div>
+                            <div class="col-md-4"><label class="small fw-bold">Nº CONTRATO</label><input type="text"
+                                    name="numero_contrato" id="mContrato" class="form-control" required></div>
+                            <div class="col-md-4"><label class="small fw-bold">TIPO CONTRATISTA</label><input
+                                    type="text" name="tipo_contratista" id="mTipoCont" class="form-control"></div>
+                            <div class="col-md-6"><label class="small fw-bold">VALOR CONTRATO</label><input
+                                    type="number" name="monto_total" id="mValor" class="form-control" required>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-danger">Número de Contrato *</label>
-                                <input type="text" name="numero_contrato" id="edit_numero_contrato" class="form-control" required placeholder="Ej: 1234-2024">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Modalidad de Contratación</label>
-                                <select name="modalidad_id" id="edit_modalidad_id" class="form-select">
-                                    <option value="">Seleccione modalidad</option>
-                                    @foreach ($modalidades as $m)
-                                        <option value="{{ $m->id }}">{{ $m->nombre }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-danger">Contratista *</label>
-                                <input type="text" name="contratista_nombre" id="edit_contratista_nombre" class="form-control" list="contratistasListEdit" required placeholder="Nombre o Razón Social del Contratista">
-                                <datalist id="contratistasListEdit">
-                                    @foreach ($contratistas as $c)
-                                        <option value="{{ $c->nombre_completo }}"></option>
-                                    @endforeach
-                                </datalist>
-                            </div>
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">Supervisor</label>
-                                <select name="supervisor_id" id="edit_supervisor_id" class="form-select">
-                                    <option value="">Seleccione supervisor</option>
+                            <div class="col-md-6"><label class="small fw-bold">SUPERVISOR</label>
+                                <select name="supervisor_id" id="mSup" class="form-select">
                                     @foreach ($supervisores as $s)
                                         <option value="{{ $s->id }}">{{ $s->nombre_completo }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-12 mb-3">
-                                <label class="form-label">Objeto del Contrato</label>
-                                <textarea name="objeto" id="edit_objeto" class="form-control" rows="3" placeholder="Descripción breve del contrato..."></textarea>
+                            <div class="col-12"><label class="small fw-bold">OBJETO</label>
+                                <textarea name="objeto" id="mObjeto" class="form-control" rows="2"></textarea>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label text-danger">Valor del Contrato *</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" step="0.01" name="monto_total" id="edit_monto_total" class="form-control" required>
-                                </div>
+                            <div class="col-md-6"><label class="small fw-bold">NO PLANTA</label><input type="text"
+                                    name="no_planta" id="mNoPlanta" class="form-control"></div>
+                            <div class="col-md-6"><label class="small fw-bold">CONCEPTO PRECONTRACTUAL</label><input
+                                    type="text" name="concepto_precontractual" id="mConcepto" class="form-control">
                             </div>
-                            <div class="col-md-6 mb-4">
-                                <label class="form-label">Link SECOP</label>
-                                <div class="input-group">
-                                    <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
-                                    <input type="url" name="link_secop" id="edit_link_secop" class="form-control" placeholder="https://www.secop.gov.co/...">
-                                </div>
-                            </div>
+                            <div class="col-md-4"><label class="small fw-bold">ABOGADO</label><input type="text"
+                                    name="abogado_responsable" id="mAbogado" class="form-control"></div>
+                            <div class="col-md-4"><label class="small fw-bold">CONTADOR</label><input type="text"
+                                    name="contador_responsable" id="mContador" class="form-control"></div>
+                            <div class="col-md-4"><label class="small fw-bold">SALDO</label><input type="number"
+                                    name="saldo" id="mSaldo" class="form-control"></div>
                         </div>
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-govco-primary px-4">
-                                <i class="bi bi-save me-2"></i> Guardar Cambios
-                            </button>
+                        <div class="mt-4 text-end">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
+                            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Guardar Cambios</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-@endsection
 
-@push('scripts')
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const tableContainer = document.getElementById('tableContainer');
-            const filterForm = document.getElementById('filterForm');
-            const searchInput = document.getElementById('searchInput');
-            const resetBtn = document.getElementById('resetFilters');
-
-            // Función para actualizar la tabla por AJAX
-            const updateTable = (url = null) => {
-                const formData = new FormData(filterForm);
-                const params = new URLSearchParams();
-
-                for (const [key, value] of formData.entries()) {
-                    if (value) params.append(key, value);
+        async function updateBadgeStatus(id, field, status, element) {
+            const badgeMap = {
+                'OK': {
+                    class: 'badge-ok',
+                    icon: 'bi-check-circle-fill'
+                },
+                'PENDIENTE': {
+                    class: 'badge-pend',
+                    icon: 'bi-hourglass-split'
+                },
+                'RECHAZADO': {
+                    class: 'badge-crit',
+                    icon: 'bi-x-circle-fill'
+                },
+                'CRÍTICO': {
+                    class: 'badge-crit',
+                    icon: 'bi-exclamation-triangle-fill'
+                },
+                'N/A': {
+                    class: 'badge-na',
+                    icon: 'bi-dash-circle'
+                },
+                '': {
+                    class: 'badge-vacio',
+                    icon: 'bi-circle'
                 }
+            };
 
-                const fetchUrl = url || `{{ route('seguimiento.index') }}?${params.toString()}`;
+            const parentDiv = element.closest('.dropdown').querySelector('.badge-pill-saas');
+            const originalHTML = parentDiv.innerHTML;
+            const originalClass = parentDiv.className;
 
-                fetch(fetchUrl, {
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+            // Feedback visual inmediato (Loading)
+            parentDiv.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+            try {
+                const res = await fetch('{{ route('seguimiento.update-status') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        id,
+                        field,
+                        status
                     })
-                    .then(response => response.text())
-                    .then(html => {
-                        tableContainer.innerHTML = html;
-                        attachStatusListeners();
-                        attachPaginationListeners();
-                        attachEditListeners();
-                    });
-            };
-
-            const attachPaginationListeners = () => {
-                document.querySelectorAll('#tableContainer .pagination a').forEach(link => {
-                    link.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        updateTable(this.href);
-                    });
                 });
-            };
 
-            // Event listeners
-            let timeout = null;
-            if (searchInput) {
-                searchInput.addEventListener('keyup', () => {
-                    clearTimeout(timeout);
-                    timeout = setTimeout(updateTable, 500);
-                });
-            }
+                if (res.ok) {
+                    const b = badgeMap[status] || badgeMap[''];
+                    parentDiv.className = `badge-pill-saas ${b.class} w-100`;
+                    parentDiv.innerHTML = `<i class="bi ${b.icon}"></i> ${status || 'VACÍO'}`;
 
-            if (resetBtn) {
-                resetBtn.addEventListener('click', () => {
-                    filterForm.reset();
-                    updateTable();
-                });
-            }
-
-            // Función para manejar cambios de estado
-            const attachStatusListeners = () => {
-                document.querySelectorAll('.status-dropdown').forEach(select => {
-                    select.addEventListener('change', function() {
-                        const id = this.dataset.id;
-                        const field = this.dataset.field;
-                        const status = this.value;
-
-                        // Update UI class
-                        this.classList.remove('status-verde', 'status-amarillo', 'status-rojo',
-                            'status-ok', 'status-pendiente', 'status-na');
-                        this.classList.add('status-' + status.toLowerCase());
-
-                        // Save to DB via AJAX
-                        fetch('{{ route('seguimiento.update-status') }}', {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                },
-                                body: JSON.stringify({
-                                    id,
-                                    field,
-                                    status
-                                })
-                            })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    showSnackbar('Estado actualizado automáticamente',
-                                        'success');
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                showSnackbar('Error al guardar el estado', 'danger');
-                            });
-                    });
-                });
-            };
-
-            // Listener para cuando se abre el modal
-            const editModalElement = document.getElementById('modalEditarContrato');
-            if (editModalElement) {
-                editModalElement.addEventListener('show.bs.modal', function(event) {
-                    // El botón que disparó el evento
-                    const btn = event.relatedTarget;
-                    if (!btn) return;
-                    
-                    const dataset = btn.dataset;
-                    
-                    document.getElementById('edit_contrato_id').value = dataset.id || '';
-                    document.getElementById('edit_numero_proceso').value = dataset.numero_proceso || '';
-                    document.getElementById('edit_numero_contrato').value = dataset.numero_contrato || '';
-                    document.getElementById('edit_modalidad_id').value = dataset.modalidad_id || '';
-                    document.getElementById('edit_contratista_nombre').value = dataset.contratista_nombre || '';
-                    document.getElementById('edit_supervisor_id').value = dataset.supervisor_id || '';
-                    document.getElementById('edit_objeto').value = dataset.objeto || '';
-                    document.getElementById('edit_monto_total').value = dataset.monto_total || '';
-                    document.getElementById('edit_link_secop').value = dataset.link_secop || '';
-
-                    const formEdit = document.getElementById('formEditarContrato');
-                    formEdit.action = `{{ url('seguimiento') }}/${dataset.id}`;
-                });
-            }
-
-            // Re-vincular después de actualizar la tabla
-            const originalUpdateTable = updateTable;
-            updateTable = (url = null) => {
-                const formData = new FormData(filterForm);
-                const params = new URLSearchParams();
-
-                for (const [key, value] of formData.entries()) {
-                    if (value) params.append(key, value);
+                    // Opcional: Notificación silenciosa (Toast) en lugar de alert
+                } else {
+                    throw new Error('Server error');
                 }
+            } catch (e) {
+                parentDiv.innerHTML = originalHTML;
+                parentDiv.className = originalClass;
+                alert('Error al actualizar el estado. Intente de nuevo.');
+            }
+        }
 
-                const fetchUrl = url || `{{ route('seguimiento.index') }}?${params.toString()}`;
+        function applyAdvancedFilters() {
+            const params = new URLSearchParams({
+                numero_contrato: document.getElementById('filterContrato').value,
+                tipo_contratista: document.getElementById('filterTipo').value,
+                supervisor_id: document.getElementById('filterSup').value
+            });
+            window.location.search = params.toString();
+        }
 
-                fetch(fetchUrl, {
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(response => response.text())
-                    .then(html => {
-                        tableContainer.innerHTML = html;
-                        attachStatusListeners();
-                        attachPaginationListeners();
-                    });
-            };
+        function openEditModal(c) {
+            document.getElementById('mTitle').innerText = 'Editar Contrato #' + c.numero_contrato;
+            document.getElementById('mMethod').value = 'PUT';
+            document.getElementById('mainForm').action = '{{ url('/seguimiento') }}/' + c.id;
+            document.getElementById('mProceso').value = c.numero_proceso || '';
+            document.getElementById('mContrato').value = c.numero_contrato;
+            document.getElementById('mTipoCont').value = c.tipo_contratista || '';
+            document.getElementById('mValor').value = c.monto_total || 0;
+            document.getElementById('mObjeto').value = c.objeto || '';
+            document.getElementById('mSup').value = c.supervisor_id || '';
+            document.getElementById('mNoPlanta').value = c.no_planta || '';
+            document.getElementById('mConcepto').value = c.concepto_precontractual || '';
+            document.getElementById('mAbogado').value = c.abogado_responsable || '';
+            document.getElementById('mContador').value = c.contador_responsable || '';
+            document.getElementById('mSaldo').value = c.saldo || 0;
+            new bootstrap.Modal(document.getElementById('modalManagement')).show();
+        }
 
-            // Inicializar listeners
-            attachStatusListeners();
-            attachPaginationListeners();
-        });
+        function openCreateModal() {
+            document.getElementById('mainForm').reset();
+            document.getElementById('mMethod').value = 'POST';
+            document.getElementById('mainForm').action = '{{ route('seguimiento.store') }}';
+            document.getElementById('mTitle').innerText = 'Registrar Nuevo Contrato';
+            new bootstrap.Modal(document.getElementById('modalManagement')).show();
+        }
     </script>
-@endpush
+@endsection

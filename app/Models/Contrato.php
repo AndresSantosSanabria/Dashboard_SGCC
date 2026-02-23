@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\SeguimientoMensual;
+use App\Models\SeguimientoRequisito;
 
 use App\Traits\Auditable;
 
@@ -28,13 +30,23 @@ class Contrato extends Model
         'fecha_fin',
         'es_activo',
         'link_secop',
-        'estudios_previos_status',
-        'idoneidad_status',
-        'clausulado_status',
-        'rpc_status',
-        'acta_inicio_status',
-        'delegacion_status',
-        'poliza_status',
+        'plazo_ejecucion',
+        'secop_estado_contrato',
+        'aprobado_y_pagado',
+        'modificaciones_y_cierre',
+
+        'saldo',
+        'observacion_1_razon',
+        'observacion_2_accion',
+        'razon_no_liquidacion',
+        'abogado_responsable',
+        'contador_responsable',
+        'ops_juridico',
+
+        // Checklist y otros
+        'tipo_contratista',
+        'no_planta',
+        'concepto_precontractual',
     ];
 
     protected $casts = [
@@ -85,6 +97,16 @@ class Contrato extends Model
     public function documentos()
     {
         return $this->hasMany(Documento::class, 'contrato_id');
+    }
+
+    public function seguimientoMensual()
+    {
+        return $this->hasMany(SeguimientoMensual::class, 'contrato_id');
+    }
+
+    public function seguimientoRequisitos()
+    {
+        return $this->hasMany(SeguimientoRequisito::class, 'contrato_id');
     }
 
     // Scopes

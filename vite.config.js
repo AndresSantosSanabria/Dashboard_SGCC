@@ -16,6 +16,8 @@ export default defineConfig({
                 'resources/views/login/login.css',
                 'resources/views/Analitica/analitica.css',
                 'resources/views/Analitica/analitica.js',
+                'resources/views/seguimiento/seguimiento.css',
+                'resources/views/seguimiento/seguimiento.js',
             ],
             refresh: true,
         }),
