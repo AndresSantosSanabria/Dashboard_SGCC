@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Contrato;
 
 class WorkflowController extends Controller
 {
@@ -14,6 +15,9 @@ class WorkflowController extends Controller
      */
     public function index(Request $request)
     {
+        // Registrar lectura de workflow (Auditoría)
+        Contrato::logManualAudit(null, 'READ', 'El usuario consultó el tablero de workflow', 'workflow');
+
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
 

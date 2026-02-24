@@ -6,9 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Contrato;
 
+use App\Traits\Auditable;
+
 class SeguimientoMensual extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $table = 'seguimiento_mensual';
 

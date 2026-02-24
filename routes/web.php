@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
 
     // Seguimiento SECOP - SIA OBSERVA
     Route::get('/seguimiento', [\App\Http\Controllers\SeguimientoController::class, 'index'])->name('seguimiento.index');
+    Route::get('/seguimiento/export', [\App\Http\Controllers\SeguimientoController::class, 'export'])->name('seguimiento.export');
     Route::post('/seguimiento/status', [\App\Http\Controllers\SeguimientoController::class, 'updateStatus'])->name('seguimiento.update-status');
     Route::post('/seguimiento/store', [\App\Http\Controllers\SeguimientoController::class, 'store'])->name('seguimiento.store');
     Route::put('/seguimiento/{id}', [\App\Http\Controllers\SeguimientoController::class, 'update'])->name('seguimiento.update');

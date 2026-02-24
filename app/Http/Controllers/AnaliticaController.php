@@ -16,6 +16,9 @@ class AnaliticaController extends Controller
 {
     public function index(Request $request)
     {
+        // Registrar lectura de analítica (Auditoría)
+        Contrato::logManualAudit(null, 'READ', 'El usuario consultó el panel de analítica y estadísticas', 'analitica');
+
         $query = CuentaCobro::with([
             'contrato.contratista',
             'contrato.supervisor',

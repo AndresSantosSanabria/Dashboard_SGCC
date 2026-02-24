@@ -105,11 +105,15 @@
                     });
                 }
 
-                function recargarKanban() {
+                window.recargarKanban = function() {
                     const form = inputContrato.closest('form');
                     const formData = new FormData(form);
                     const params = new URLSearchParams(formData).toString();
                     const url = `{{ route('workflow') }}?${params}`;
+
+                    // Preservar Scroll
+                    const scrollY = window.scrollY;
+                    const scrollX = window.scrollX;
 
                     // Actualizar la URL del navegador sin recargar la página
                     window.history.replaceState(null, '', url);
@@ -121,6 +125,8 @@
                     .then(r => r.text())
                     .then(html => {
                         document.getElementById('kanban-container').innerHTML = html;
+                        // Restaurar Scroll
+                        window.scrollTo(scrollX, scrollY);
                     })
                     .catch(err => console.error('Error al filtrar:', err));
                 }

@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Traits\Auditable;
+
 class EntidadSeguridadSocial extends Model
 {
-    use HasFactory;
+    use HasFactory, Auditable;
 
     protected $table = 'entidades_seguridad_social';
 

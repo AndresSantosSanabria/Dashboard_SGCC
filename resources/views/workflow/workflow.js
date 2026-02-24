@@ -167,11 +167,15 @@ function cambiarEstado(cuentaId, estadoDestinoId, requiereComentario, estadoNomb
                             window.showSnackbar('❌ Error al cargar usuarios', 'error');
                         });
 
-                    return; // Don't reload yet
+                    return;
                 } else {
                     // Normal flow - state changed successfully
                     window.showSnackbar('✅ ' + data.message, 'success');
-                    setTimeout(() => location.reload(), 1500);
+                    if (window.recargarKanban) {
+                        setTimeout(() => window.recargarKanban(), 1000);
+                    } else {
+                        setTimeout(() => location.reload(), 1500);
+                    }
                 }
             } else {
                 window.showSnackbar('❌ Error: ' + data.message, 'error');
@@ -210,7 +214,16 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(data => {
                     if (data.success) {
                         window.showSnackbar('✅ ' + data.message, 'success');
-                        setTimeout(() => location.reload(), 1500);
+
+                        // Cierra el modal de responsable
+                        const modalResp = bootstrap.Modal.getInstance(document.getElementById('modalAsignarResponsable'));
+                        if (modalResp) modalResp.hide();
+
+                        if (window.recargarKanban) {
+                            setTimeout(() => window.recargarKanban(), 1000);
+                        } else {
+                            setTimeout(() => location.reload(), 1500);
+                        }
                     } else {
                         window.showSnackbar('❌ Error: ' + data.message, 'error');
                     }

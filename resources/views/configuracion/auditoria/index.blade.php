@@ -43,6 +43,7 @@
                             <option value="UPDATE" {{ request('accion') == 'UPDATE' ? 'selected' : '' }}>UPDATE</option>
                             <option value="DELETE" {{ request('accion') == 'DELETE' ? 'selected' : '' }}>DELETE</option>
                             <option value="READ" {{ request('accion') == 'READ' ? 'selected' : '' }}>READ</option>
+                            <option value="FAILURE" {{ request('accion') == 'FAILURE' ? 'selected' : '' }}>FALLOS (FAILURE)</option>
                         </select>
                     </div>
                     <div class="col-md-4 d-flex gap-2">
@@ -99,11 +100,12 @@
                                     </td>
                                     <td>
                                         @php
-                                            $badgeClass = match($auditoria->accion) {
-                                                'INSERT' => 'bg-success',
-                                                'UPDATE' => 'bg-info',
-                                                'DELETE' => 'bg-danger',
-                                                'READ' => 'bg-secondary',
+                                            $badgeClass = match(true) {
+                                                $auditoria->accion === 'INSERT' => 'bg-success',
+                                                $auditoria->accion === 'UPDATE' => 'bg-info',
+                                                $auditoria->accion === 'DELETE' => 'bg-danger',
+                                                $auditoria->accion === 'READ' => 'bg-secondary',
+                                                str_contains($auditoria->accion, 'FAILURE') => 'bg-danger',
                                                 default => 'bg-secondary'
                                             };
                                         @endphp
@@ -120,7 +122,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">No se encontraron registros de auditoría</td>
+                                    <td colspan="7" class="text-center py-5 text-muted">
+                                        @if(request('accion') === 'FAILURE')
+                                            <i class="fas fa-check-circle text-success mb-2 d-block" style="font-size: 2rem;"></i>
+                                            No se encontró fallo
+                                        @else
+                                            No se encontraron registros de auditoría
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>
@@ -155,6 +164,11 @@
                         </div>
                     </div>
 
+                    <div class="mb-4">
+                        <label class="small text-muted mb-1 d-block">Estado de la Operación</label>
+                        <div id="det_status_badge"></div>
+                    </div>
+
                     <div class="row g-4">
                         <div class="col-md-6">
                             <div class="card h-100 border-0 shadow-sm">
@@ -187,8 +201,21 @@
                     document.getElementById('det_ip').textContent = data.ip_origen || 'N/A';
                     document.getElementById('det_ua').textContent = data.user_agent || 'N/A';
                     
-                    document.getElementById('det_anterior').textContent = JSON.stringify(data.payload_anterior, null, 4) || 'Ninguno';
-                    document.getElementById('det_nuevo').textContent = JSON.stringify(data.payload_nuevo, null, 4) || 'Ninguno';
+                    let anterior = data.payload_anterior ? JSON.stringify(data.payload_anterior, null, 4) : 'Ninguno';
+                    let nuevo = data.payload_nuevo ? JSON.stringify(data.payload_nuevo, null, 4) : 'Ninguno';
+
+                    const statusBadge = document.getElementById('det_status_badge');
+                    if (data.accion.includes('FAILURE')) {
+                        statusBadge.innerHTML = '<span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i> Fallo Detectado</span>';
+                        if (!data.payload_nuevo || !data.payload_nuevo.detalle) {
+                            nuevo = "No se encontró fallo específico";
+                        }
+                    } else {
+                        statusBadge.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Operación Correcta (Sin fallos)</span>';
+                    }
+                    
+                    document.getElementById('det_anterior').textContent = anterior;
+                    document.getElementById('det_nuevo').textContent = nuevo;
                     
                     const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
                     modal.show();

@@ -31,22 +31,38 @@ trait Auditable
         });
     }
 
-    protected static function logAudit($model, $accion, $anterior, $nuevo)
+    /**
+     * Permite registrar eventos de auditoría manualmente (ej: Fallos o Lecturas de Vista)
+     */
+    public static function logManualAudit($model, $accion, $mensajeError = null, $tablaManual = null, $datosIntento = null)
+    {
+        $tabla = $tablaManual ?? ($model ? $model->getTable() : 'SISTEMA');
+        $nuevo = ['detalle' => $mensajeError];
+        if ($datosIntento) {
+            $nuevo['intentado'] = $datosIntento;
+        }
+        self::logAudit($model, $accion, $model ? $model->getOriginal() : null, $nuevo, $tabla);
+    }
+
+    protected static function logAudit($model, $accion, $anterior, $nuevo, $tablaManual = null)
     {
         try {
+            // Evitar loggear la propia tabla de auditoría si por error se le pone el trait
+            if ($model && $model->getTable() === 'auditorias') return;
+
             Auditoria::create([
                 'usuario_id' => Auth::id(),
-                'tabla_afectada' => $model->getTable(),
-                'registro_id' => $model->id,
+                'tabla_afectada' => $tablaManual ?? ($model ? $model->getTable() : 'SISTEMA'),
+                'registro_id' => $model ? $model->id : 0,
                 'accion' => $accion,
                 'payload_anterior' => $anterior,
                 'payload_nuevo' => $nuevo,
-                'ip_origen' => Request::ip(),
-                'user_agent' => substr(Request::userAgent(), 0, 200),
+                'ip_origen' => Request::ip() ?? '127.0.0.1',
+                'user_agent' => substr(Request::userAgent() ?? 'none', 0, 200),
             ]);
         } catch (\Exception $e) {
-            // No queremos que un error en auditoría rompa la ejecución principal
             \Log::error("Error guardando auditoría: " . $e->getMessage());
         }
     }
 }
+

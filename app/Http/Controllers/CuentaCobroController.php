@@ -129,6 +129,9 @@ class CuentaCobroController extends Controller
     }
     public function index(Request $request)
     {
+        // Registrar lectura de dashboard (Auditoría)
+        Contrato::logManualAudit(null, 'READ', 'El usuario consultó el dashboard de cuentas de cobro', 'cuentas_cobro');
+
         /** @var \App\Models\Usuario $user */
         $user = \Illuminate\Support\Facades\Auth::user();
 
@@ -564,6 +567,9 @@ class CuentaCobroController extends Controller
                 ], 422);
             }
 
+            // Registrar en auditoría el resumen de la importación
+            Contrato::logManualAudit(null, 'IMPORT_EXCEL', $summary, 'cuentas_cobro');
+
             return response()->json([
                 'success' => true,
                 'message' => $summary,
@@ -576,6 +582,7 @@ class CuentaCobroController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Error en importación de Excel: ' . $e->getMessage());
+            Contrato::logManualAudit(null, 'FAILURE_IMPORT_EXCEL', $e->getMessage(), 'cuentas_cobro');
             return response()->json([
                 'success' => false,
                 'message' => "Error crítico: " . $e->getMessage()
@@ -756,9 +763,13 @@ class CuentaCobroController extends Controller
                 }
             });
 
+            // Registrar en auditoría la carga manual
+            Contrato::logManualAudit(null, 'INSERT_MANUAL', "Carga manual exitosa del contrato " . ($numContrato ?? ''), 'cuentas_cobro');
+
             return response()->json(['success' => true, 'message' => 'Registro cargado correctamente a la base de datos.']);
         } catch (\Exception $e) {
             Log::error('Error en carga manual: ' . $e->getMessage());
+            Contrato::logManualAudit(null, 'FAILURE_INSERT_MANUAL', $e->getMessage(), 'cuentas_cobro');
             return response()->json(['success' => false, 'message' => "Error: " . $e->getMessage()], 500);
         }
     }

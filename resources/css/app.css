@@ -15,10 +15,56 @@ body {
 #sidebar {
     transition: width 0.3s;
     overflow-x: hidden;
+    font-size: 0.9rem;
+    /* Refined font size */
+}
+
+#sidebar .nav-link {
+    padding: 0.6rem 0.8rem;
+    border-radius: 8px;
+    margin: 2px 0;
+    transition: all 0.2s ease;
+}
+
+#sidebar .sidebar-text {
+    font-weight: 500;
+    letter-spacing: 0.3px;
+}
+
+#sidebar .bi {
+    font-size: 1.1rem !important;
 }
 
 #sidebar.collapsed {
     width: 4.5rem !important;
+}
+
+/* Global Font Refinement for "Professional" look */
+body {
+    font-size: 0.9375rem;
+    /* 15px equivalent if base is 16px */
+    letter-spacing: -0.01em;
+}
+
+h1,
+.h1 {
+    font-size: 1.8rem !important;
+    letter-spacing: -0.02em;
+}
+
+h2,
+.h2 {
+    font-size: 1.5rem !important;
+}
+
+h3,
+.h3 {
+    font-size: 1.25rem !important;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 700;
 }
 
 #sidebar.collapsed .nav-link span,

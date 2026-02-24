@@ -17,6 +17,9 @@
                 <p>Gestión de Contratación — SIA OBSERVA — Panel de Control Ejecutivo</p>
             </div>
             <div class="d-flex gap-2">
+                <button class="btn btn-saas-secondary" onclick="exportToExcel()">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Exportar Excel
+                </button>
                 <button class="btn btn-saas-secondary" onclick="window.location.reload()">
                     <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
                 </button>
@@ -24,28 +27,52 @@
         </header>
 
         {{-- ANALÍTICA RESUMEN SUPERIOR --}}
-        <div class="analytics-summary animate-fadeIn">
+        <div class="analytics-summary animate-fadeIn" style="grid-template-columns: repeat(4, 1fr);">
             <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #16a34a !important;">
                 <span class="label text-success">Contratos OK</span>
-                <span class="val">{{ number_format($stats['ok_contratos']) }}</span>
+                <span class="val" id="stat-ok">{{ number_format($stats['ok_contratos']) }}</span>
                 <span class="sub">Checklist completo</span>
             </div>
             <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #d97706 !important;">
                 <span class="label text-warning">Con Pendientes</span>
-                <span class="val">{{ number_format($stats['pend_contratos']) }}</span>
+                <span class="val" id="stat-pend">{{ number_format($stats['pend_contratos']) }}</span>
                 <span class="sub">Gestión en proceso</span>
-            </div>
-            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #dc2626 !important;">
-                <span class="label text-danger">Estado Crítico</span>
-                <span class="val">{{ number_format($stats['crit_contratos']) }}</span>
-                <span class="sub">Acción inmediata</span>
             </div>
             <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #2563eb !important;">
                 <span class="label text-primary">Cumplimiento Global</span>
-                <div class="val">{{ number_format($stats['avg_cumplimiento'], 1) }}%</div>
+                <div class="val"><span id="stat-avg">{{ number_format($stats['avg_cumplimiento'], 1) }}</span>%</div>
                 <div class="progress mt-1" style="height: 6px; background: #e2e8f0;">
-                    <div class="progress-bar bg-primary" style="width: {{ $stats['avg_cumplimiento'] }}%"></div>
+                    <div class="progress-bar bg-primary" id="stat-bar" style="width: {{ $stats['avg_cumplimiento'] }}%"></div>
                 </div>
+            </div>
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #8b5cf6 !important;">
+                <span class="label" style="color: #7c3aed;">TOTAL CONTRATOS ACTUALES</span>
+                <span class="val" id="stat-val-total">{{ number_format($stats['total']) }}</span>
+                <span class="sub">Registros en vista actual</span>
+            </div>
+        </div>
+
+        {{-- SEGUNDA FILA: ANALÍTICA SECOP --}}
+        <div class="analytics-summary animate-fadeIn" style="margin-top: 1rem; margin-bottom: 2rem; grid-template-columns: repeat(4, 1fr);">
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #10b981 !important;">
+                <span class="label" style="color: #059669;">Cerrados/Terminados SECOP</span>
+                <span class="val" id="stat-sec-cerrado">{{ number_format($stats['sec_cerrado']) }}</span>
+                <span class="sub">Contratos con cierre efectivo</span>
+            </div>
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #f59e0b !important;">
+                <span class="label" style="color: #d97706;">En Ejecución SECOP</span>
+                <span class="val" id="stat-sec-ejecucion">{{ number_format($stats['sec_ejecucion']) }}</span>
+                <span class="sub">Contratos activos en plataforma</span>
+            </div>
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #94a3b8 !important;">
+                <span class="label text-muted">Sin Datos SECOP</span>
+                <span class="val" id="stat-sec-vacio">{{ number_format($stats['sec_vacio']) }}</span>
+                <span class="sub">Pendientes de actualización SECOP</span>
+            </div>
+            <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #6366f1 !important;">
+                <span class="label" style="color: #4f46e5;">ESTADO SECOP TOTAL</span>
+                <span class="val"><span id="stat-total-con-seg">{{ number_format($stats['total']) }}</span></span>
+                <span class="sub">Consolidado general plataforma</span>
             </div>
         </div>
 
@@ -58,6 +85,35 @@
             <div class="form-group-saas">
                 <label>Tipo de Contratista</label>
                 <input type="text" id="filterTipo" class="input-saas" placeholder="Persona Natural/Jurídica...">
+            </div>
+            <div class="form-group-saas">
+                <label>Estado SECOP</label>
+                <select id="filterSecop" class="input-saas">
+                    <option value="">Todos</option>
+                    <option value="CERRADO">CERRADO</option>
+                    <option value="TERMINADO">TERMINADO</option>
+                    <option value="EN EJECUCION">EN EJECUCION</option>
+                </select>
+            </div>
+            <div class="form-group-saas">
+                <label>Estado</label>
+                <select id="filterEstado" class="input-saas">
+                    <option value="">Cualquiera</option>
+                    <option value="OK">OK</option>
+                    <option value="PENDIENTE">PENDIENTE</option>
+                    <option value="EN PROGRESO">EN PROGRESO</option>
+                    <option value="N/A">N/A</option>
+                    <option value="VACÍO">VACÍO</option>
+                </select>
+            </div>
+            <div class="form-group-saas">
+                <label>Cuenta Ejecución</label>
+                <select id="filterMes" class="input-saas">
+                    <option value="">Cualquiera</option>
+                    @for ($i = 1; $i <= 12; $i++)
+                        <option value="{{ $i }}">Cuenta {{ $i }}</option>
+                    @endfor
+                </select>
             </div>
             <div class="form-group-saas">
                 <label>Supervisor</label>
@@ -83,21 +139,21 @@
                 <table class="saas-table" id="masterTable">
                     <thead>
                         <tr style="height: 35px; background: #F8FAFC;">
-                            <th class="stk-saas stk-gest" style="z-index: 12 !important;"></th>
-                            <th class="stk-saas stk-risk" style="z-index: 12 !important;"></th>
+                            <th class="stk-gest"></th>
+                            <th class="stk-risk"></th>
                             <th class="stk-saas stk-proc" style="z-index: 12 !important;"></th>
-                            <th class="stk-saas stk-cont" style="z-index: 12 !important; border-right: 2px solid #e2e8f0;">
-                                IDENTIFICACIÓN</th>
+                            <th class="stk-saas stk-cont-merged" colspan="2" style="z-index: 12 !important; border-right: 2px solid #e2e8f0; text-align: center;">
+                                NUMERO DE CONTRATO / CONTRATISTA</th>
 
-                            <th colspan="9" style="border-right: 2px solid #e2e8f0; text-align: center;">INFORMACIÓN BASE
+                            <th colspan="4" style="border-right: 2px solid #e2e8f0; text-align: center;">INFORMACIÓN BASE
                             </th>
-                            <th colspan="10"
+                            <th colspan="14"
                                 style="border-right: 2px solid #e2e8f0; text-align: center; background: #FEF9C3; color: #854D0E;">
                                 CHECKLIST TÉCNICO</th>
                             <th colspan="2"
                                 style="border-right: 2px solid #e2e8f0; text-align: center; background: #F0FDF4; color: #166534;">
                                 GESTIÓN</th>
-                            <th colspan="24"
+                            <th colspan="36"
                                 style="border-right: 2px solid #e2e8f0; text-align: center; background: #F1F5F9;">EJECUCIÓN
                                 MENSUAL</th>
                             <th colspan="6"
@@ -107,249 +163,69 @@
                             </th>
                         </tr>
                         <tr>
-                            <th class="stk-saas stk-gest text-center">GESTIÓN</th>
-                            <th class="stk-saas stk-risk text-center">PROGRESO</th>
+                            <th class="stk-gest text-center">GESTIÓN</th>
+                            <th class="stk-risk text-center">PROGRESO</th>
                             <th class="stk-saas stk-proc text-center">PROCESO</th>
-                            <th class="stk-saas stk-cont text-center" style="border-right: 2px solid #e2e8f0;">CONTRATO</th>
+                            <th class="stk-saas stk-num text-center">Nº CONTRATO</th>
+                            <th class="stk-saas stk-nom text-center" style="border-right: 2px solid #e2e8f0;">CONTRATISTA</th>
 
-                            <th>TIPO CONTRATISTA</th>
-                            <th>CONTRATISTA</th>
-                            <th>SUPERVISOR</th>
-                            <th>OBJETO</th>
-                            <th>VALOR CONTRATO</th>
-                            <th>LINK SECOP</th>
-                            <th>NO PLANTA</th>
-                            <th>CONCEPTO PRECON.</th>
-                            <th style="border-right: 2px solid #e2e8f0">CDP</th>
+                            <th class="col-md-saas">TIPO CONTRATISTA</th>
+                            <th class="col-md-saas">SUPERVISOR</th>
+                            <th style="width: 250px; min-width: 250px;">OBJETO</th>
+                            <th class="col-md-saas text-end">VALOR CONTRATO</th>
+                            <th class="col-narrow-saas">LINK</th>
+                            <th class="col-narrow-saas">PLANTA</th>
+                            <th class="col-md-saas">CONCEPTO PRECON.</th>
+                            <th class="col-md-saas" style="border-right: 2px solid #e2e8f0">CDP</th>
 
                             {{-- Checklist Técnico --}}
-                            <th>ESTUDIOS PREVIOS</th>
-                            <th>SOPORTES</th>
-                            <th>IDONEIDAD</th>
-                            <th>CONFIDEN.</th>
-                            <th>CLAUSULADO</th>
-                            <th>ACTA INICIO</th>
-                            <th>DELEGACIÓN</th>
-                            <th>ARL</th>
-                            <th>RP</th>
-                            <th style="border-right: 2px solid #e2e8f0">ESTADO SECOP</th>
+                            <th class="col-narrow-saas">ESTUDIOS PREVIOS</th>
+                            <th class="col-narrow-saas">SOPORTES</th>
+                            <th class="col-narrow-saas">IDONEIDAD</th>
+                            <th class="col-narrow-saas">CONFIDEN.</th>
+                            <th class="col-narrow-saas">CLAUSULADO</th>
+                            <th class="col-narrow-saas">ACTA INICIO</th>
+                            <th class="col-narrow-saas">DELEGACIÓN</th>
+                            <th class="col-narrow-saas">ARL</th>
+                            <th class="col-narrow-saas">RP</th>
+                            <th class="col-narrow-saas" style="border-right: 2px solid #e2e8f0">ESTADO SECOP</th>
 
                             {{-- Gestión --}}
-                            <th>APROBADO Y PAGADO</th>
-                            <th style="border-right: 2px solid #e2e8f0">MODIF. Y CIERRE</th>
+                            <th class="col-narrow-saas">APROBADO</th>
+                            <th class="col-narrow-saas" style="border-right: 2px solid #e2e8f0">CIERRE</th>
 
                             {{-- Ejecución (1 a 12) --}}
                             @for ($i = 1; $i <= 12; $i++)
-                                <th title="Mes {{ $i }}">PAGADO SEC {{ $i }}</th>
-                                <th title="Mes {{ $i }}"
-                                    style="{{ $i == 12 ? 'border-right: 2px solid #e2e8f0' : '' }}">CUENTA SIA
-                                    {{ $i }}</th>
+                                <th class="col-narrow-saas" title="Cuenta {{ $i }}">REP {{ $i }}</th>
+                                <th class="col-narrow-saas" title="Cuenta {{ $i }}">SEC {{ $i }}</th>
+                                <th class="col-narrow-saas" title="Cuenta {{ $i }}"
+                                    style="{{ $i == 12 ? 'border-right: 2px solid #e2e8f0' : '' }}">SIA {{ $i }}</th>
                             @endfor
 
                             {{-- Cierre --}}
-                            <th>EVAL. PROV.</th>
-                            <th>ACTA CIERRE</th>
-                            <th>REQ. ACTA LIQ</th>
-                            <th>EN REPOS.</th>
-                            <th>LIQ SECOP</th>
-                            <th style="border-right: 2px solid #e2e8f0">LIQ SIA</th>
+                            <th class="col-narrow-saas">EVAL. PROV.</th>
+                            <th class="col-narrow-saas">ACTA CIERRE</th>
+                            <th class="col-narrow-saas">REQ. ACTA LIQ</th>
+                            <th class="col-narrow-saas">EN REPOS.</th>
+                            <th class="col-narrow-saas">LIQ SECOP</th>
+                            <th class="col-narrow-saas" style="border-right: 2px solid #e2e8f0">LIQ SIA</th>
 
                             {{-- Resultados --}}
-                            <th>SALDO</th>
-                            <th>OBS 1 RAZON</th>
-                            <th>OBS 2 ACCION</th>
-                            <th>RAZON NO LIQ</th>
-                            <th>ABOGADO</th>
-                            <th>CONTADOR</th>
+                            <th class="col-md-saas">SALDO</th>
+                            <th class="col-md-saas">OBS 1 RAZON</th>
+                            <th class="col-md-saas">OBS 2 ACCION</th>
+                            <th class="col-md-saas">RAZON NO LIQ</th>
+                            <th class="col-md-saas">ABOGADO</th>
+                            <th class="col-md-saas">CONTADOR</th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        @foreach ($contratos as $c)
-                            @php
-                                $badgeMap = [
-                                    'OK' => ['class' => 'badge-ok', 'icon' => 'bi-check-circle-fill'],
-                                    'PENDIENTE' => ['class' => 'badge-pend', 'icon' => 'bi-hourglass-split'],
-                                    'RECHAZADO' => ['class' => 'badge-crit', 'icon' => 'bi-x-circle-fill'],
-                                    'CRÍTICO' => ['class' => 'badge-crit', 'icon' => 'bi-exclamation-triangle-fill'],
-                                    'N/A' => ['class' => 'badge-na', 'icon' => 'bi-dash-circle'],
-                                    '' => ['class' => 'badge-vacio', 'icon' => 'bi-circle'],
-                                ];
-
-                                $riskClass = match ($c->global_status) {
-                                    'EN PROGRESO' => 'risk-med text-primary',
-                                    'COMPLETO' => 'risk-low',
-                                    'PENDIENTES' => 'risk-med',
-                                    'CRÍTICO' => 'risk-high',
-                                    default => 'text-muted',
-                                };
-                            @endphp
-                            <tr class="contract-row">
-                                <td class="stk-saas stk-gest text-center">
-                                    <button class="btn btn-sm btn-light border p-1"
-                                        onclick='openEditModal({!! json_encode($c) !!})' title="Gestionar">
-                                        <i class="bi bi-pencil-square text-primary"></i>
-                                    </button>
-                                </td>
-                                <td class="stk-saas stk-risk text-center">
-                                    <div class="badge-pill-saas {{ $riskClass }} w-100 justify-content-center"
-                                        style="font-size: 0.6rem;">
-                                        {{ $c->global_status }}
-                                    </div>
-                                    <div class="progress mt-1 mx-auto" style="height: 3px; width: 80%;">
-                                        <div class="progress-bar bg-success" style="width: {{ $c->perc_cumplimiento }}%">
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="stk-saas stk-proc text-muted small text-center">{{ $c->numero_proceso ?: '-' }}
-                                </td>
-                                <td class="stk-saas stk-cont fw-bold text-primary text-center"
-                                    style="border-right: 2px solid #e2e8f0;">{{ $c->numero_contrato }}</td>
-
-                                <td class="small">{{ $c->tipo_contratista ?: '-' }}</td>
-                                <td>
-                                    <div class="fw-bold small" style="white-space:normal; min-width:180px">
-                                        {{ $c->contratista->nombre_completo ?? 'N/A' }}</div>
-                                </td>
-                                <td class="small text-muted text-center">{{ $c->supervisor->nombre_completo ?? 'N/A' }}
-                                </td>
-                                <td>
-                                    <div class="text-truncate small text-muted" style="max-width:120px"
-                                        title="{{ $c->objeto }}">{{ $c->objeto }}</div>
-                                </td>
-                                <td class="fw-bold text-success text-end small">
-                                    ${{ number_format($c->monto_total, 0, ',', '.') }}</td>
-                                <td class="text-center">
-                                    @if ($c->link_secop)
-                                        <a href="{{ $c->link_secop }}" target="_blank" class="text-primary"><i
-                                                class="bi bi-link-45deg"></i></a>
-                                    @endif
-                                </td>
-                                <td class="text-center small">{{ $c->no_planta }}</td>
-                                <td class="small">{{ $c->concepto_precontractual }}</td>
-                                <td class="small text-center" style="border-right: 2px solid #e2e8f0">
-                                    {{ $c->cdp_codigo }}</td>
-
-                                {{-- Checklist Técnico --}}
-                                @php $checklistFields = ['estudios_previos_status', 'soportes_status', 'idoneidad_status', 'acuerdo_confidencialidad_status', 'clausulado_status', 'acta_inicio_status', 'delegacion_status', 'arl_status', 'rpc_status', 'secop_estado_contrato']; @endphp
-                                @foreach ($checklistFields as $field)
-                                    @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
-                                    <td class="text-center">
-                                        <div class="dropdown">
-                                            <div class="badge-pill-saas {{ $b['class'] }} w-100"
-                                                data-bs-toggle="dropdown">
-                                                <i class="bi {{ $b['icon'] }}"></i>
-                                                {{ $c->$field ?: 'VACÍO' }}
-                                            </div>
-                                            <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                                                <li><a class="dropdown-item py-2" href="#"
-                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'OK', this)"><i
-                                                            class="bi bi-check-circle-fill text-success me-2"></i> OK</a>
-                                                </li>
-                                                <li><a class="dropdown-item py-2" href="#"
-                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)"><i
-                                                            class="bi bi-hourglass-split text-warning me-2"></i>
-                                                        PENDIENTE</a></li>
-                                                <li><a class="dropdown-item py-2" href="#"
-                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'RECHAZADO', this)"><i
-                                                            class="bi bi-x-circle-fill text-danger me-2"></i> RECHAZADO</a>
-                                                </li>
-                                                <li><a class="dropdown-item py-2" href="#"
-                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'N/A', this)"><i
-                                                            class="bi bi-dash-circle text-muted me-2"></i> N/A</a></li>
-                                                <li>
-                                                    <hr class="dropdown-divider">
-                                                </li>
-                                                <li><a class="dropdown-item py-2" href="#"
-                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', '', this)"><i
-                                                            class="bi bi-circle text-light me-2"></i> VACÍO</a></li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                @endforeach
-
-                                {{-- Gestión --}}
-                                <td class="small text-center">{{ $c->aprobado_y_pagado }}</td>
-                                <td class="small text-center" style="border-right: 2px solid #e2e8f0">
-                                    {{ $c->modificaciones_y_cierre }}</td>
-
-                                {{-- Ejecución Mensual --}}
-                                @for ($i = 1; $i <= 12; $i++)
-                                    @foreach (["cta{$i}_secop_status", "cta{$i}_sia_status"] as $field)
-                                        @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
-                                        <td class="text-center"
-                                            style="{{ $i == 12 && $field == 'cta12_sia_status' ? 'border-right: 2px solid #e2e8f0' : '' }}">
-                                            <div class="dropdown">
-                                                <div class="badge-pill-saas {{ $b['class'] }} w-100"
-                                                    data-bs-toggle="dropdown">
-                                                    {{ $c->$field ?: 'V' }}
-                                                </div>
-                                                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                                                    <li><a class="dropdown-item py-2" href="#"
-                                                            onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'OK', this)">OK</a>
-                                                    </li>
-                                                    <li><a class="dropdown-item py-2" href="#"
-                                                            onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)">PENDIENTE</a>
-                                                    </li>
-                                                    <li><a class="dropdown-item py-2" href="#"
-                                                            onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'N/A', this)">N/A</a>
-                                                    </li>
-                                                    <li><a class="dropdown-item py-2" href="#"
-                                                            onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', '', this)">VACÍO</a>
-                                                    </li>
-                                                </ul>
-                                            </div>
-                                        </td>
-                                    @endforeach
-                                @endfor
-
-                                {{-- Cierre --}}
-                                @php $cierreFields = ['evaluacion_proveedor_status', 'acta_cierre_expediente_status', 'requiere_acta_liq_status', 'acta_liq_repositorio_status', 'acta_liq_secop_status', 'acta_liq_sia_status']; @endphp
-                                @foreach ($cierreFields as $field)
-                                    @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
-                                    <td class="text-center"
-                                        style="{{ $field == 'acta_liq_sia_status' ? 'border-right: 2px solid #e2e8f0' : '' }}">
-                                        <div class="dropdown">
-                                            <div class="badge-pill-saas {{ $b['class'] }} w-100"
-                                                data-bs-toggle="dropdown">
-                                                <i class="bi {{ $b['icon'] }}"></i>
-                                                {{ $c->$field ?: 'VACÍO' }}
-                                            </div>
-                                            <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                                                <li><a class="dropdown-item py-2" href="#"
-                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'OK', this)">OK/SI</a>
-                                                </li>
-                                                <li><a class="dropdown-item py-2" href="#"
-                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)">NO/PEND</a>
-                                                </li>
-                                                <li><a class="dropdown-item py-2" href="#"
-                                                        onclick="updateBadgeStatus({{ $c->id }}, '{{ $field }}', 'N/A', this)">N/A</a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                @endforeach
-
-                                {{-- Resultados --}}
-                                <td class="fw-bold text-danger text-end small">
-                                    ${{ number_format($c->saldo, 0, ',', '.') }}</td>
-                                <td class="small text-muted">
-                                    <div class="text-truncate" style="max-width:100px">
-                                        {{ $c->observacion_1_razon ?: '-' }}</div>
-                                </td>
-                                <td class="small text-muted">
-                                    <div class="text-truncate" style="max-width:100px">
-                                        {{ $c->observacion_2_accion ?: '-' }}</div>
-                                </td>
-                                <td class="small text-muted">
-                                    <div class="text-truncate" style="max-width:100px">
-                                        {{ $c->razon_no_liquidacion ?: '-' }}</div>
-                                </td>
-                                <td class="small text-muted text-center">{{ $c->abogado_responsable ?: '-' }}</td>
-                                <td class="small text-muted text-center">{{ $c->contador_responsable ?: '-' }}</td>
-                            </tr>
-                        @endforeach
+                        @include('seguimiento.partials.table')
                     </tbody>
                 </table>
+            </div>
+            <div id="pagination-container" class="d-flex justify-content-center align-items-center p-3 border-top bg-white" style="border-radius: 0 0 12px 12px;">
+                {{ $contratos->appends(request()->query())->links('pagination::bootstrap-5') }}
             </div>
         </div>
     </div>
@@ -367,12 +243,21 @@
                         @csrf
                         <input type="hidden" name="_method" id="mMethod" value="POST">
                         <div class="row g-3">
+                            <!-- Sección: Información Base -->
+                            <div class="col-12">
+                                <h6 class="fw-bold mb-3" style="color: #1e40af; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+                                    <i class="bi bi-info-circle me-1"></i> INFORMACIÓN BASE
+                                </h6>
+                            </div>
                             <div class="col-md-4"><label class="small fw-bold">Nº PROCESO</label><input type="text"
                                     name="numero_proceso" id="mProceso" class="form-control"></div>
                             <div class="col-md-4"><label class="small fw-bold">Nº CONTRATO</label><input type="text"
                                     name="numero_contrato" id="mContrato" class="form-control" required></div>
                             <div class="col-md-4"><label class="small fw-bold">TIPO CONTRATISTA</label><input
                                     type="text" name="tipo_contratista" id="mTipoCont" class="form-control"></div>
+                            <div class="col-md-6"><label class="small fw-bold">CONTRATISTA / RAZÓN SOCIAL</label>
+                                <input type="text" name="contratista_nombre" id="mContratistaNom" class="form-control" required>
+                            </div>
                             <div class="col-md-6"><label class="small fw-bold">VALOR CONTRATO</label><input
                                     type="number" name="monto_total" id="mValor" class="form-control" required>
                             </div>
@@ -383,20 +268,62 @@
                                     @endforeach
                                 </select>
                             </div>
+                            <div class="col-md-6"><label class="small fw-bold">SALDO</label><input type="number"
+                                    name="saldo" id="mSaldo" class="form-control"></div>
                             <div class="col-12"><label class="small fw-bold">OBJETO</label>
                                 <textarea name="objeto" id="mObjeto" class="form-control" rows="2"></textarea>
                             </div>
-                            <div class="col-md-6"><label class="small fw-bold">NO PLANTA</label><input type="text"
+
+                            <!-- Sección: Checklist Técnico -->
+                            <div class="col-12 mt-4">
+                                <h6 class="fw-bold mb-3" style="color: #854d0e; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+                                    <i class="bi bi-check2-square me-1"></i> CHECKLIST TÉCNICO
+                                </h6>
+                            </div>
+                            <div class="col-md-6"><label class="small fw-bold text-warning">LINK SECOP</label><input type="text"
+                                    name="link_secop" id="mLink" class="form-control" placeholder="URL del contrato"></div>
+                            <div class="col-md-6"><label class="small fw-bold text-warning">CDP</label><input type="text"
+                                    name="cdp_codigo" id="mCdp" class="form-control"></div>
+                            <div class="col-md-5"><label class="small fw-bold text-warning">NO PLANTA</label><input type="text"
                                     name="no_planta" id="mNoPlanta" class="form-control"></div>
-                            <div class="col-md-6"><label class="small fw-bold">CONCEPTO PRECONTRACTUAL</label><input
+                            <div class="col-md-7"><label class="small fw-bold text-warning">CONCEPTO PRECONTRACTUAL</label><input
                                     type="text" name="concepto_precontractual" id="mConcepto" class="form-control">
                             </div>
-                            <div class="col-md-4"><label class="small fw-bold">ABOGADO</label><input type="text"
+
+                            <!-- Sección: Gestión -->
+                            <div class="col-12 mt-4">
+                                <h6 class="fw-bold mb-3" style="color: #166534; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+                                    <i class="bi bi-gear me-1"></i> GESTIÓN Y CIERRE
+                                </h6>
+                            </div>
+                            <div class="col-md-4"><label class="small fw-bold text-success">APROBADO Y PAGADO</label>
+                                <select name="aprobado_y_pagado" id="mApagado" class="form-select">
+                                    <option value="">VACÍO</option>
+                                    <option value="Con supervisor">Con supervisor</option>
+                                    <option value="Pagado">Pagado</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4"><label class="small fw-bold text-success">MODIFICACIONES Y CIERRE</label>
+                                <select name="modificaciones_y_cierre" id="mMcierre" class="form-select">
+                                    <option value="">VACÍO</option>
+                                    <option value="con supervisor">con supervisor</option>
+                                    <option value="Cerrado por supervisor">Cerrado por supervisor</option>
+                                    <option value="Secretaria">Secretaria</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4"><label class="small fw-bold text-success">ABOGADO RESP.</label><input type="text"
                                     name="abogado_responsable" id="mAbogado" class="form-control"></div>
-                            <div class="col-md-4"><label class="small fw-bold">CONTADOR</label><input type="text"
+                            <div class="col-md-4"><label class="small fw-bold">CONTADOR RESP.</label><input type="text"
                                     name="contador_responsable" id="mContador" class="form-control"></div>
-                            <div class="col-md-4"><label class="small fw-bold">SALDO</label><input type="number"
-                                    name="saldo" id="mSaldo" class="form-control"></div>
+                            <div class="col-md-8"><label class="small fw-bold">RAZÓN NO LIQUIDACIÓN</label>
+                                <textarea name="razon_no_liquidacion" id="mRazonNoLiq" class="form-control" rows="1"></textarea>
+                            </div>
+                            <div class="col-md-6"><label class="small fw-bold">OBS 1 RAZÓN</label>
+                                <textarea name="observacion_1_razon" id="mObs1" class="form-control" rows="1"></textarea>
+                            </div>
+                            <div class="col-md-6"><label class="small fw-bold">OBS 2 ACCIÓN</label>
+                                <textarea name="observacion_2_accion" id="mObs2" class="form-control" rows="1"></textarea>
+                            </div>
                         </div>
                         <div class="mt-4 text-end">
                             <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
@@ -409,7 +336,8 @@
     </div>
 
     <script>
-        async function updateBadgeStatus(id, field, status, element) {
+        async function updateBadgeStatus(event, id, field, status, element) {
+            if (event) event.preventDefault();
             const badgeMap = {
                 'OK': {
                     class: 'badge-ok',
@@ -463,7 +391,8 @@
                     parentDiv.className = `badge-pill-saas ${b.class} w-100`;
                     parentDiv.innerHTML = `<i class="bi ${b.icon}"></i> ${status || 'VACÍO'}`;
 
-                    // Opcional: Notificación silenciosa (Toast) en lugar de alert
+                    // Recargar stats y estado global sin perder posición
+                    applyAdvancedFilters(); 
                 } else {
                     throw new Error('Server error');
                 }
@@ -474,13 +403,109 @@
             }
         }
 
-        function applyAdvancedFilters() {
-            const params = new URLSearchParams({
-                numero_contrato: document.getElementById('filterContrato').value,
-                tipo_contratista: document.getElementById('filterTipo').value,
-                supervisor_id: document.getElementById('filterSup').value
-            });
-            window.location.search = params.toString();
+        let filterTimeout;
+        function debouncedFilter() {
+            clearTimeout(filterTimeout);
+            filterTimeout = setTimeout(() => {
+                applyAdvancedFilters();
+            }, 300);
+        }
+
+        document.getElementById('filterContrato').addEventListener('input', debouncedFilter);
+        document.getElementById('filterTipo').addEventListener('input', debouncedFilter);
+        document.getElementById('filterEstado').addEventListener('change', () => applyAdvancedFilters());
+        document.getElementById('filterSecop').addEventListener('change', () => applyAdvancedFilters());
+        document.getElementById('filterMes').addEventListener('change', () => applyAdvancedFilters());
+        document.getElementById('filterSup').addEventListener('change', () => applyAdvancedFilters());
+
+        document.addEventListener('click', function(e) {
+            let pageLink = e.target.closest('#pagination-container a');
+            if (pageLink) {
+                e.preventDefault();
+                applyAdvancedFilters(pageLink.href);
+            }
+        });
+
+        async function applyAdvancedFilters(url = null) {
+            const btn = document.querySelector('.btn-saas-primary');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            btn.disabled = true;
+
+            let fetchUrl = typeof url === 'string' ? url : null;
+            if (!fetchUrl) {
+                const params = new URLSearchParams({
+                    numero_contrato: document.getElementById('filterContrato').value,
+                    tipo_contratista: document.getElementById('filterTipo').value,
+                    supervisor_id: document.getElementById('filterSup').value,
+                    estado_filtro: document.getElementById('filterEstado') ? document.getElementById('filterEstado').value : '',
+                    secop_filtro: document.getElementById('filterSecop').value,
+                    mes_filtro: document.getElementById('filterMes').value
+                });
+                fetchUrl = `{{ route('seguimiento.index') }}?${params.toString()}`;
+            }
+
+            // Preservar Scroll
+            const scrollPos = window.scrollY;
+            const tableScroll = document.querySelector('.table-scroll-container')?.scrollLeft;
+            
+            // Estabilizar altura para prevenir saltos
+            const tableCard = document.querySelector('.table-card-saas');
+            if (tableCard) {
+                tableCard.style.minHeight = tableCard.offsetHeight + 'px';
+            }
+
+            try {
+                const res = await fetch(fetchUrl, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const data = await res.json();
+
+                // Actualizar Tabla
+                document.getElementById('tableBody').innerHTML = data.table;
+
+                // Actualizar Paginación
+                if (document.getElementById('pagination-container')) {
+                    document.getElementById('pagination-container').innerHTML = data.pagination;
+                }
+
+                // Restaurar Scroll
+                window.scrollTo(0, scrollPos);
+                if (tableScroll !== undefined) {
+                    const tableContainer = document.querySelector('.table-scroll-container');
+                    if(tableContainer) tableContainer.scrollLeft = tableScroll;
+                }
+
+                // Actualizar Stats
+                document.getElementById('stat-ok').innerText = parseInt(data.stats.ok_contratos).toLocaleString();
+                document.getElementById('stat-pend').innerText = parseInt(data.stats.pend_contratos).toLocaleString();
+                document.getElementById('stat-avg').innerText = parseFloat(data.stats.avg_cumplimiento).toFixed(1);
+                document.getElementById('stat-bar').style.width = data.stats.avg_cumplimiento + '%';
+                if(document.getElementById('stat-val-total')){
+                    document.getElementById('stat-val-total').innerText = parseInt(data.stats.total).toLocaleString();
+                }
+
+                // Actualizar Stats SECOP
+                document.getElementById('stat-sec-cerrado').innerText = parseInt(data.stats.sec_cerrado).toLocaleString();
+                document.getElementById('stat-sec-ejecucion').innerText = parseInt(data.stats.sec_ejecucion).toLocaleString();
+                document.getElementById('stat-sec-vacio').innerText = parseInt(data.stats.sec_vacio).toLocaleString();
+                if(document.getElementById('stat-total-con-seg')){
+                    document.getElementById('stat-total-con-seg').innerText = parseInt(data.stats.total).toLocaleString();
+                }
+
+            } catch (e) {
+                console.error(e);
+                // Opcional: mostrar error sutil
+            } finally {
+                // Quitar restricción de altura
+                const tableCard = document.querySelector('.table-card-saas');
+                if (tableCard) tableCard.style.minHeight = '';
+                
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
 
         function openEditModal(c) {
@@ -490,6 +515,7 @@
             document.getElementById('mProceso').value = c.numero_proceso || '';
             document.getElementById('mContrato').value = c.numero_contrato;
             document.getElementById('mTipoCont').value = c.tipo_contratista || '';
+            document.getElementById('mContratistaNom').value = c.contratista ? c.contratista.razon_social : '';
             document.getElementById('mValor').value = c.monto_total || 0;
             document.getElementById('mObjeto').value = c.objeto || '';
             document.getElementById('mSup').value = c.supervisor_id || '';
@@ -498,8 +524,61 @@
             document.getElementById('mAbogado').value = c.abogado_responsable || '';
             document.getElementById('mContador').value = c.contador_responsable || '';
             document.getElementById('mSaldo').value = c.saldo || 0;
+            document.getElementById('mObs1').value = c.observacion_1_razon || '';
+            document.getElementById('mObs2').value = c.observacion_2_accion || '';
+            document.getElementById('mRazonNoLiq').value = c.razon_no_liquidacion || '';
+            document.getElementById('mApagado').value = c.aprobado_y_pagado || '';
+            document.getElementById('mMcierre').value = c.modificaciones_y_cierre || '';
+            document.getElementById('mLink').value = c.link_secop || '';
+            document.getElementById('mCdp').value = c.cdp_codigo || '';
             new bootstrap.Modal(document.getElementById('modalManagement')).show();
         }
+
+        // Guardar/Actualizar vía AJAX
+        document.getElementById('mainForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const form = this;
+            const formData = new FormData(form);
+            const btn = form.querySelector('button[type="submit"]');
+            const originalText = btn.innerHTML;
+
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Guardando...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const modalEl = document.getElementById('modalManagement');
+                    bootstrap.Modal.getInstance(modalEl).hide();
+                    
+                    if (window.showSnackbar) {
+                        window.showSnackbar(data.message || 'Operación exitosa', 'success');
+                    } else {
+                        alert(data.message || 'Operación exitosa');
+                    }
+                    
+                    applyAdvancedFilters(); // Recarga la tabla sin recargar la página
+                } else {
+                    const errorData = await res.json();
+                    alert('Error: ' + (errorData.message || 'No se pudo procesar la solicitud'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Ocurrió un error inesperado al conectar con el servidor');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
 
         function openCreateModal() {
             document.getElementById('mainForm').reset();
@@ -507,6 +586,24 @@
             document.getElementById('mainForm').action = '{{ route('seguimiento.store') }}';
             document.getElementById('mTitle').innerText = 'Registrar Nuevo Contrato';
             new bootstrap.Modal(document.getElementById('modalManagement')).show();
+        }
+        function editDirectField(id, field, currentVal, element) {
+            const newVal = prompt('Ingrese el nuevo valor:', currentVal);
+            if (newVal !== null) {
+                updateBadgeStatus(null, id, field, newVal, element);
+            }
+        }
+
+        function exportToExcel() {
+            const params = new URLSearchParams({
+                numero_contrato: document.getElementById('filterContrato').value,
+                tipo_contratista: document.getElementById('filterTipo').value,
+                estado_filtro: document.getElementById('filterEstado').value,
+                mes_filtro: document.getElementById('filterMes').value,
+                secop_filtro: document.getElementById('filterSecop').value,
+                supervisor_id: document.getElementById('filterSup').value
+            });
+            window.location.href = "{{ route('seguimiento.export') }}?" + params.toString();
         }
     </script>
 @endsection

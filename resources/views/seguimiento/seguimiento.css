@@ -5,7 +5,7 @@
 
 :root {
   --bg-app: #F8FAFC;
-  --primary: #004884; /* Azul Institucional */
+  --primary: #004884;
   --primary-light: rgba(0, 72, 132, 0.1);
   --accent: #2B7CFC;
   --white: #ffffff;
@@ -21,13 +21,15 @@ body {
   background-color: var(--bg-app);
   font-family: 'Inter', sans-serif;
   color: var(--text-main);
+  font-size: 0.875rem;
+  /* Standard professional base size */
   scroll-behavior: smooth;
 }
 
 /* ── LAYOUT ── */
 .dashboard-container {
-  padding: 2rem;
-  max-width: 1600px;
+  padding: 1rem 1.5rem;
+  max-width: 100%;
   margin: 0 auto;
 }
 
@@ -38,22 +40,53 @@ body {
   align-items: center;
   margin-bottom: 2rem;
 }
-.db-header h1 { font-weight: 700; font-size: 1.875rem; color: #000; margin: 0; }
-.db-header p { color: var(--text-muted); margin: 0; font-size: 0.875rem; }
+
+.db-header h1 {
+  font-weight: 800;
+  font-size: 1.35rem;
+  /* More balanced size */
+  color: #000;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.db-header p {
+  color: var(--text-muted);
+  margin: 0;
+  font-size: 0.8rem;
+}
 
 /* ── BUTTONS ── */
 .btn-saas-primary {
-  background: var(--primary); color: #fff; border: none;
-  padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 500;
-  transition: all 0.2s; box-shadow: var(--shadow-sm);
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.2s;
+  box-shadow: var(--shadow-sm);
 }
-.btn-saas-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); filter: brightness(1.1); }
+
+.btn-saas-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+  filter: brightness(1.1);
+}
 
 .btn-saas-secondary {
-  background: var(--white); color: var(--text-main); border: 1px solid var(--border);
-  padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 500;
+  background: var(--white);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  padding: 0.4rem 1rem;
+  border-radius: 8px;
+  font-weight: 500;
 }
-.btn-saas-secondary:hover { background: var(--bg-app); border-color: #cbd5e1; }
+
+.btn-saas-secondary:hover {
+  background: var(--bg-app);
+  border-color: #cbd5e1;
+}
 
 /* ── KPI CARDS ── */
 .kpi-grid {
@@ -62,154 +95,467 @@ body {
   gap: 1.5rem;
   margin-bottom: 2rem;
 }
+
 .kpi-card {
-  background: var(--white); padding: 1.5rem; border-radius: var(--radius);
-  border: 1px solid var(--border); box-shadow: var(--shadow-sm);
+  background: var(--white);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
   transition: transform 0.2s;
 }
-.kpi-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+
+.kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
 .kpi-icon {
-  width: 42px; height: 42px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
   font-size: 1.25rem;
 }
-.kpi-label { font-size: 0.875rem; font-weight: 500; color: var(--text-muted); }
-.kpi-value { font-size: 1.5rem; font-weight: 700; margin: 0.25rem 0; }
-.kpi-trend { font-size: 0.75rem; font-weight: 600; }
-.trend-up { color: #10B981; }
-.trend-down { color: #EF4444; }
+
+.kpi-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.kpi-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin: 0.2rem 0;
+  letter-spacing: -0.01em;
+}
+
+.kpi-trend {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.trend-up {
+  color: #10B981;
+}
+
+.trend-down {
+  color: #EF4444;
+}
 
 /* ── CHARTS SECTION ── */
 .analytics-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 1.5rem; margin-bottom: 2rem;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
 }
+
 .chart-card {
-  background: var(--white); padding: 1.5rem; border-radius: var(--radius);
-  border: 1px solid var(--border); min-height: 350px;
+  background: var(--white);
+  padding: 1.5rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  min-height: 350px;
 }
-.chart-title { font-size: 1rem; font-weight: 600; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1rem; }
+
+.chart-title {
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1rem;
+  margin-bottom: 1rem;
+}
 
 /* ── FILTERS CARD ── */
 .filter-card-saas {
-  background: var(--white); padding: 1.25rem; border-radius: var(--radius);
-  border: 1px solid var(--border); margin-bottom: 2rem; display: flex; gap: 1rem; align-items: flex-end;
+  background: var(--white);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
 }
-.form-group-saas { flex: 1; }
-.form-group-saas label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; }
+
+.form-group-saas {
+  flex: 1;
+}
+
+.form-group-saas label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+
 .input-saas {
-  width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.875rem;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  /* More compact */
 }
 
 /* ── TABLE DESIGN ── */
 .table-card-saas {
-  background: var(--white); border-radius: var(--radius); border: 1px solid var(--border);
-  overflow: hidden; box-shadow: var(--shadow-sm);
+  background: var(--white);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
-.saas-table { width: 100%; border-collapse: collapse; min-width: 2000px; }
+
+/* === TABLA COMPACTA - SIN SEPARACIÓN ENTRE FILAS === */
+.saas-table {
+  width: 100%;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  min-width: 4200px;
+  /* Adjusted slightly */
+}
+
 .saas-table thead th {
-  background: #F1F5F9; padding: 1rem; text-align: left; font-size: 0.75rem;
-  font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);
+  background: #F8FAFC;
+  padding: 0.5rem 0.35rem !important;
+  text-align: center;
+  /* Center labels for better look */
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 2px solid var(--border);
+  border-right: 1px solid rgba(0, 0, 0, 0.05);
+  white-space: normal;
+  /* Allow wrapping to prevent overlap */
+  vertical-align: middle;
+  line-height: 1;
+  word-wrap: break-word;
+}
+
+.saas-table thead tr:first-child th {
+  background: #f1f5f9;
+  color: #1e293b;
+  font-size: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.stk-cont-merged {
+  background: linear-gradient(180deg, #f8faff 0%, #eef2ff 100%) !important;
+  color: #3730a3 !important;
+  font-weight: 800 !important;
+  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.05);
+}
+
+.stk-num,
+.stk-nom {
+  background: #ffffff !important;
+}
+
+.saas-table tbody tr:hover .stk-num,
+.saas-table tbody tr:hover .stk-nom {
+  background: #f8fafc !important;
+}
+
+.saas-table tbody td {
+  padding: 0.25rem 0.35rem !important;
+  font-size: 0.72rem;
+  /* Slightly smaller for more data visibility */
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f8fafc;
+  vertical-align: middle;
+  line-height: 1.1;
+}
+
+.saas-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.saas-table tbody tr:hover {
+  background: #F8FAFC;
+}
+
+/* ── STATUS BADGES (PILLS) ── */
+.badge-pill-saas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 1px 4px;
+  /* More space */
+  border-radius: 3px;
+  font-size: 0.6rem;
+  min-width: 35px;
+  font-weight: 700;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  cursor: pointer;
   white-space: nowrap;
 }
-.saas-table tbody td {
-  padding: 1rem; font-size: 0.875rem; border-bottom: 1px solid #f8fafc;
-}
-.saas-table tbody tr:hover { background: #F8FAFC; }
 
-/* ── NEW STATUS BADGES (PILLS) ── */
-.badge-pill-saas {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    border: 1px solid transparent;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    white-space: nowrap;
+.badge-ok {
+  background: #DCFCE7;
+  color: #166534;
+  border-color: #BBF7D0;
 }
 
-.badge-ok { background: #DCFCE7; color: #166534; border-color: #BBF7D0; }
-.badge-pend { background: #FEF9C3; color: #854D0E; border-color: #FEF08A; }
-.badge-crit { background: #FEE2E2; color: #991B1B; border-color: #FECACA; }
-.badge-na { background: #F1F5F9; color: #475569; border-color: #E2E8F0; }
-.badge-vacio { background: #ffffff; color: #94A3B8; border: 1px dashed #CBD5E1; }
+.badge-pend {
+  background: #FEF9C3;
+  color: #854D0E;
+  border-color: #FEF08A;
+}
 
-.badge-pill-saas:hover { filter: brightness(0.95); transform: scale(1.02); }
+.badge-crit {
+  background: #FEE2E2;
+  color: #991B1B;
+  border-color: #FECACA;
+}
+
+.badge-na {
+  background: #F1F5F9;
+  color: #475569;
+  border-color: #E2E8F0;
+}
+
+/* Custom SECOP Status Colors (Pastel) */
+.badge-secop-verde {
+  background: #E8F5E9 !important;
+  /* Pastel Green */
+  color: #2E7D32 !important;
+  border: 1px solid #C8E6C9 !important;
+}
+
+.badge-secop-amarillo {
+  background: #FFFDE7 !important;
+  /* Pastel Yellow */
+  color: #F57F17 !important;
+  border: 1px solid #FFF9C4 !important;
+}
+
+.badge-vacio {
+  background: #F5F5F5 !important;
+  /* Pastel Gray */
+  color: #757575 !important;
+  border: 1px solid #E0E0E0 !important;
+}
+
+.badge-pill-saas:hover {
+  filter: brightness(0.95);
+  transform: scale(1.02);
+}
 
 /* Global Risk Indicators */
-.risk-high { color: #DC2626; background: #FEF2F2; }
-.risk-med { color: #D97706; background: #FFFBEB; }
-.risk-low { color: #059669; background: #ECFDF5; }
-
-/* ── TABLE IMPROVEMENTS ── */
-.checklist-section-bg { background: #FEFCE8 !important; } /* Soft yellow for checklist th/td */
-
-.saas-table thead th {
-    height: 40px;
+.risk-high {
+  color: #DC2626;
+  background: #FEF2F2;
 }
 
-.saas-table tbody td {
-    vertical-align: middle;
+.risk-med {
+  color: #D97706;
+  background: #FFFBEB;
 }
 
-/* Horizontal Scroll Bar Tooltip Fix */
+.risk-low {
+  color: #059669;
+  background: #ECFDF5;
+}
+
+/* ── TABLE EXTRAS ── */
+.checklist-section-bg {
+  background: #FEFCE8 !important;
+}
+
+/* Compactar barra de progreso en columna PROGRESO */
+.saas-table .progress.mt-1 {
+  margin-top: 3px !important;
+}
+
+/* Compactar botón de gestión */
+.saas-table .btn.btn-sm.btn-light {
+  padding: 0.2rem 0.35rem !important;
+  line-height: 1;
+}
+
+/* Horizontal Scroll */
 .table-scroll-container {
-    overflow-x: auto;
-    padding-bottom: 10px;
-    scrollbar-width: thin;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-width: thin;
 }
-.table-scroll-container::-webkit-scrollbar { height: 8px; }
-.table-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+.table-scroll-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.table-scroll-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 10px;
+}
 
 /* ── STICKY COLUMNS SYSTEM ── */
-.stk-saas { 
-    position: sticky; 
-    left: 0; 
-    background: #fff !important; 
-    z-index: 10 !important; 
-    border-right: 1px solid var(--border); 
-}
-.saas-table thead th.stk-saas { 
-    background: #F1F5F9 !important; 
-    z-index: 11 !important; 
+.stk-saas {
+  position: sticky;
+  left: 0;
+  background: #fff !important;
+  z-index: 10 !important;
+  border-right: 1px solid var(--border);
 }
 
-/* Precise offsets for 4-level sticky */
-.stk-gest { width: 60px; left: 0; }
-.stk-risk { width: 140px; left: 60px; }
-.stk-proc { width: 110px; left: 200px; }
-.stk-cont { width: 140px; left: 310px; border-right: 2px solid #cbd5e1 !important; }
+.saas-table thead th.stk-saas {
+  background: #F8FAFC !important;
+  z-index: 20 !important;
+}
+
+.saas-table thead tr:first-child th.stk-saas {
+  background: #f1f5f9 !important;
+}
+
+/* Standard cells (not sticky by default anymore) */
+.stk-gest {
+  width: 60px;
+  min-width: 60px;
+  max-width: 60px;
+}
+
+.stk-risk {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+}
+
+.stk-proc {
+  width: 90px;
+  min-width: 90px;
+  max-width: 90px;
+  left: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stk-num {
+  width: 170px;
+  min-width: 170px;
+  max-width: 170px;
+  left: 90px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stk-nom {
+  width: 280px;
+  /* Reduced from 450px */
+  min-width: 280px;
+  max-width: 280px;
+  left: 260px;
+  /* 90 + 170 */
+  border-right: 2px solid #cbd5e1 !important;
+  padding-left: 10px !important;
+  box-shadow: -2px 0 5px -2px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stk-cont-merged {
+  left: 90px;
+  width: 450px;
+  /* 170 + 280 */
+  min-width: 450px;
+  border-right: 2px solid #cbd5e1 !important;
+}
 
 /* ── ANALYTICS KPI TOP ── */
 .analytics-summary {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
-.summary-mini-card {
-    background: #fff;
-    padding: 1.25rem;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    box-shadow: var(--shadow-sm);
-}
-.summary-mini-card .label { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.025em; }
-.summary-mini-card .val { font-size: 1.5rem; font-weight: 700; color: var(--text-main); margin-top: 0.25rem; }
-.summary-mini-card .sub { font-size: 0.7rem; color: #94A3B8; margin-top: 0.25rem; }
 
-/* Animation */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+.summary-mini-card {
+  background: #fff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
 }
-.animate-fadeIn { animation: fadeInUp 0.4s ease forwards; }
+
+.summary-mini-card .label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  line-height: 1.2;
+}
+
+.summary-mini-card .val {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-top: 0.1rem;
+}
+
+.summary-mini-card .sub {
+  font-size: 0.6rem;
+  color: #94A3B8;
+  margin-top: 0.15rem;
+  line-height: 1.1;
+}
+
+.col-narrow-saas {
+  width: 100px !important;
+  min-width: 100px !important;
+  text-align: center !important;
+}
+
+.col-md-saas {
+  width: 180px !important;
+  min-width: 180px !important;
+}
+
+.stk-nom {
+  padding-left: 10px !important;
+  /* Safety gap */
+}
+
+/* ── ANIMATION ── */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeInUp 0.4s ease forwards;
+}
+
+.clickable-cell {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.clickable-cell:hover {
+  background: #f1f5f9 !important;
+}

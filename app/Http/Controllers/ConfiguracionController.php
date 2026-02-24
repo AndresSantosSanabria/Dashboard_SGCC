@@ -7,6 +7,7 @@ use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Contrato;
 
 class ConfiguracionController extends Controller
 {
@@ -15,6 +16,9 @@ class ConfiguracionController extends Controller
      */
     public function index()
     {
+        // Registrar lectura de configuración (Auditoría)
+        Contrato::logManualAudit(null, 'READ', 'El usuario consultó la configuración de usuarios', 'usuarios');
+
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
         // Check if user is admin
