@@ -115,14 +115,19 @@ class ConfiguracionController extends Controller
         $role = Role::find($request->rol_id);
         $isPersonalizado = $role && str_contains(strtolower($role->nombre), 'personalizado');
 
-        $usuario = new Usuario();
-        $usuario->fill($validated);
-        // Only assign permisos if it's a personalized role AND there are true values
-        $usuario->permisos = ($isPersonalizado && !empty($permisos)) ? $permisos : null;
-        $usuario->save();
+        try {
+            $usuario = new Usuario();
+            $usuario->fill($validated);
+            // Only assign permisos if it's a personalized role AND there are true values
+            $usuario->permisos = ($isPersonalizado && !empty($permisos)) ? $permisos : null;
+            $usuario->save();
 
-        return redirect()->route('configuracion.index')
-            ->with('success', 'Usuario creado exitosamente');
+            return redirect()->route('configuracion.index')
+                ->with('success', 'Usuario creado exitosamente');
+        } catch (\Exception $e) {
+            Contrato::logException($e, 'usuarios', $request->all());
+            return redirect()->back()->withInput()->with('error', 'Error al crear usuario: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -217,13 +222,18 @@ class ConfiguracionController extends Controller
         $role = Role::find($request->rol_id);
         $isPersonalizado = $role && str_contains(strtolower($role->nombre), 'personalizado');
 
-        $usuario->fill($validated);
-        // Only assign permisos if it's a personalized role AND there are true values
-        $usuario->permisos = ($isPersonalizado && !empty($permisos)) ? $permisos : null;
-        $usuario->save();
+        try {
+            $usuario->fill($validated);
+            // Only assign permisos if it's a personalized role AND there are true values
+            $usuario->permisos = ($isPersonalizado && !empty($permisos)) ? $permisos : null;
+            $usuario->save();
 
-        return redirect()->route('configuracion.index')
-            ->with('success', 'Usuario actualizado exitosamente');
+            return redirect()->route('configuracion.index')
+                ->with('success', 'Usuario actualizado exitosamente');
+        } catch (\Exception $e) {
+            Contrato::logException($e, 'usuarios', $request->all());
+            return redirect()->back()->withInput()->with('error', 'Error al actualizar usuario: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -247,14 +257,19 @@ class ConfiguracionController extends Controller
             ], 400);
         }
 
-        $usuario->es_activo = !$usuario->es_activo;
-        $usuario->fecha_inactivacion = $usuario->es_activo ? null : now();
-        $usuario->save();
+        try {
+            $usuario->es_activo = !$usuario->es_activo;
+            $usuario->fecha_inactivacion = $usuario->es_activo ? null : now();
+            $usuario->save();
 
-        return response()->json([
-            'success' => true,
-            'message' => $usuario->es_activo ? 'Usuario activado' : 'Usuario desactivado',
-            'es_activo' => $usuario->es_activo
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => $usuario->es_activo ? 'Usuario activado' : 'Usuario desactivado',
+                'es_activo' => $usuario->es_activo
+            ]);
+        } catch (\Exception $e) {
+            Contrato::logException($e, 'usuarios', ['id' => $id]);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
     }
 }

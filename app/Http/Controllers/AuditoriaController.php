@@ -22,6 +22,8 @@ class AuditoriaController extends Controller
         if ($request->filled('accion')) {
             if ($request->accion === 'FAILURE') {
                 $query->where('accion', 'LIKE', 'FAILURE%');
+            } elseif (in_array($request->accion, ['FAILURE_DATABASE', 'FAILURE_SERVER'])) {
+                $query->where('accion', $request->accion);
             } else {
                 $query->where('accion', $request->accion);
             }

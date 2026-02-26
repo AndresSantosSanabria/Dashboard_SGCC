@@ -123,43 +123,26 @@ class SeguimientoController extends Controller
                     $rep = $c->{"cta{$mesReq}_rep_status"} ?? '';
                     $sec = $c->{"cta{$mesReq}_secop_status"} ?? '';
                     $sia = $c->{"cta{$mesReq}_sia_status"} ?? '';
-                    $vals = array_filter([$rep, $sec, $sia], fn($v) => $v !== '' && $v !== null);
+                    $mFields = [$rep, $sec, $sia];
+                    $vals = array_filter($mFields, fn($v) => !empty($v));
                     
                     // Si no hay estado seleccionado, mostramos solo si hay alguna actividad en ese mes
-                    if (empty($estadoReq)) {
-                        return count($vals) > 0;
-                    }
+                    if (empty($estadoReq)) return count($vals) > 0;
 
-                    // Determinar el "estado agregado del mes" basado en prioridad
-                    $monthStatus = 'VACÍO';
-                    if (in_array('RECHAZADO', [$rep, $sec, $sia]) || in_array('CRÍTICO', [$rep, $sec, $sia])) {
-                        $monthStatus = 'CRÍTICO';
-                    } elseif (in_array('PENDIENTE', [$rep, $sec, $sia])) {
-                        $monthStatus = 'PENDIENTE';
-                    } elseif (count($vals) > 0) {
-                        // Verificar si todo lo reportado es final (OK o N/A)
+                    // Filtro inclusivo: si alguno de los campos del mes cumple el estado
+                    if ($estadoReq === 'OK') return in_array('OK', $mFields);
+                    if ($estadoReq === 'PENDIENTE') {
+                        return in_array('PENDIENTE', $mFields) || in_array('RECHAZADO', $mFields) || in_array('CRÍTICO', $mFields);
+                    }
+                    if ($estadoReq === 'N/A') return in_array('N/A', $mFields);
+                    if ($estadoReq === 'VACÍO') return count($vals) === 0;
+                    if ($estadoReq === 'EN PROGRESO') {
+                        // Un mes está "en progreso" si tiene algo pero no todo es OK/NA
+                        $hasSomething = count($vals) > 0;
                         $allDone = true;
-                        $allNA = true;
-                        foreach ([$rep, $sec, $sia] as $v) {
-                            if ($v !== '' && $v !== null) {
-                                if (!in_array($v, ['OK', 'N/A'])) $allDone = false;
-                                if ($v !== 'N/A') $allNA = false;
-                            }
-                        }
-                        
-                        if ($allDone) {
-                            $monthStatus = $allNA ? 'N/A' : 'OK';
-                        } else {
-                            $monthStatus = 'EN PROGRESO';
-                        }
+                        foreach($vals as $v) if (!in_array($v, ['OK', 'N/A'])) $allDone = false;
+                        return $hasSomething && !$allDone;
                     }
-
-                    // Comparar estado agregado del mes con el filtro solicitado
-                    if ($estadoReq === 'OK') return $monthStatus === 'OK';
-                    if ($estadoReq === 'PENDIENTE') return in_array($monthStatus, ['PENDIENTE', 'CRÍTICO']);
-                    if ($estadoReq === 'EN PROGRESO') return $monthStatus === 'EN PROGRESO';
-                    if ($estadoReq === 'N/A') return $monthStatus === 'N/A';
-                    if ($estadoReq === 'VACÍO') return $monthStatus === 'VACÍO';
                     
                     return true;
                 }
@@ -332,7 +315,7 @@ class SeguimientoController extends Controller
                 ->deleteFileAfterSend(true);
 
         } catch (\Exception $e) {
-            Log::error('Error en exportación Seguimiento: ' . $e->getMessage());
+            Contrato::logException($e, 'contratos', $request->all());
             return redirect()->back()->with('error', 'Error al generar el archivo Excel: ' . $e->getMessage());
         }
     }
@@ -375,8 +358,7 @@ class SeguimientoController extends Controller
 
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
-            $contrato = Contrato::find($request->id);
-            Contrato::logManualAudit($contrato, 'FAILURE_STATUS_UPDATE', $e->getMessage());
+            Contrato::logException($e, 'contratos', ['id' => $request->id, 'field' => $request->field, 'status' => $request->status]);
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
@@ -426,7 +408,7 @@ class SeguimientoController extends Controller
 
             return redirect()->back()->with('success', 'Contrato registrado correctamente.');
         } catch (\Exception $e) {
-            Contrato::logManualAudit(null, 'FAILURE_INSERT', $e->getMessage(), 'contratos', $request->all());
+            Contrato::logException($e, 'contratos', $request->all());
             if ($request->ajax()) {
                 return response()->json(['success' => false, 'message' => 'Error al registrar: ' . $e->getMessage()], 500);
             }
@@ -480,8 +462,7 @@ class SeguimientoController extends Controller
 
             return redirect()->back()->with('success', 'Contrato actualizado correctamente.');
         } catch (\Exception $e) {
-            $contrato = Contrato::find($id);
-            Contrato::logManualAudit($contrato, 'FAILURE_UPDATE', $e->getMessage(), null, $request->all());
+            Contrato::logException($e, 'contratos', $request->all());
             if ($request->ajax()) {
                 return response()->json(['success' => false, 'message' => 'Error al actualizar: ' . $e->getMessage()], 500);
             }

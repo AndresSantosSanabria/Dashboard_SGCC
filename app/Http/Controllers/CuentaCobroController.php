@@ -548,6 +548,7 @@ class CuentaCobroController extends Controller
                     $msgError = "Fila $filaActual error: " . $e->getMessage();
                     Log::error($msgError);
                     $errors[] = $msgError;
+                    Contrato::logException($e, 'cuentas_cobro', ['fila' => $filaActual]);
                 }
             }
 
@@ -581,8 +582,7 @@ class CuentaCobroController extends Controller
                 ]
             ]);
         } catch (\Exception $e) {
-            Log::error('Error en importación de Excel: ' . $e->getMessage());
-            Contrato::logManualAudit(null, 'FAILURE_IMPORT_EXCEL', $e->getMessage(), 'cuentas_cobro');
+            Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'importExcel']);
             return response()->json([
                 'success' => false,
                 'message' => "Error crítico: " . $e->getMessage()
@@ -768,8 +768,7 @@ class CuentaCobroController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Registro cargado correctamente a la base de datos.']);
         } catch (\Exception $e) {
-            Log::error('Error en carga manual: ' . $e->getMessage());
-            Contrato::logManualAudit(null, 'FAILURE_INSERT_MANUAL', $e->getMessage(), 'cuentas_cobro');
+            Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'storeManual', 'contrato' => $numContrato ?? 'desconocido']);
             return response()->json(['success' => false, 'message' => "Error: " . $e->getMessage()], 500);
         }
     }
@@ -841,6 +840,7 @@ class CuentaCobroController extends Controller
 
             return response()->json(['success' => true, 'data' => $data]);
         } catch (\Exception $e) {
+            Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'edit', 'id' => $id]);
             return response()->json(['success' => false, 'message' => 'Error al cargar datos: ' . $e->getMessage()], 500);
         }
     }
@@ -963,7 +963,7 @@ class CuentaCobroController extends Controller
 
             return response()->json(['success' => true, 'message' => 'Registro actualizado correctamente.']);
         } catch (\Exception $e) {
-            Log::error('Error actualizando registro: ' . $e->getMessage());
+            Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'update', 'id' => $id]);
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }

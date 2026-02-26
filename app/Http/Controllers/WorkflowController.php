@@ -282,6 +282,7 @@ class WorkflowController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'cambiarEstado', 'cuenta_id' => $cuentaId]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cambiar estado: ' . $e->getMessage(),
@@ -366,6 +367,7 @@ class WorkflowController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
+            Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'assignResponsible', 'cuenta_id' => $cuentaId]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al cambiar estado: ' . $e->getMessage(),
@@ -742,7 +744,7 @@ class WorkflowController extends Controller
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error al iniciar siguiente cuenta: " . $e->getMessage());
+            Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'iniciarSiguienteCuenta', 'cuenta_id' => $cuentaId]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error al iniciar el ciclo: ' . $e->getMessage(),
