@@ -641,6 +641,7 @@ class WorkflowController extends Controller
         ])
             ->where('cuenta_cobro_id', $cuentaId)
             ->orderBy('fecha_transicion', 'asc')
+            ->orderBy('id', 'asc')
             ->get();
 
         return response()->json([

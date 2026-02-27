@@ -66,12 +66,14 @@
                 </div>
                 <div class="timeline-section-title d-flex align-items-center">
                     <i class="fas fa-history me-2"></i>Línea de Tiempo
-                    <span class="badge bg-white text-primary border ms-3 shadow-sm px-3 py-2" style="font-size: 0.8rem; border-radius: 20px;">
-                        <i class="fas fa-clock me-1 text-primary-light"></i> <span class="text-muted small fw-normal">Total:</span> {{ $cuenta->tiempo_total_ejecucion }}
+                    <span class="badge bg-white text-primary border ms-3 shadow-sm px-3 py-2"
+                        style="font-size: 0.8rem; border-radius: 20px;">
+                        <i class="fas fa-clock me-1 text-primary-light"></i> <span
+                            class="text-muted small fw-normal">Total:</span> {{ $cuenta->tiempo_total_ejecucion }}
                     </span>
                 </div>
                 <div class="timeline-container" id="timeline{{ $cuenta->id }}">
-                    @foreach ($cuenta->historialWorkflow->sortByDesc('fecha_transicion') as $index => $hist)
+                    @foreach ($cuenta->historialWorkflow->sortBy([['fecha_transicion', 'desc'], ['id', 'desc']]) as $index => $hist)
                         @php
                             $tipoDestino = $hist->estadoDestino?->tipo ?? 'INICIAL';
                             $colorClass = match ($tipoDestino) {

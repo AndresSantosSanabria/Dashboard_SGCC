@@ -171,6 +171,14 @@ function cambiarEstado(cuentaId, estadoDestinoId, requiereComentario, estadoNomb
                 } else {
                     // Normal flow - state changed successfully
                     window.showSnackbar('✅ ' + data.message, 'success');
+
+                    // Cierre automático del modal para evitar conflictos
+                    const modalElement = document.getElementById('modalCuenta' + cuentaId);
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+
                     if (window.recargarKanban) {
                         setTimeout(() => window.recargarKanban(), 1000);
                     } else {

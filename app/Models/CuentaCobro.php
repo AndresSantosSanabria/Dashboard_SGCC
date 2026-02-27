@@ -77,7 +77,9 @@ class CuentaCobro extends Model
 
     public function historialWorkflow()
     {
-        return $this->hasMany(HistorialWorkflow::class, 'cuenta_cobro_id');
+        return $this->hasMany(HistorialWorkflow::class, 'cuenta_cobro_id')
+            ->orderBy('fecha_transicion', 'desc')
+            ->orderBy('id', 'desc');
     }
 
     public function alertas()
@@ -159,15 +161,15 @@ class CuentaCobro extends Model
     {
         // Usar created_at como el inicio real del workflow en el sistema
         $primera = $this->created_at;
-        
+
         if (!$primera) return '0s';
 
         // Si la cuenta está finalizada, el tiempo se cuenta hasta la última transición en el historial
         // de lo contrario, se cuenta hasta el momento actual (now)
-        $ultima = $this->finalizada 
-            ? ($this->historialWorkflow()->max('fecha_transicion') ?? now()) 
+        $ultima = $this->finalizada
+            ? ($this->historialWorkflow()->max('fecha_transicion') ?? now())
             : now();
-        
+
         $ultima = \Carbon\Carbon::parse($ultima);
         $primera = \Carbon\Carbon::parse($primera);
 
@@ -180,7 +182,7 @@ class CuentaCobro extends Model
         if ($diff->d > 0) $partes[] = $diff->d . 'd';
         if ($diff->h > 0) $partes[] = $diff->h . 'h';
         if ($diff->i > 0) $partes[] = $diff->i . 'm';
-        
+
         // Siempre mostrar segundos si el tiempo es muy corto
         if (empty($partes) || $diff->s > 0) {
             $partes[] = $diff->s . 's';

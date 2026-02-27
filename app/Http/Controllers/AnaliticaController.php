@@ -49,12 +49,19 @@ class AnaliticaController extends Controller
             $query->where('responsable_actual_id', $request->responsable);
         }
 
+        // Filtro de fecha mejorado: Inclusive para fecha_radicacion OR created_at
         if ($request->filled('fecha_desde')) {
-            $query->whereDate('fecha_radicacion', '>=', $request->fecha_desde);
+            $query->where(function ($q) use ($request) {
+                $q->whereDate('fecha_radicacion', '>=', $request->fecha_desde)
+                    ->orWhereDate('created_at', '>=', $request->fecha_desde);
+            });
         }
 
         if ($request->filled('fecha_hasta')) {
-            $query->whereDate('fecha_radicacion', '<=', $request->fecha_hasta);
+            $query->where(function ($q) use ($request) {
+                $q->whereDate('fecha_radicacion', '<=', $request->fecha_hasta)
+                    ->orWhereDate('created_at', '<=', $request->fecha_hasta);
+            });
         }
 
         $cuentas = $query->get();
@@ -76,35 +83,39 @@ class AnaliticaController extends Controller
             $cuentas = $cuentas->where('avance_bi', '<=', (float)$request->porcentaje_max);
         }
 
+        // Agrupación por contrato para KPIs globales para evitar duplicidad de metas
+        $grupoPorContrato = $cuentas->groupBy('contrato_id');
+
         // KPIs
         $totalCuentas = $cuentas->count();
         $contratistasUnicos = $cuentas->pluck('contrato.contratista_id')->unique()->count();
 
+        // Cuentas en trámite (procesos activos en el workflow)
         $cuentasTramite = $cuentas->filter(function ($c) {
             $estado = strtolower($c->estadoActual->nombre ?? '');
             return !($c->finalizada || str_contains($estado, 'radicad') || str_contains($estado, 'completado'));
         })->count();
 
-        $cuentasFinalizadas = $cuentas->where('finalizada', true)->count();
-        $cuentasRadicadas = $cuentas->sum('radicadas_bi');
-        $pagosTotales = $cuentas->sum('numero_pagos_totales');
-        $avanceGlobal = $totalCuentas > 0 ? $cuentas->avg('avance_bi') : 0;
-
-        // Monto total gestionado basado en contratos únicos visibles
-        $contratosUnicosVisibles = $cuentas->groupBy('contrato_id');
-        $montoTotal = 0;
+        // Métricas agregadas por CONTRATO (Meta y Radicadas)
+        $pagosTotales = 0;
+        $cuentasRadicadas = 0;
         $indicadorTotalUnico = 0;
+        $montoTotal = 0;
 
-        foreach ($contratosUnicosVisibles as $id => $group) {
-            $primerCC = $group->first();
-            $contrato = $primerCC->contrato;
-            
-            // Lógica corregida: Sumatoria simple de Valor RP
-            $indicadorTotalUnico += $contrato->registrosPresupuestales->sum('valor_rp');
-            
-            // Monto total del contrato (base)
-            $montoTotal += $contrato->monto_total ?? 0;
+        foreach ($grupoPorContrato as $contratoId => $ccGroup) {
+            // Se toma el valor más alto de meta y radicadas reportado para este contrato
+            $pagosTotales += $ccGroup->max('numero_pagos_totales') ?? 0;
+            $cuentasRadicadas += $ccGroup->max('radicadas_bi') ?? 0;
+
+            $contrato = $ccGroup->first()->contrato;
+            if ($contrato) {
+                $indicadorTotalUnico += $contrato->registrosPresupuestales->sum('valor_rp');
+                $montoTotal += $contrato->monto_total ?? 0;
+            }
         }
+
+        $avanceGlobal = $pagosTotales > 0 ? round(($cuentasRadicadas / $pagosTotales) * 100, 2) : 0;
+        $cuentasFinalizadas = $cuentas->where('finalizada', true)->count();
 
         // Datos para filtros
         $supervisores = Supervisor::where('es_activo', true)
@@ -148,9 +159,19 @@ class AnaliticaController extends Controller
         }
 
         return view('Analitica.analitica', compact(
-            'cuentas', 'totalCuentas', 'contratistasUnicos', 'cuentasTramite',
-            'cuentasFinalizadas', 'cuentasRadicadas', 'pagosTotales',
-            'avanceGlobal', 'montoTotal', 'indicadorTotalUnico', 'supervisores', 'responsables', 'chartData'
+            'cuentas',
+            'totalCuentas',
+            'contratistasUnicos',
+            'cuentasTramite',
+            'cuentasFinalizadas',
+            'cuentasRadicadas',
+            'pagosTotales',
+            'avanceGlobal',
+            'montoTotal',
+            'indicadorTotalUnico',
+            'supervisores',
+            'responsables',
+            'chartData'
         ));
     }
 
@@ -204,7 +225,7 @@ class AnaliticaController extends Controller
                 });
 
                 $promedioMinutos = $duracionesMinutos->avg();
-                
+
                 return [
                     'bloque'          => $group->first()->bloque->nombre ?? 'N/A',
                     'promedio_horas'  => round($promedioMinutos / 60, 2),
@@ -258,7 +279,7 @@ class AnaliticaController extends Controller
     private function getTimelineData($cuentas)
     {
         $cuentaIds = $cuentas->pluck('id')->toArray();
-        
+
         // Determinar el rango de fechas para el gráfico
         $fechaHasta = request('fecha_hasta') ? Carbon::parse(request('fecha_hasta')) : Carbon::now();
         $fechaDesde = request('fecha_desde') ? Carbon::parse(request('fecha_desde')) : $fechaHasta->copy()->subDays(30);

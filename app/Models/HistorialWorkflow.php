@@ -64,7 +64,8 @@ class HistorialWorkflow extends Model
     public function scopePorCuenta($query, $cuentaCobroId)
     {
         return $query->where('cuenta_cobro_id', $cuentaCobroId)
-            ->orderBy('fecha_transicion', 'desc');
+            ->orderBy('fecha_transicion', 'desc')
+            ->orderBy('id', 'desc');
     }
 
     public function scopePorBloque($query, $bloqueId)

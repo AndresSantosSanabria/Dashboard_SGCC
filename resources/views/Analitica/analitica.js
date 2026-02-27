@@ -386,8 +386,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     document.getElementById('fecha_desde').value = start;
                     document.getElementById('fecha_hasta').value = end;
 
-                    const displayStart = instance.formatDate(selectedDates[0], "d M");
-                    const displayEnd = instance.formatDate(selectedDates[1], "d M, Y");
+                    const displayStart = instance.formatDate(selectedDates[0], "d F, Y");
+                    const displayEnd = instance.formatDate(selectedDates[1], "d F, Y");
                     document.getElementById('dateDisplay').textContent = `${displayStart} - ${displayEnd}`;
 
                     refreshDashboard();

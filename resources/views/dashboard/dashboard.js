@@ -130,6 +130,22 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
+    // Validation for VALOR RP
+    const inputValorRP = document.getElementById("inputValorRP");
+    if (inputValorRP) {
+        inputValorRP.addEventListener("input", function () {
+            const errorMsg = document.getElementById("errorValorRP");
+            // validity.badInput detects when letters are typed in a number field
+            if (this.validity.badInput) {
+                errorMsg.classList.remove("d-none");
+                this.classList.add("is-invalid");
+            } else {
+                errorMsg.classList.add("d-none");
+                this.classList.remove("is-invalid");
+            }
+        });
+    }
+
     // Remove loading state on page load
     const container = document.querySelector('.premium-loading-container');
     if (container) {

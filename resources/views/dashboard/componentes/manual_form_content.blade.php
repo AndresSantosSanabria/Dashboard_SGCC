@@ -23,7 +23,10 @@
 </div>
 <div class="col-md-4">
     <label class="form-label">VALOR RP</label>
-    <input type="number" step="0.01" name="VALOR RP" class="form-control">
+    <input type="number" step="0.01" name="VALOR RP" class="form-control" id="inputValorRP">
+    <div id="errorValorRP" class="text-danger small mt-1 d-none" style="font-size: 0.75rem;">
+        <i class="fas fa-exclamation-circle me-1"></i>Sólo se permiten números en este campo
+    </div>
 </div>
 
 {{-- Fila 3 --}}
