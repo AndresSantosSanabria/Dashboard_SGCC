@@ -84,7 +84,11 @@
             </div>
             <div class="form-group-saas">
                 <label>Tipo de Contratista</label>
-                <input type="text" id="filterTipo" class="input-saas" placeholder="Persona Natural/Jurídica...">
+                <select id="filterTipo" class="input-saas">
+                    <option value="">Todos</option>
+                    <option value="Natural">Natural</option>
+                    <option value="Juridica">Juridica</option>
+                </select>
             </div>
             <div class="form-group-saas">
                 <label>Estado SECOP</label>
@@ -147,10 +151,10 @@
 
                             <th colspan="4" style="border-right: 2px solid #e2e8f0; text-align: center;">INFORMACIÓN BASE
                             </th>
-                            <th colspan="14"
+                            <th colspan="13"
                                 style="border-right: 2px solid #e2e8f0; text-align: center; background: #FEF9C3; color: #854D0E;">
                                 CHECKLIST TÉCNICO</th>
-                            <th colspan="2"
+                            <th colspan="3"
                                 style="border-right: 2px solid #e2e8f0; text-align: center; background: #F0FDF4; color: #166534;">
                                 GESTIÓN</th>
                             <th colspan="36"
@@ -172,11 +176,11 @@
                             <th class="col-md-saas">TIPO CONTRATISTA</th>
                             <th class="col-md-saas">SUPERVISOR</th>
                             <th style="width: 250px; min-width: 250px;">OBJETO</th>
-                            <th class="col-md-saas text-end">VALOR CONTRATO</th>
+                            <th class="col-md-saas text-end" style="border-right: 2px solid #e2e8f0">VALOR CONTRATO</th>
                             <th class="col-narrow-saas">LINK</th>
                             <th class="col-narrow-saas">PLANTA</th>
                             <th class="col-md-saas">CONCEPTO PRECON.</th>
-                            <th class="col-md-saas" style="border-right: 2px solid #e2e8f0">CDP</th>
+                            <th class="col-md-saas">CDP</th>
 
                             {{-- Checklist Técnico --}}
                             <th class="col-narrow-saas">ESTUDIOS PREVIOS</th>
@@ -187,10 +191,10 @@
                             <th class="col-narrow-saas">ACTA INICIO</th>
                             <th class="col-narrow-saas">DELEGACIÓN</th>
                             <th class="col-narrow-saas">ARL</th>
-                            <th class="col-narrow-saas">RP</th>
-                            <th class="col-narrow-saas" style="border-right: 2px solid #e2e8f0">ESTADO SECOP</th>
+                            <th class="col-narrow-saas" style="border-right: 2px solid #e2e8f0">RP</th>
 
                             {{-- Gestión --}}
+                            <th class="col-narrow-saas">ESTADO SECOP</th>
                             <th class="col-narrow-saas">APROBADO</th>
                             <th class="col-narrow-saas" style="border-right: 2px solid #e2e8f0">CIERRE</th>
 
@@ -253,8 +257,13 @@
                                     name="numero_proceso" id="mProceso" class="form-control"></div>
                             <div class="col-md-4"><label class="small fw-bold">Nº CONTRATO</label><input type="text"
                                     name="numero_contrato" id="mContrato" class="form-control" required></div>
-                            <div class="col-md-4"><label class="small fw-bold">TIPO CONTRATISTA</label><input
-                                    type="text" name="tipo_contratista" id="mTipoCont" class="form-control"></div>
+                            <div class="col-md-4"><label class="small fw-bold">TIPO CONTRATISTA</label>
+                                <select name="tipo_contratista" id="mTipoCont" class="form-select">
+                                    <option value="">VACÍO</option>
+                                    <option value="Natural">Natural</option>
+                                    <option value="Juridica">Juridica</option>
+                                </select>
+                            </div>
                             <div class="col-md-6"><label class="small fw-bold">CONTRATISTA / RAZÓN SOCIAL</label>
                                 <input type="text" name="contratista_nombre" id="mContratistaNom" class="form-control" required>
                             </div>
@@ -280,15 +289,8 @@
                                     <i class="bi bi-check2-square me-1"></i> CHECKLIST TÉCNICO
                                 </h6>
                             </div>
-                            <div class="col-md-6"><label class="small fw-bold text-warning">LINK SECOP</label><input type="text"
+                            <div class="col-md-12"><label class="small fw-bold text-warning">LINK SECOP</label><input type="text"
                                     name="link_secop" id="mLink" class="form-control" placeholder="URL del contrato"></div>
-                            <div class="col-md-6"><label class="small fw-bold text-warning">CDP</label><input type="text"
-                                    name="cdp_codigo" id="mCdp" class="form-control"></div>
-                            <div class="col-md-5"><label class="small fw-bold text-warning">NO PLANTA</label><input type="text"
-                                    name="no_planta" id="mNoPlanta" class="form-control"></div>
-                            <div class="col-md-7"><label class="small fw-bold text-warning">CONCEPTO PRECONTRACTUAL</label><input
-                                    type="text" name="concepto_precontractual" id="mConcepto" class="form-control">
-                            </div>
 
                             <!-- Sección: Gestión -->
                             <div class="col-12 mt-4">
@@ -334,6 +336,30 @@
             </div>
         </div>
     </div>
+
+    {{-- MODAL ESPECÍFICO PARA LINK SECOP --}}
+    <div class="modal fade" id="modalLink" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+                <div class="modal-header bg-primary text-white">
+                    <h6 class="modal-title fw-bold">Actualizar Link SECOP</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="small fw-bold mb-1">URL del contrato en SECOP</label>
+                        <input type="url" id="linkInput" class="form-control" placeholder="https://www.secop.gov.co/...">
+                        <input type="hidden" id="linkContratoId">
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary px-4 fw-bold" onclick="saveLink()">Guardar Link</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
     <script>
         async function updateBadgeStatus(event, id, field, status, element) {
@@ -412,7 +438,7 @@
         }
 
         document.getElementById('filterContrato').addEventListener('input', debouncedFilter);
-        document.getElementById('filterTipo').addEventListener('input', debouncedFilter);
+        document.getElementById('filterTipo').addEventListener('change', () => applyAdvancedFilters());
         document.getElementById('filterEstado').addEventListener('change', () => applyAdvancedFilters());
         document.getElementById('filterSecop').addEventListener('change', () => applyAdvancedFilters());
         document.getElementById('filterMes').addEventListener('change', () => applyAdvancedFilters());
@@ -519,8 +545,6 @@
             document.getElementById('mValor').value = c.monto_total || 0;
             document.getElementById('mObjeto').value = c.objeto || '';
             document.getElementById('mSup').value = c.supervisor_id || '';
-            document.getElementById('mNoPlanta').value = c.no_planta || '';
-            document.getElementById('mConcepto').value = c.concepto_precontractual || '';
             document.getElementById('mAbogado').value = c.abogado_responsable || '';
             document.getElementById('mContador').value = c.contador_responsable || '';
             document.getElementById('mSaldo').value = c.saldo || 0;
@@ -530,7 +554,6 @@
             document.getElementById('mApagado').value = c.aprobado_y_pagado || '';
             document.getElementById('mMcierre').value = c.modificaciones_y_cierre || '';
             document.getElementById('mLink').value = c.link_secop || '';
-            document.getElementById('mCdp').value = c.cdp_codigo || '';
             new bootstrap.Modal(document.getElementById('modalManagement')).show();
         }
 
@@ -604,6 +627,47 @@
                 supervisor_id: document.getElementById('filterSup').value
             });
             window.location.href = "{{ route('seguimiento.export') }}?" + params.toString();
+        }
+
+        function openLinkModal(id, currentLink) {
+            document.getElementById('linkContratoId').value = id;
+            document.getElementById('linkInput').value = currentLink || '';
+            new bootstrap.Modal(document.getElementById('modalLink')).show();
+        }
+
+        async function saveLink() {
+            const id = document.getElementById('linkContratoId').value;
+            const link = document.getElementById('linkInput').value;
+            
+            try {
+                const res = await fetch('{{ route('seguimiento.update-status') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    body: JSON.stringify({
+                        id,
+                        field: 'link_secop',
+                        status: link
+                    })
+                });
+
+                if (res.ok) {
+                    bootstrap.Modal.getInstance(document.getElementById('modalLink')).hide();
+                    if (window.showSnackbar) {
+                        window.showSnackbar('Link actualizado correctamente', 'success');
+                    } else {
+                        alert('Link actualizado correctamente');
+                    }
+                    applyAdvancedFilters();
+                } else {
+                    alert('Error al actualizar el link');
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error de conexión');
+            }
         }
     </script>
 @endsection

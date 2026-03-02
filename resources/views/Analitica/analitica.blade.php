@@ -88,17 +88,17 @@
                     <form action="{{ route('analitica') }}" method="GET" class="row g-3 align-items-end" id="filterForm">
                         <input type="hidden" name="fecha_desde" id="fecha_desde" value="{{ request('fecha_desde') }}">
                         <input type="hidden" name="fecha_hasta" id="fecha_hasta" value="{{ request('fecha_hasta') }}">
-                        <div class="col-lg-2 col-md-4 col-6">
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
                             <label class="form-label">N° Contrato</label>
                             <input type="text" name="contrato" class="form-control" placeholder="Ej: 119-2025"
                                 value="{{ request('contrato') }}">
                         </div>
-                        <div class="col-lg-2 col-md-4 col-6">
-                            <label class="form-label">N° de Cuenta</label>
+                        <div class="col-xl-1 col-lg-3 col-md-4 col-6">
+                            <label class="form-label">N° Cuenta</label>
                             <input type="text" name="numero_cuenta" class="form-control" placeholder="Ej: 1"
                                 value="{{ request('numero_cuenta') }}">
                         </div>
-                        <div class="col-lg-2 col-md-4 col-6">
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
                             <label class="form-label">Supervisor</label>
                             <select name="supervisor" class="form-select">
                                 <option value="">Todos</option>
@@ -109,7 +109,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-lg-2 col-md-4 col-6">
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
                             <label class="form-label">Responsable</label>
                             <select name="responsable" class="form-select">
                                 <option value="">Todos</option>
@@ -120,7 +120,18 @@
                                 @endforeach
                             </select>
                         </div>
-                        <div class="col-lg-2 col-md-4 col-6">
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                            <label class="form-label">Estado</label>
+                            <select name="estado" class="form-select">
+                                <option value="">Todos</option>
+                                @foreach ($estados as $est)
+                                    <option value="{{ $est->nombre }}"
+                                        {{ request('estado') == $est->nombre ? 'selected' : '' }}>
+                                        {{ $est->nombre }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
                             <label class="form-label">% Avance</label>
                             <div class="px-1">
                                 <div id="rangeSlider" class="mt-2"></div>
@@ -130,10 +141,10 @@
                                     value="{{ request('porcentaje_max', 100) }}">
                             </div>
                         </div>
-                        <div class="col-lg-2 col-md-4 col-6">
+                        <div class="col-xl-1 col-lg-4 col-md-4 col-12">
                             <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-filter flex-grow-1">
-                                    <i class="bi bi-funnel me-1"></i>Filtrar
+                                <button type="submit" class="btn btn-filter flex-grow-1" title="Aplicar filtros">
+                                    <i class="bi bi-funnel"></i>
                                 </button>
                                 <button type="button" id="btnReset" class="btn btn-reset" title="Limpiar filtros">
                                     <i class="bi bi-arrow-counterclockwise"></i>

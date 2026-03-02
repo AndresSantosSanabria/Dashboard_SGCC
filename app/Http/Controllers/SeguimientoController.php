@@ -59,6 +59,7 @@ class SeguimientoController extends Controller
         }
 
         $checklistFields = [
+            'planta_status', 'concepto_status', 'cdp_status',
             'estudios_previos_status', 'soportes_status', 'idoneidad_status', 
             'acuerdo_confidencialidad_status', 'clausulado_status', 
             'acta_inicio_status', 'delegacion_status', 'arl_status', 'rpc_status'
@@ -343,7 +344,7 @@ class SeguimientoController extends Controller
                 );
             } 
             // 2. Campos directos del Contrato (ej: secop_estado_contrato)
-            elseif (in_array($field, ['secop_estado_contrato', 'aprobado_y_pagado', 'modificaciones_y_cierre'])) {
+            elseif (in_array($field, ['secop_estado_contrato', 'aprobado_y_pagado', 'modificaciones_y_cierre', 'link_secop', 'tipo_contratista'])) {
                 $contrato = Contrato::findOrFail($request->id);
                 $contrato->$field = $status;
                 $contrato->save();

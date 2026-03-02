@@ -7,6 +7,7 @@ use App\Models\Contrato;
 use App\Models\Supervisor;
 use App\Models\Usuario;
 use App\Models\BloqueWorkflow;
+use App\Models\EstadoWorkflow;
 use App\Models\HistorialWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +48,12 @@ class AnaliticaController extends Controller
 
         if ($request->filled('responsable')) {
             $query->where('responsable_actual_id', $request->responsable);
+        }
+
+        if ($request->filled('estado')) {
+            $query->whereHas('estadoActual', function ($q) use ($request) {
+                $q->where('nombre', $request->estado);
+            });
         }
 
         // Filtro de fecha mejorado: Inclusive para fecha_radicacion OR created_at
@@ -128,6 +135,12 @@ class AnaliticaController extends Controller
             ->unique('nombre_completo')
             ->sortBy('nombre_completo');
 
+        $estados = EstadoWorkflow::where('es_activo', true)
+            ->select('nombre')
+            ->distinct()
+            ->orderBy('nombre')
+            ->get();
+
         // Datos para Gráficos
         $chartData = [
             'gap_chart'          => $this->getGapData($cuentas),
@@ -171,6 +184,7 @@ class AnaliticaController extends Controller
             'indicadorTotalUnico',
             'supervisores',
             'responsables',
+            'estados',
             'chartData'
         ));
     }
