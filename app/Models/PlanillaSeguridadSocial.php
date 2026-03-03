@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-use App\Traits\Auditable;
-
 class PlanillaSeguridadSocial extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $table = 'planillas_seguridad_social';
 
@@ -41,7 +40,7 @@ class PlanillaSeguridadSocial extends Model
     // Accessor para periodo completo
     public function getPeriodoCompletoAttribute()
     {
-        return $this->mes_planilla . ' ' . $this->anio_planilla;
+        return $this->mes_planilla.' '.$this->anio_planilla;
     }
 
     // Scopes

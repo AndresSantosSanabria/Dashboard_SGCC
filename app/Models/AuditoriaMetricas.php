@@ -12,6 +12,7 @@ class MetricaDiaria extends Model
     protected $table = 'metricas_diarias';
 
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $primaryKey = ['fecha', 'bloque_id'];
@@ -63,6 +64,7 @@ class MetricaDiaria extends Model
         if ($this->cantidad_procesada == 0) {
             return 0;
         }
+
         return round(($this->cantidad_aprobada / $this->cantidad_procesada) * 100, 2);
     }
 
@@ -72,6 +74,7 @@ class MetricaDiaria extends Model
         if ($this->cantidad_procesada == 0) {
             return 0;
         }
+
         return round(($this->cantidad_devuelta / $this->cantidad_procesada) * 100, 2);
     }
 }

@@ -3,11 +3,12 @@
 namespace Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Foundation\Testing\WithFaker;
 use Tests\TestCase;
 
 class RoleResponsibilityTest extends TestCase
 {
+    use RefreshDatabase;
+
     /**
      * A basic feature test example.
      */
@@ -25,23 +26,23 @@ class RoleResponsibilityTest extends TestCase
             'nombre' => 'Administrador Test',
             'permisos' => ['es_admin' => true],
             'es_activo' => true,
-            'tipo' => 'SISTEMA'
+            'tipo' => 'SISTEMA',
         ]);
 
         $user = \App\Models\Usuario::factory()->create([
             'rol_id' => $adminRole->id,
             'user' => 'admin_test',
-            'password' => bcrypt('password')
+            'password' => bcrypt('password'),
         ]);
 
         $this->actingAs($user);
 
         // 2. Data to Submit
         $data = [
-            'nombre' => 'Rol Test Responsable ' . rand(1000, 9999),
+            'nombre' => 'Rol Test Responsable '.rand(1000, 9999),
             'descripcion' => 'Descripcion de prueba',
             'permisos_matrix' => [
-                'dashboard' => ['view' => 1]
+                'dashboard' => ['view' => 1],
             ],
             'es_responsable_sap' => 1,
             'es_responsable_facturacion' => 1,
@@ -71,24 +72,24 @@ class RoleResponsibilityTest extends TestCase
             'nombre' => 'Administrador Test 2',
             'permisos' => ['es_admin' => true],
             'es_activo' => true,
-            'tipo' => 'SISTEMA'
+            'tipo' => 'SISTEMA',
         ]);
 
         $user = \App\Models\Usuario::factory()->create([
             'rol_id' => $adminRole->id,
             'user' => 'admin_test_2',
-            'password' => bcrypt('password')
+            'password' => bcrypt('password'),
         ]);
 
         $this->actingAs($user);
 
         // Create initial role
         $role = \App\Models\Role::create([
-            'nombre' => 'Rol Update Test ' . rand(1000, 9999),
+            'nombre' => 'Rol Update Test '.rand(1000, 9999),
             'descripcion' => 'Initial Description',
             'tipo' => 'PERSONALIZADO',
             'es_activo' => true,
-            'permisos' => ['responsable_sap' => true, 'responsable_facturacion' => true]
+            'permisos' => ['responsable_sap' => true, 'responsable_facturacion' => true],
         ]);
 
         // Update Data - Uncheck Facturacion
@@ -96,7 +97,7 @@ class RoleResponsibilityTest extends TestCase
             'nombre' => $role->nombre,
             'descripcion' => 'Updated Description',
             'permisos_matrix' => [
-                'dashboard' => ['view' => 1]
+                'dashboard' => ['view' => 1],
             ],
             'es_responsable_sap' => 1,
             // 'es_responsable_facturacion' => 0, // Not sending it means false/unchecked

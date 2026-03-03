@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Usuario;
-use App\Models\Role;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Auth;
 use App\Models\Contrato;
+use App\Models\Role;
+use App\Models\Usuario;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 
 class ConfiguracionController extends Controller
 {
@@ -22,7 +22,7 @@ class ConfiguracionController extends Controller
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
         // Check if user is admin
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para acceder a esta sección');
         }
 
@@ -38,7 +38,7 @@ class ConfiguracionController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para acceder a esta sección');
         }
 
@@ -55,7 +55,7 @@ class ConfiguracionController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para realizar esta acción');
         }
 
@@ -90,7 +90,7 @@ class ConfiguracionController extends Controller
             'contratos_editar',
             'cuentas_ver',
             'cuentas_editar',
-            'reportes_exportar'
+            'reportes_exportar',
         ];
 
         // Only save permissions that are explicitly TRUE
@@ -106,7 +106,7 @@ class ConfiguracionController extends Controller
             $permisos['bloques_permitidos'] = true;
         } else {
             $bloques = $request->input('bloques_permitidos', []);
-            if (!empty($bloques)) {
+            if (! empty($bloques)) {
                 $permisos['bloques_permitidos'] = $bloques;
             }
         }
@@ -116,17 +116,18 @@ class ConfiguracionController extends Controller
         $isPersonalizado = $role && str_contains(strtolower($role->nombre), 'personalizado');
 
         try {
-            $usuario = new Usuario();
+            $usuario = new Usuario;
             $usuario->fill($validated);
             // Only assign permisos if it's a personalized role AND there are true values
-            $usuario->permisos = ($isPersonalizado && !empty($permisos)) ? $permisos : null;
+            $usuario->permisos = ($isPersonalizado && ! empty($permisos)) ? $permisos : null;
             $usuario->save();
 
             return redirect()->route('configuracion.index')
                 ->with('success', 'Usuario creado exitosamente');
         } catch (\Exception $e) {
             Contrato::logException($e, 'usuarios', $request->all());
-            return redirect()->back()->withInput()->with('error', 'Error al crear usuario: ' . $e->getMessage());
+
+            return redirect()->back()->withInput()->with('error', 'Error al crear usuario: '.$e->getMessage());
         }
     }
 
@@ -137,7 +138,7 @@ class ConfiguracionController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para acceder a esta sección');
         }
 
@@ -155,7 +156,7 @@ class ConfiguracionController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para realizar esta acción');
         }
 
@@ -166,12 +167,12 @@ class ConfiguracionController extends Controller
             'segundo_nombre' => 'nullable|string|max:50',
             'primer_apellido' => 'required|string|max:50',
             'segundo_apellido' => 'nullable|string|max:50',
-            'user' => 'required|string|max:150|unique:usuarios,user,' . $id,
+            'user' => 'required|string|max:150|unique:usuarios,user,'.$id,
             'password' => 'nullable|string|min:6|confirmed',
             'rol_id' => 'required|exists:roles,id',
         ]);
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
@@ -195,7 +196,7 @@ class ConfiguracionController extends Controller
             'contratos_editar',
             'cuentas_ver',
             'cuentas_editar',
-            'reportes_exportar'
+            'reportes_exportar',
         ];
 
         // Only save permissions that are explicitly TRUE
@@ -211,12 +212,12 @@ class ConfiguracionController extends Controller
             $permisos['bloques_permitidos'] = true;
         } else {
             $bloques = $request->input('bloques_permitidos', []);
-            if (!empty($bloques)) {
+            if (! empty($bloques)) {
                 $permisos['bloques_permitidos'] = $bloques;
             }
         }
 
-        // IMPORTANT: If the role is NOT personalized, clear individual permissions 
+        // IMPORTANT: If the role is NOT personalized, clear individual permissions
         // to ensure the user inherits everything from the role without overrides.
         // We find the role name to check for "personalized" keyword.
         $role = Role::find($request->rol_id);
@@ -225,14 +226,15 @@ class ConfiguracionController extends Controller
         try {
             $usuario->fill($validated);
             // Only assign permisos if it's a personalized role AND there are true values
-            $usuario->permisos = ($isPersonalizado && !empty($permisos)) ? $permisos : null;
+            $usuario->permisos = ($isPersonalizado && ! empty($permisos)) ? $permisos : null;
             $usuario->save();
 
             return redirect()->route('configuracion.index')
                 ->with('success', 'Usuario actualizado exitosamente');
         } catch (\Exception $e) {
             Contrato::logException($e, 'usuarios', $request->all());
-            return redirect()->back()->withInput()->with('error', 'Error al actualizar usuario: ' . $e->getMessage());
+
+            return redirect()->back()->withInput()->with('error', 'Error al actualizar usuario: '.$e->getMessage());
         }
     }
 
@@ -243,7 +245,7 @@ class ConfiguracionController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
         }
 
@@ -253,22 +255,23 @@ class ConfiguracionController extends Controller
         if ($usuario->id === Auth::id()) {
             return response()->json([
                 'success' => false,
-                'message' => 'No puedes desactivar tu propia cuenta'
+                'message' => 'No puedes desactivar tu propia cuenta',
             ], 400);
         }
 
         try {
-            $usuario->es_activo = !$usuario->es_activo;
+            $usuario->es_activo = ! $usuario->es_activo;
             $usuario->fecha_inactivacion = $usuario->es_activo ? null : now();
             $usuario->save();
 
             return response()->json([
                 'success' => true,
                 'message' => $usuario->es_activo ? 'Usuario activado' : 'Usuario desactivado',
-                'es_activo' => $usuario->es_activo
+                'es_activo' => $usuario->es_activo,
             ]);
         } catch (\Exception $e) {
             Contrato::logException($e, 'usuarios', ['id' => $id]);
+
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }

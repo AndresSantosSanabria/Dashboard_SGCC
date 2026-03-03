@@ -77,6 +77,7 @@ class EstadoBloqueCuenta extends Model
     public function getTiempoEnBloqueHorasAttribute()
     {
         $fechaFin = $this->fecha_completado_bloque ?? now();
+
         return $this->fecha_ingreso_bloque->diffInHours($fechaFin);
     }
 
@@ -84,9 +85,10 @@ class EstadoBloqueCuenta extends Model
     public function getCumpleSlaAttribute()
     {
         $slaHoras = $this->bloque->sla_horas;
-        if (!$slaHoras) {
+        if (! $slaHoras) {
             return null;
         }
+
         return $this->tiempo_en_bloque_horas <= $slaHoras;
     }
 }

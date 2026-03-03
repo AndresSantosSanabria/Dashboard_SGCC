@@ -1,9 +1,9 @@
 <?php
 
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Database\QueryException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,7 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Capturar errores de base de datos (QueryException) en la auditoría
@@ -32,7 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
                         'clase' => get_class($e),
                         'url' => $url,
                         'metodo' => $method,
-                        'ubicacion' => $e->getFile() . ':' . $e->getLine(),
+                        'ubicacion' => $e->getFile().':'.$e->getLine(),
                         'trace' => substr($e->getTraceAsString(), 0, 800),
                     ],
                     'ip_origen' => request()->ip() ?? '127.0.0.1',
@@ -40,7 +40,7 @@ return Application::configure(basePath: dirname(__DIR__))
                 ]);
             } catch (\Exception $ex) {
                 // Si falla la auditoría, al menos loguear en archivo
-                \Illuminate\Support\Facades\Log::error('Fallo al auditar QueryException: ' . $ex->getMessage());
+                \Illuminate\Support\Facades\Log::error('Fallo al auditar QueryException: '.$ex->getMessage());
             }
         })->stop();
 
@@ -70,14 +70,14 @@ return Application::configure(basePath: dirname(__DIR__))
                         'clase' => get_class($e),
                         'url' => request()->fullUrl(),
                         'metodo' => request()->method(),
-                        'ubicacion' => $e->getFile() . ':' . $e->getLine(),
+                        'ubicacion' => $e->getFile().':'.$e->getLine(),
                         'trace' => substr($e->getTraceAsString(), 0, 800),
                     ],
                     'ip_origen' => request()->ip() ?? '127.0.0.1',
                     'user_agent' => substr(request()->userAgent() ?? 'none', 0, 200),
                 ]);
             } catch (\Exception $ex) {
-                \Illuminate\Support\Facades\Log::error('Fallo al auditar excepción: ' . $ex->getMessage());
+                \Illuminate\Support\Facades\Log::error('Fallo al auditar excepción: '.$ex->getMessage());
             }
         })->stop();
     })->create();

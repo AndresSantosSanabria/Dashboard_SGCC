@@ -26,7 +26,7 @@ return new class extends Migration
             $table->timestamp('ultimo_login')->nullable();
             $table->rememberToken();
             $table->timestamps();
-            
+
             $table->index('user');
             $table->index('rol_id');
         });

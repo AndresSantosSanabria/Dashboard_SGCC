@@ -36,7 +36,7 @@ return new class extends Migration
                 'rpc_status',
                 'acta_inicio_status',
                 'delegacion_status',
-                'poliza_status'
+                'poliza_status',
             ]);
         });
     }

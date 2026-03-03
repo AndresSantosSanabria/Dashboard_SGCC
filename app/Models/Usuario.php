@@ -2,15 +2,14 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-use App\Traits\Auditable;
-
 class Usuario extends Authenticatable
 {
-    use HasFactory, Notifiable, Auditable;
+    use Auditable, HasFactory, Notifiable;
 
     protected $table = 'usuarios';
 
@@ -87,9 +86,9 @@ class Usuario extends Authenticatable
     public function getNombreCompletoAttribute()
     {
         return trim(
-            $this->primer_nombre . ' ' .
-                $this->segundo_nombre . ' ' .
-                $this->primer_apellido . ' ' .
+            $this->primer_nombre.' '.
+                $this->segundo_nombre.' '.
+                $this->primer_apellido.' '.
                 $this->segundo_apellido
         );
     }
@@ -197,6 +196,7 @@ class Usuario extends Authenticatable
             $filteredBloques = array_filter($bloquesUsuario, function ($b) {
                 return $b !== null && $b !== '' && $b !== false;
             });
+
             return array_values($filteredBloques);
         }
 
@@ -212,6 +212,7 @@ class Usuario extends Authenticatable
                 $filteredBloques = array_filter($bloquesRole, function ($b) {
                     return $b !== null && $b !== '' && $b !== false;
                 });
+
                 return array_values($filteredBloques);
             }
         }

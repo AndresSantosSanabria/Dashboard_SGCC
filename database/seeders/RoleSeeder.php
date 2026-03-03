@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Role;
+use Illuminate\Database\Seeder;
 
 class RoleSeeder extends Seeder
 {
@@ -35,7 +35,7 @@ class RoleSeeder extends Seeder
                     'reportes_exportar' => true,
                     'logs_ver' => true,
                 ],
-                'es_activo' => true
+                'es_activo' => true,
             ]
         );
 
@@ -62,7 +62,7 @@ class RoleSeeder extends Seeder
                     'reportes_exportar' => true,
                     'logs_ver' => false,
                 ],
-                'es_activo' => true
+                'es_activo' => true,
             ]
         );
 
@@ -89,7 +89,7 @@ class RoleSeeder extends Seeder
                     'reportes_exportar' => false,     // Por seguridad, no exporta data masiva
                     'logs_ver' => false,
                 ],
-                'es_activo' => true
+                'es_activo' => true,
             ]
         );
 
@@ -116,7 +116,7 @@ class RoleSeeder extends Seeder
                     'reportes_exportar' => true,      // Auditor puede necesitar evidencia
                     'logs_ver' => true,               // VISUALIZA LOGS
                 ],
-                'es_activo' => true
+                'es_activo' => true,
             ]
         );
     }

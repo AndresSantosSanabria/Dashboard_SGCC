@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-use App\Traits\Auditable;
-
 class Supervisor extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $table = 'supervisores';
 
@@ -37,6 +36,6 @@ class Supervisor extends Model
     // Accessor
     public function getNombreCompletoAttribute()
     {
-        return trim($this->nombres . ' ' . $this->apellidos);
+        return trim($this->nombres.' '.$this->apellidos);
     }
 }

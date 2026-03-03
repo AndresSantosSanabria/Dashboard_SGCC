@@ -16,7 +16,7 @@ class AuditoriaController extends Controller
         $query = Auditoria::with('usuario')->latest();
 
         if ($request->filled('tabla')) {
-            $query->where('tabla_afectada', 'LIKE', '%' . $request->tabla . '%');
+            $query->where('tabla_afectada', 'LIKE', '%'.$request->tabla.'%');
         }
 
         if ($request->filled('accion')) {
@@ -48,6 +48,7 @@ class AuditoriaController extends Controller
     public function show($id)
     {
         $auditoria = Auditoria::with('usuario')->findOrFail($id);
+
         return response()->json($auditoria);
     }
 }

@@ -2,26 +2,26 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\Usuario;
-use App\Models\Role;
-use App\Models\Contratista;
-use App\Models\Supervisor;
-use App\Models\Contrato;
-use App\Models\RegistroPresupuestal;
-use App\Models\CuentaCobro;
-use App\Models\PlanillaSeguridadSocial;
 use App\Models\BloqueWorkflow;
-use App\Models\EstadoWorkflow;
-use App\Models\EstadoBloqueCuenta;
-use App\Models\Modalidad;
 use App\Models\Concepto;
-use App\Models\Planta;
-use App\Models\EntidadSeguridadSocial;
+use App\Models\Contratista;
 use App\Models\ContratistaSeguridadSocial;
+use App\Models\Contrato;
+use App\Models\CuentaCobro;
+use App\Models\EntidadSeguridadSocial;
+use App\Models\EstadoBloqueCuenta;
+use App\Models\EstadoWorkflow;
+use App\Models\Modalidad;
+use App\Models\PlanillaSeguridadSocial;
+use App\Models\Planta;
+use App\Models\RegistroPresupuestal;
+use App\Models\Role;
+use App\Models\Supervisor;
+use App\Models\Usuario;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 
 class DashboardTestDataSeeder extends Seeder
 {
@@ -37,7 +37,7 @@ class DashboardTestDataSeeder extends Seeder
                 'primer_apellido' => 'Hidalgo',
                 'password' => Hash::make('password123'),
                 'rol_id' => $adminRole->id,
-                'es_activo' => true
+                'es_activo' => true,
             ]
         );
 
@@ -48,7 +48,7 @@ class DashboardTestDataSeeder extends Seeder
                 'primer_apellido' => 'Gestión',
                 'password' => Hash::make('password123'),
                 'rol_id' => $adminRole->id,
-                'es_activo' => true
+                'es_activo' => true,
             ]
         );
 
@@ -74,25 +74,25 @@ class DashboardTestDataSeeder extends Seeder
 
             // Estado inicial por bloque
             EstadoWorkflow::firstOrCreate(
-                ['codigo' => $b['codigo'] . '_INI'],
+                ['codigo' => $b['codigo'].'_INI'],
                 [
                     'bloque_id' => $bloque->id,
-                    'nombre' => 'PENDIENTE ' . strtoupper($b['nombre']),
+                    'nombre' => 'PENDIENTE '.strtoupper($b['nombre']),
                     'tipo' => 'INICIAL',
                     'es_inicial' => true,
-                    'es_activo' => true
+                    'es_activo' => true,
                 ]
             );
 
             // Estado final por bloque
             EstadoWorkflow::firstOrCreate(
-                ['codigo' => $b['codigo'] . '_FIN'],
+                ['codigo' => $b['codigo'].'_FIN'],
                 [
                     'bloque_id' => $bloque->id,
-                    'nombre' => strtoupper($b['nombre']) . ' COMPLETADO',
+                    'nombre' => strtoupper($b['nombre']).' COMPLETADO',
                     'tipo' => 'FINAL',
                     'es_final' => true,
-                    'es_activo' => true
+                    'es_activo' => true,
                 ]
             );
         }
@@ -103,7 +103,7 @@ class DashboardTestDataSeeder extends Seeder
             [
                 'razon_social' => 'LAURA FERNANDA SOTO AMAYA',
                 'tipo_persona' => 'NATURAL',
-                'es_activo' => true
+                'es_activo' => true,
             ]
         );
 
@@ -138,7 +138,7 @@ class DashboardTestDataSeeder extends Seeder
                 'monto_total' => 64473280,
                 'fecha_inicio' => Carbon::create(2025, 1, 14),
                 'fecha_fin' => Carbon::create(2025, 9, 13),
-                'es_activo' => true
+                'es_activo' => true,
             ]
         );
 
@@ -149,7 +149,7 @@ class DashboardTestDataSeeder extends Seeder
                 'contrato_id' => $contrato->id,
                 'fecha_rp' => Carbon::create(2025, 1, 14),
                 'valor_rp' => 64473280,
-                'estado' => 'ACTIVO'
+                'estado' => 'ACTIVO',
             ]
         );
 
@@ -189,7 +189,7 @@ class DashboardTestDataSeeder extends Seeder
             'numero_planilla' => '12',
             'valor_total' => 0,
             'fecha_pago' => Carbon::create(2025, 10, 5),
-            'es_ultima' => true
+            'es_ultima' => true,
         ]);
 
         // 9. Estados de bloques (Historial para el dashboard)
@@ -221,7 +221,7 @@ class DashboardTestDataSeeder extends Seeder
             'fecha_ingreso_bloque' => Carbon::create(2026, 2, 6),
             'fecha_completado_bloque' => Carbon::create(2026, 2, 6),
             'bloque_completado' => true,
-            'observaciones' => 'PASA'
+            'observaciones' => 'PASA',
         ]);
 
         // SAP (Claudia)
@@ -244,7 +244,7 @@ class DashboardTestDataSeeder extends Seeder
             'fecha_ingreso_bloque' => Carbon::create(2026, 2, 6),
             'fecha_completado_bloque' => Carbon::create(2026, 2, 6),
             'bloque_completado' => true,
-            'observaciones' => 'FACTURADA'
+            'observaciones' => 'FACTURADA',
         ]);
 
         // FIRMA

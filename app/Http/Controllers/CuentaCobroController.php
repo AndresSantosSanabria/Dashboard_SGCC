@@ -2,46 +2,57 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\CuentaCobro;
-use App\Models\Contrato;
-use App\Models\Contratista;
-use App\Models\Supervisor;
-use App\Models\RegistroPresupuestal;
-use App\Models\PlanillaSeguridadSocial;
 use App\Models\BloqueWorkflow;
-use App\Models\EstadoWorkflow;
-use App\Models\EstadoBloqueCuenta;
-use App\Models\Modalidad;
 use App\Models\Concepto;
-use App\Models\Planta;
-use App\Models\EntidadSeguridadSocial;
+use App\Models\Contratista;
 use App\Models\ContratistaSeguridadSocial;
+use App\Models\Contrato;
+use App\Models\CuentaCobro;
+use App\Models\EntidadSeguridadSocial;
+use App\Models\EstadoBloqueCuenta;
+use App\Models\EstadoWorkflow;
+use App\Models\Modalidad;
+use App\Models\PlanillaSeguridadSocial;
+use App\Models\Planta;
+use App\Models\RegistroPresupuestal;
+use App\Models\Supervisor;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Spatie\SimpleExcel\SimpleExcelReader;
 use Spatie\SimpleExcel\SimpleExcelWriter;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
 
 class CuentaCobroController extends Controller
 {
     private $bloquesCache = [];
+
     private $estadosCache = [];
 
     private function getBlockIdByCode(string $code): int
     {
-        if (isset($this->blocksCache[$code])) return $this->blocksCache[$code];
+        if (isset($this->blocksCache[$code])) {
+            return $this->blocksCache[$code];
+        }
         $id = BloqueWorkflow::where('codigo', $code)->value('id');
-        if (!$id) throw new \Exception("Bloque con código '$code' no encontrado en la base de datos.");
+        if (! $id) {
+            throw new \Exception("Bloque con código '$code' no encontrado en la base de datos.");
+        }
+
         return $this->blocksCache[$code] = $id;
     }
 
     private function getStateIdByCode(string $code): int
     {
-        if (isset($this->statesCache[$code])) return $this->statesCache[$code];
+        if (isset($this->statesCache[$code])) {
+            return $this->statesCache[$code];
+        }
         $id = EstadoWorkflow::where('codigo', $code)->value('id');
-        if (!$id) throw new \Exception("Estado con código '$code' no encontrado en la base de datos.");
+        if (! $id) {
+            throw new \Exception("Estado con código '$code' no encontrado en la base de datos.");
+        }
+
         return $this->statesCache[$code] = $id;
     }
 
@@ -49,7 +60,7 @@ class CuentaCobroController extends Controller
     {
         $nit = $request->input('nit');
 
-        if (!$nit) {
+        if (! $nit) {
             return response()->json(['error' => 'NIT no proporcionado'], 400);
         }
 
@@ -61,7 +72,7 @@ class CuentaCobroController extends Controller
             ->latest('updated_at')
             ->first();
 
-        if (!$cuenta) {
+        if (! $cuenta) {
             return response()->json(['error' => 'No se encontró ninguna cuenta asociada a este NIT/Cédula.'], 404);
         }
 
@@ -93,16 +104,16 @@ class CuentaCobroController extends Controller
             'bloque',
             'estadoOrigen',
             'estadoDestino',
-            'usuarioAccion'
+            'usuarioAccion',
         ])
-        ->where('cuenta_cobro_id', $cuentaId)
+            ->where('cuenta_cobro_id', $cuentaId)
         // Only show events from the current cycle onwards
-        ->where('fecha_transicion', '>=', $fechaInicioActual)
+            ->where('fecha_transicion', '>=', $fechaInicioActual)
         // Exclude the internal cycle-start marker ("Inicio manual del ciclo - Cuenta #X")
-        ->where(function($q) {
-            $q->whereNull('comentarios')
-              ->orWhere('comentarios', 'not like', 'Inicio manual del ciclo%');
-        });
+            ->where(function ($q) {
+                $q->whereNull('comentarios')
+                    ->orWhere('comentarios', 'not like', 'Inicio manual del ciclo%');
+            });
 
         $historial = $query->orderBy('fecha_transicion', 'asc')->get();
 
@@ -110,10 +121,9 @@ class CuentaCobroController extends Controller
             'success' => true,
             'historial' => $historial,
             'tiempo_total' => $cuenta->tiempo_total_ejecucion,
-            'fecha_inicio' => $historial->count() > 0 ? $historial->first()->fecha_transicion->format('d/m/Y H:i') : null
+            'fecha_inicio' => $historial->count() > 0 ? $historial->first()->fecha_transicion->format('d/m/Y H:i') : null,
         ]);
     }
-
 
     private function getNextInvoiceNumber($contratoId)
     {
@@ -127,6 +137,7 @@ class CuentaCobroController extends Controller
 
         return ($maxInvoice ?? 0) + 1;
     }
+
     public function index(Request $request)
     {
         // Registrar lectura de dashboard (Auditoría)
@@ -142,7 +153,7 @@ class CuentaCobroController extends Controller
         $canViewOnly = $user->puedeAccederConsolidado();
 
         // DEBUG BLOCK
-        if (!$canViewOnly && request()->has('debug')) {
+        if (! $canViewOnly && request()->has('debug')) {
             dd([
                 'DEBUG INFO' => 'Access Denied',
                 'User ID' => $user->id,
@@ -157,7 +168,7 @@ class CuentaCobroController extends Controller
             ]);
         }
 
-        if (!$canViewOnly) {
+        if (! $canViewOnly) {
             if ($user->puedeAccederWorkflow()) {
                 return redirect()->route('workflow');
             }
@@ -182,7 +193,7 @@ class CuentaCobroController extends Controller
             'estadosBloques.responsable',
             'responsableActual',
             'estadoActual',
-            'bloqueActual'
+            'bloqueActual',
         ]);
 
         // 2. Filter by "Solo asignados" if applicable
@@ -207,20 +218,20 @@ class CuentaCobroController extends Controller
         // Nivel 1: Barra de Búsqueda Superior
         if ($request->filled('searchContrato')) {
             $query->whereHas('contrato', function ($q) use ($request) {
-                $q->where('numero_contrato', 'like', '%' . $request->searchContrato . '%');
+                $q->where('numero_contrato', 'like', '%'.$request->searchContrato.'%');
             });
         }
 
         if ($request->filled('searchContratista')) {
             $query->whereHas('contrato.contratista', function ($q) use ($request) {
-                $q->where('razon_social', 'like', '%' . $request->searchContratista . '%')
-                    ->orWhere('representante_legal', 'like', '%' . $request->searchContratista . '%');
+                $q->where('razon_social', 'like', '%'.$request->searchContratista.'%')
+                    ->orWhere('representante_legal', 'like', '%'.$request->searchContratista.'%');
             });
         }
 
         if ($request->filled('searchCedula')) {
             $query->whereHas('contrato.contratista', function ($q) use ($request) {
-                $q->where('nit', 'like', '%' . $request->searchCedula . '%');
+                $q->where('nit', 'like', '%'.$request->searchCedula.'%');
             });
         }
 
@@ -295,7 +306,7 @@ class CuentaCobroController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->tienePermiso('editar_dashboard')) {
+        if (! $user->tienePermiso('editar_dashboard')) {
             return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar importaciones.'], 403);
         }
         try {
@@ -320,7 +331,7 @@ class CuentaCobroController extends Controller
             $skippedReasons = [];
 
             $bloqueRad = BloqueWorkflow::where('codigo', 'REV1')->first();
-            if (!$bloqueRad) {
+            if (! $bloqueRad) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Error de configuración: No se encontró el bloque inicial (REV1).',
@@ -328,7 +339,7 @@ class CuentaCobroController extends Controller
             }
 
             $estadoRad = $bloqueRad->estadoInicial;
-            if (!$estadoRad) {
+            if (! $estadoRad) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Error de configuración: No se encontró el estado inicial para el bloque RAD.',
@@ -351,6 +362,7 @@ class CuentaCobroController extends Controller
                         Log::warning($msg);
                         $skippedCount++;
                         $skippedReasons[] = $msg;
+
                         continue;
                     }
 
@@ -361,10 +373,11 @@ class CuentaCobroController extends Controller
                         Log::info($msg);
                         $skippedCount++;
                         $skippedReasons[] = $msg;
+
                         continue;
                     }
 
-                    DB::transaction(function () use ($data, &$importCount, $bloqueRad, $estadoRad, $filaActual, $numContrato) {
+                    DB::transaction(function () use ($data, &$importCount, $filaActual, $numContrato) {
 
                         // 3. CONTRATISTA - NIT/CÉDULA
                         $nit = $data['CEDULA'] ?? $data['NIT'] ?? $data['DOCUMENTO'] ?? null;
@@ -384,21 +397,21 @@ class CuentaCobroController extends Controller
                         // --- LÓGICA DEGuessing PARA EXCEL DESPLAZADO ---
                         $rawFechaRP = $data['FECHA RP'] ?? null;
                         $rawValorRP = $data['VALOR RP'] ?? $data['VALOR CONTRATO'] ?? null;
-                        
+
                         $finalValorRP = $rawValorRP;
                         $finalFechaRP = $rawFechaRP;
 
                         // Si FECHA RP parece un precio (tiene $) y VALOR RP parece una fecha u vacío, intercambiamos
                         if (is_string($rawFechaRP) && str_contains($rawFechaRP, '$')) {
                             $finalValorRP = $rawFechaRP;
-                            $finalFechaRP = (is_string($rawValorRP) && !str_contains($rawValorRP, '$')) ? $rawValorRP : null;
+                            $finalFechaRP = (is_string($rawValorRP) && ! str_contains($rawValorRP, '$')) ? $rawValorRP : null;
                         }
 
                         // 4. SUPERVISOR (Fallback si viene desplazado a FECHA DE TERMINACIÓN)
                         $supervisorNombre = $data['SUPERVISOR'] ?? '';
                         $fechaTerminacionRaw = $data['FECHA DE TERMINACIÓN'] ?? '';
-                        
-                        if ((empty($supervisorNombre) || $supervisorNombre == 'PENDIENTE') && !empty($fechaTerminacionRaw) && !is_numeric($fechaTerminacionRaw) && !str_contains($fechaTerminacionRaw, '-')) {
+
+                        if ((empty($supervisorNombre) || $supervisorNombre == 'PENDIENTE') && ! empty($fechaTerminacionRaw) && ! is_numeric($fechaTerminacionRaw) && ! str_contains($fechaTerminacionRaw, '-')) {
                             $supervisorNombre = $fechaTerminacionRaw;
                         }
 
@@ -444,10 +457,12 @@ class CuentaCobroController extends Controller
                         Log::info("Fila $filaActual: Creando cuenta de cobro");
 
                         $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $data['N° CUENTA'] ?? $data['NUMERO CUENTA'] ?? 0;
-                        if (empty($numeroCuenta) || $numeroCuenta == 0) $numeroCuenta = 1;
+                        if (empty($numeroCuenta) || $numeroCuenta == 0) {
+                            $numeroCuenta = 1;
+                        }
                         $valorRP = $this->parseAmount($finalValorRP ?? 0);
                         $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? $data['TOTAL PAGOS'] ?? null;
-                        $pagosTotales = (!empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int)$pagosTotalesRaw : null;
+                        $pagosTotales = (! empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int) $pagosTotalesRaw : null;
 
                         // Determinar bloque actual basado en datos históricos
                         $radHacienda = strtoupper($data['RADICADA EN HACIENDA'] ?? '');
@@ -459,19 +474,19 @@ class CuentaCobroController extends Controller
                         if ($estaFinalizada) {
                             $bloqueId = $this->getBlockIdByCode('FIN');
                             $estadoId = $this->getStateIdByCode('FIN_OK');
-                        } elseif (!empty($data['RADICADA EN HACIENDA']) && ($radHacienda === 'SI' || $radHacienda === 'SÍ')) {
+                        } elseif (! empty($data['RADICADA EN HACIENDA']) && ($radHacienda === 'SI' || $radHacienda === 'SÍ')) {
                             $bloqueId = $this->getBlockIdByCode('HAC');
                             $estadoId = $this->getStateIdByCode('HAC_OK');
-                        } elseif (!empty($data['FIRMA SECRETARIO'])) {
+                        } elseif (! empty($data['FIRMA SECRETARIO'])) {
                             $bloqueId = $this->getBlockIdByCode('FIR');
                             $estadoId = $this->getStateIdByCode('FIR_ESP');
-                        } elseif (!empty($data['EN FACTURACIÓN'])) {
+                        } elseif (! empty($data['EN FACTURACIÓN'])) {
                             $bloqueId = $this->getBlockIdByCode('FAC');
                             $estadoId = $this->getStateIdByCode('FAC_ESP');
-                        } elseif (!empty($data['ENVIADA A INGRESO MERCANCIA SAP']) || !empty($data['ENVIADA SAP'])) {
+                        } elseif (! empty($data['ENVIADA A INGRESO MERCANCIA SAP']) || ! empty($data['ENVIADA SAP'])) {
                             $bloqueId = $this->getBlockIdByCode('SAP');
                             $estadoId = $this->getStateIdByCode('SAP_ESP');
-                        } elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
+                        } elseif (! empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
                             // Si viene dato en la columna REV1, buscarlo
                             $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
                                 ->where('bloque_id', $bloqueId)
@@ -481,23 +496,25 @@ class CuentaCobroController extends Controller
                         // --- DETECTAR DESPLAZAMIENTO DE COLUMNAS (SHIFT) ---
                         $valPorcentajeRaw = $data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? '';
                         $isShifted = false;
-                        
+
                         // Si en la columna de Facturas o Porcentaje viene texto (como SANITAS o REVISOR FISCAL)
                         $checkShift = $data['PORCENTAJE DE CUENTAS'] ?? '';
-                        if (is_string($checkShift) && !empty($checkShift) && !is_numeric($checkShift) && !str_contains($checkShift, '%') && !str_contains($checkShift, ',')) {
+                        if (is_string($checkShift) && ! empty($checkShift) && ! is_numeric($checkShift) && ! str_contains($checkShift, '%') && ! str_contains($checkShift, ',')) {
                             $isShifted = true;
                         }
 
                         $facturasRadVal = $this->parseAmount($valPorcentajeRaw);
                         $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? $data['TOTAL PAGOS'] ?? null;
-                        $pagosTotales = (!empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int)$pagosTotalesRaw : null;
+                        $pagosTotales = (! empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int) $pagosTotalesRaw : null;
 
                         $porcentajeCalculado = ($pagosTotales > 0) ? (($facturasRadVal / $pagosTotales) * 100) : 0;
-                        if ($porcentajeCalculado > 100) $porcentajeCalculado = 100; // Cap a 100%
+                        if ($porcentajeCalculado > 100) {
+                            $porcentajeCalculado = 100;
+                        } // Cap a 100%
 
                         $fechaRadicacionExcel = $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? $data['FECHA RADICACION'] ?? null);
                         $radicadoPor = $data['RADICADO POR'] ?? null;
-                        
+
                         // Si está desplazado, reasignar campos de auditoría y fechas
                         if ($isShifted) {
                             $radicadoPor = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? $radicadoPor;
@@ -508,7 +525,7 @@ class CuentaCobroController extends Controller
                             'contrato_id' => $contrato->id,
                             'numero_cuenta' => $numeroCuenta,
                             'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
-                            'fecha_radicacion' => $fechaRadicacionExcel, 
+                            'fecha_radicacion' => $fechaRadicacionExcel,
                             'numero_pagos_totales' => $pagosTotales,
                             'numero_facturas_radicadas' => $facturasRadVal,
 
@@ -533,38 +550,38 @@ class CuentaCobroController extends Controller
                             $mesPlanilla = $data['ENTIDAD ARL'] ?? 'RESERVA';
                         }
 
-                        if ($mesPlanilla && !empty($mesPlanilla)) {
+                        if ($mesPlanilla && ! empty($mesPlanilla)) {
                             PlanillaSeguridadSocial::create([
                                 'cuenta_cobro_id' => $cuenta->id,
-                                'numero_planilla' => 'PLANILLA-' . $numeroCuenta . '-' . $filaActual,
+                                'numero_planilla' => 'PLANILLA-'.$numeroCuenta.'-'.$filaActual,
                                 'mes_planilla' => strtoupper($mesPlanilla),
-                                'es_ultima' => true
+                                'es_ultima' => true,
                             ]);
                         }
 
                         $importCount++;
                     });
                 } catch (\Exception $e) {
-                    $msgError = "Fila $filaActual error: " . $e->getMessage();
+                    $msgError = "Fila $filaActual error: ".$e->getMessage();
                     Log::error($msgError);
                     $errors[] = $msgError;
                     Contrato::logException($e, 'cuentas_cobro', ['fila' => $filaActual]);
                 }
             }
 
-            $summary = "Importación finalizada.\n" .
-                "✅ Éxito: $importCount\n" .
-                "⏭️ Saltados (Duplicados/Vacíos): $skippedCount\n" .
-                "❌ Errores: " . count($errors);
+            $summary = "Importación finalizada.\n".
+                "✅ Éxito: $importCount\n".
+                "⏭️ Saltados (Duplicados/Vacíos): $skippedCount\n".
+                '❌ Errores: '.count($errors);
 
-            if (!empty($skippedReasons)) {
-                Log::info("Resumen de filas saltadas:\n" . implode("\n", $skippedReasons));
+            if (! empty($skippedReasons)) {
+                Log::info("Resumen de filas saltadas:\n".implode("\n", $skippedReasons));
             }
 
             if ($importCount === 0 && count($errors) > 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => "No se pudo importar nada. Principales errores:\n" . implode("\n", array_slice($errors, 0, 3)),
+                    'message' => "No se pudo importar nada. Principales errores:\n".implode("\n", array_slice($errors, 0, 3)),
                 ], 422);
             }
 
@@ -578,14 +595,15 @@ class CuentaCobroController extends Controller
                     'importados' => $importCount,
                     'saltados' => $skippedCount,
                     'errores' => count($errors),
-                    'log_saltados' => array_slice($skippedReasons, 0, 10) // Enviar solo 10 para no saturar
-                ]
+                    'log_saltados' => array_slice($skippedReasons, 0, 10), // Enviar solo 10 para no saturar
+                ],
             ]);
         } catch (\Exception $e) {
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'importExcel']);
+
             return response()->json([
                 'success' => false,
-                'message' => "Error crítico: " . $e->getMessage()
+                'message' => 'Error crítico: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -594,7 +612,7 @@ class CuentaCobroController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->tienePermiso('editar_dashboard')) {
+        if (! $user->tienePermiso('editar_dashboard')) {
             return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar cargas manuales.'], 403);
         }
         try {
@@ -627,11 +645,11 @@ class CuentaCobroController extends Controller
             $bloqueRad = BloqueWorkflow::where('codigo', 'REV1')->first();
             $estadoRad = $bloqueRad?->estadoInicial;
 
-            if (!$bloqueRad || !$estadoRad) {
+            if (! $bloqueRad || ! $estadoRad) {
                 return response()->json(['success' => false, 'message' => 'Error de configuración de workflow (REV1).'], 500);
             }
 
-            DB::transaction(function () use ($data, $bloqueRad, $estadoRad, $numContrato) {
+            DB::transaction(function () use ($data, $numContrato) {
                 // 1. Contratista
                 $nit = $data['CEDULA'] ?? $data['NIT'] ?? '0';
                 $contratista = Contratista::firstOrCreate(
@@ -664,11 +682,11 @@ class CuentaCobroController extends Controller
                     'fecha_inicio' => $this->parseDate($data['FECHA DE INICIO'] ?? null),
                     'fecha_fin' => $this->parseDate($data['FECHA DE TERMINACIÓN'] ?? null),
                     'monto_total' => $this->parseAmount($data['VALOR RP'] ?? 0),
-                    'es_activo' => true
+                    'es_activo' => true,
                 ]);
 
                 // 5. Registro Presupuestal
-                if (!empty($data['RP'])) {
+                if (! empty($data['RP'])) {
                     RegistroPresupuestal::create([
                         'numero_rp' => $data['RP'],
                         'contrato_id' => $contrato->id,
@@ -682,32 +700,34 @@ class CuentaCobroController extends Controller
 
                 // 7. Cuenta de Cobro
                 $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? 0;
-                if (empty($numeroCuenta) || $numeroCuenta == 0) $numeroCuenta = 1;
+                if (empty($numeroCuenta) || $numeroCuenta == 0) {
+                    $numeroCuenta = 1;
+                }
                 $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
                 $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? null;
-                $pagosTotales = (!empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int)$pagosTotalesRaw : null;
+                $pagosTotales = (! empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int) $pagosTotalesRaw : null;
 
                 // Determinar bloque y estado actual basado en el formulario (de mayor a menor importancia)
                 $bloqueId = $this->getBlockIdByCode('REV1');
                 $estadoId = $this->getStateIdByCode('REV1_SIN'); // Default: Sin tramite
 
-                if (!empty($data['RADICADA EN HACIENDA'])) {
+                if (! empty($data['RADICADA EN HACIENDA'])) {
                     $bloqueId = $this->getBlockIdByCode('HAC');
                     $estadoId = EstadoWorkflow::where('nombre', $data['RADICADA EN HACIENDA'])
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('HAC_ESP');
-                } elseif (!empty($data['FIRMA SECRETARIO'])) {
+                } elseif (! empty($data['FIRMA SECRETARIO'])) {
                     $bloqueId = $this->getBlockIdByCode('FIR');
                     $estadoId = EstadoWorkflow::where('nombre', $data['FIRMA SECRETARIO'])
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('FIR_ESP');
-                } elseif (!empty($data['EN FACTURACIÓN'])) {
+                } elseif (! empty($data['EN FACTURACIÓN'])) {
                     $bloqueId = $this->getBlockIdByCode('FAC');
                     $estadoId = EstadoWorkflow::where('nombre', $data['EN FACTURACIÓN'])
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('FAC_ESP');
-                } elseif (!empty($data['ENVIADA A INGRESO MERCANCIA SAP'])) {
+                } elseif (! empty($data['ENVIADA A INGRESO MERCANCIA SAP'])) {
                     $bloqueId = $this->getBlockIdByCode('SAP');
                     $estadoId = EstadoWorkflow::where('nombre', $data['ENVIADA A INGRESO MERCANCIA SAP'])
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('SAP_ESP');
-                } elseif (!empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
+                } elseif (! empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
                     $bloqueId = $this->getBlockIdByCode('REV1');
                     $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_SIN');
@@ -730,7 +750,7 @@ class CuentaCobroController extends Controller
                 $cuenta = CuentaCobro::create([
                     'contrato_id' => $contrato->id,
                     'numero_cuenta' => $numeroCuenta,
-                                        'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
+                    'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
 
                     'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null),
                     'numero_pagos_totales' => $pagosTotales,
@@ -756,20 +776,21 @@ class CuentaCobroController extends Controller
                 if ($mesPlanilla) {
                     PlanillaSeguridadSocial::create([
                         'cuenta_cobro_id' => $cuenta->id,
-                        'numero_planilla' => 'MANUAL-' . $numeroCuenta . '-' . uniqid(),
+                        'numero_planilla' => 'MANUAL-'.$numeroCuenta.'-'.uniqid(),
                         'mes_planilla' => strtoupper($mesPlanilla),
-                        'es_ultima' => true
+                        'es_ultima' => true,
                     ]);
                 }
             });
 
             // Registrar en auditoría la carga manual
-            Contrato::logManualAudit(null, 'INSERT_MANUAL', "Carga manual exitosa del contrato " . ($numContrato ?? ''), 'cuentas_cobro');
+            Contrato::logManualAudit(null, 'INSERT_MANUAL', 'Carga manual exitosa del contrato '.($numContrato ?? ''), 'cuentas_cobro');
 
             return response()->json(['success' => true, 'message' => 'Registro cargado correctamente a la base de datos.']);
         } catch (\Exception $e) {
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'storeManual', 'contrato' => $numContrato ?? 'desconocido']);
-            return response()->json(['success' => false, 'message' => "Error: " . $e->getMessage()], 500);
+
+            return response()->json(['success' => false, 'message' => 'Error: '.$e->getMessage()], 500);
         }
     }
 
@@ -780,12 +801,12 @@ class CuentaCobroController extends Controller
                 'contrato.contratista',
                 'contrato.supervisor',
                 'contrato.registrosPresupuestales',
-                'planillasSeguridadSocial' => fn($q) => $q->where('es_ultima', true),
+                'planillasSeguridadSocial' => fn ($q) => $q->where('es_ultima', true),
                 'contrato.contratista.seguridadSocialVigente.entidadSalud',
                 'contrato.contratista.seguridadSocialVigente.entidadPension',
                 'contrato.contratista.seguridadSocialVigente.entidadArl',
                 'estadosBloques.bloque',
-                'estadosBloques.estadoActual'
+                'estadosBloques.estadoActual',
             ])->findOrFail($id);
 
             /** @var \App\Models\RegistroPresupuestal $rp */
@@ -841,7 +862,8 @@ class CuentaCobroController extends Controller
             return response()->json(['success' => true, 'data' => $data]);
         } catch (\Exception $e) {
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'edit', 'id' => $id]);
-            return response()->json(['success' => false, 'message' => 'Error al cargar datos: ' . $e->getMessage()], 500);
+
+            return response()->json(['success' => false, 'message' => 'Error al cargar datos: '.$e->getMessage()], 500);
         }
     }
 
@@ -868,16 +890,16 @@ class CuentaCobroController extends Controller
                 ]);
 
                 // 2. Actualizar Contratista
-                if (!empty($data['CONTRATISTA'])) {
+                if (! empty($data['CONTRATISTA'])) {
                     $contrato->contratista->update(['razon_social' => $data['CONTRATISTA']]);
                 }
                 // (Nota: Si cambia la cédula, debería buscar/crear otro contratista, pero por simplicidad de edición asumimos actualización de datos del mismo)
-                if (!empty($data['CEDULA'])) {
+                if (! empty($data['CEDULA'])) {
                     $contrato->contratista->update(['nit' => $data['CEDULA']]);
                 }
 
                 // 3. Supervisor
-                if (!empty($data['SUPERVISOR'])) {
+                if (! empty($data['SUPERVISOR'])) {
                     $supervisor = Supervisor::firstOrCreate(
                         ['nombres' => $data['SUPERVISOR'], 'apellidos' => ''],
                         ['cargo' => 'SUPERVISOR']
@@ -900,17 +922,19 @@ class CuentaCobroController extends Controller
                 // 6. Cuenta de Cobro
                 $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
                 $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? null;
-                $pagosTotales = (!empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int)$pagosTotalesRaw : null;
+                $pagosTotales = (! empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int) $pagosTotalesRaw : null;
 
                 // Preservar numero_facturas_radicadas actual: NO sobrescribir con el valor del formulario
                 $facturasRadicadasActual = $cuenta->numero_facturas_radicadas ?? 0;
 
                 $newNumCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta;
-                if (empty($newNumCuenta) || $newNumCuenta == 0) $newNumCuenta = 1;
+                if (empty($newNumCuenta) || $newNumCuenta == 0) {
+                    $newNumCuenta = 1;
+                }
 
                 $cuenta->update([
                     'numero_cuenta' => $newNumCuenta,
-                                        'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
+                    'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
 
                     'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion,
                     'numero_pagos_totales' => $pagosTotales,
@@ -944,7 +968,7 @@ class CuentaCobroController extends Controller
                             'ultima_factura_hacienda' => $nextNum,
                         ]);
                     } else {
-                        Log::info("Skipping generation: Current factura is present and valid.");
+                        Log::info('Skipping generation: Current factura is present and valid.');
                     }
                 }
 
@@ -964,7 +988,8 @@ class CuentaCobroController extends Controller
             return response()->json(['success' => true, 'message' => 'Registro actualizado correctamente.']);
         } catch (\Exception $e) {
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'update', 'id' => $id]);
-            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
+
+            return response()->json(['success' => false, 'message' => 'Error: '.$e->getMessage()], 500);
         }
     }
 
@@ -1005,7 +1030,7 @@ class CuentaCobroController extends Controller
             'FECHA DE RADICACIÓN',
             'ULTIMA FACTURA RADICADA HACIENDA',
             'OBSERVACIÓN DEVOLUCIÓN HACIENDA',
-            'DIFERENCIA CUENTAS TOTALES - VS CUENTAS RADICADAS'
+            'DIFERENCIA CUENTAS TOTALES - VS CUENTAS RADICADAS',
         ];
 
         return SimpleExcelWriter::streamDownload('plantilla_cuentas_cobro.xlsx')
@@ -1016,24 +1041,34 @@ class CuentaCobroController extends Controller
 
     private function parseDate($value)
     {
-        if (!$value || $value === '0' || $value === 'N/A' || $value === '') return null;
-        if ($value === '1') return now();
+        if (! $value || $value === '0' || $value === 'N/A' || $value === '') {
+            return null;
+        }
+        if ($value === '1') {
+            return now();
+        }
 
         // Si es un objeto ya (como Carbon o DateTime)
-        if ($value instanceof \DateTimeInterface) return Carbon::instance($value);
+        if ($value instanceof \DateTimeInterface) {
+            return Carbon::instance($value);
+        }
 
         if (is_string($value)) {
             $value = trim($value);
             // Si parece un monto (contiene $) no es una fecha válida
-            if (str_contains($value, '$')) return null;
+            if (str_contains($value, '$')) {
+                return null;
+            }
             // Si es algo como "15 MESES" tampoco es fecha
-            if (preg_match('/[0-9]+\s*MESES/i', $value)) return null;
+            if (preg_match('/[0-9]+\s*MESES/i', $value)) {
+                return null;
+            }
         }
 
         try {
             // Si es numérico y parece fecha Excel (días desde 1900-01-01)
             if (is_numeric($value) && $value > 40000 && $value < 60000) {
-                return Carbon::create(1899, 12, 30)->addDays((int)$value);
+                return Carbon::create(1899, 12, 30)->addDays((int) $value);
             }
 
             return Carbon::parse($value);
@@ -1062,7 +1097,7 @@ class CuentaCobroController extends Controller
                     'fecha_ingreso_bloque' => $cuenta->fecha_radicacion ?? $cuenta->updated_at ?? now(),
                     'fecha_completado_bloque' => $fechaRev,
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => !empty($fechaRev),
+                    'bloque_completado' => ! empty($fechaRev),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
@@ -1082,7 +1117,7 @@ class CuentaCobroController extends Controller
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DEVUELTA DE REVISIÓN O ENVIADA A SAP'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaSap,
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => !empty($fechaSap),
+                    'bloque_completado' => ! empty($fechaSap),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
@@ -1102,7 +1137,7 @@ class CuentaCobroController extends Controller
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA DE ENVIO A FACTURACIÓN O DEVUELTA A CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaFac,
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => !empty($fechaFac),
+                    'bloque_completado' => ! empty($fechaFac),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
@@ -1122,7 +1157,7 @@ class CuentaCobroController extends Controller
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE GENERA FACURACIÓN'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaFir,
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => !empty($fechaFir),
+                    'bloque_completado' => ! empty($fechaFir),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
@@ -1142,7 +1177,7 @@ class CuentaCobroController extends Controller
                     'fecha_ingreso_bloque' => $this->parseDate($data['FECHA EN QUE SE DEJAN PARA FIRMA DEL SECRETARIO'] ?? null) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
                     'fecha_completado_bloque' => $fechaHac,
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => !empty($fechaHac),
+                    'bloque_completado' => ! empty($fechaHac),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
@@ -1165,15 +1200,23 @@ class CuentaCobroController extends Controller
 
     private function parseAmount($value)
     {
-        if ($value instanceof \DateTimeInterface) return 0.0;
-        if (is_numeric($value)) return (float) $value;
-        if (empty($value)) return 0.0;
+        if ($value instanceof \DateTimeInterface) {
+            return 0.0;
+        }
+        if (is_numeric($value)) {
+            return (float) $value;
+        }
+        if (empty($value)) {
+            return 0.0;
+        }
 
         // Limpiar caracteres comunes
-        $clean = str_replace(['$', ' ', '%'], '', (string)$value);
+        $clean = str_replace(['$', ' ', '%'], '', (string) $value);
 
         // Si no hay números, retornar 0
-        if (!preg_match('/[0-9]/', $clean)) return 0.0;
+        if (! preg_match('/[0-9]/', $clean)) {
+            return 0.0;
+        }
 
         // Caso especial: $80.591.600 (Puntos como miles)
         // Si hay múltiples puntos, o si hay un punto y luego una coma
@@ -1204,14 +1247,18 @@ class CuentaCobroController extends Controller
 
     private function obtenerOCrearEntidad(?string $nombre, string $tipo): ?int
     {
-        if (empty($nombre)) return null;
+        if (empty($nombre)) {
+            return null;
+        }
 
         // Normalizar nombre
         $nombre = strtoupper(trim($nombre));
 
         // Filtrar casos especiales
         $especiales = ['NA', 'N/A', 'NINGUNA', 'REVISOR FISCAL', 'PARAFISCALES Y CONTADOR', 'SIN DATO', '0'];
-        if (in_array($nombre, $especiales)) return null;
+        if (in_array($nombre, $especiales)) {
+            return null;
+        }
 
         // Buscar o crear en BD (Sin cache global para evitar errores en transacciones fallidas)
         $entidad = EntidadSeguridadSocial::firstOrCreate(
@@ -1227,7 +1274,7 @@ class CuentaCobroController extends Controller
         // Detect shifted mapping
         $isShifted = false;
         $valCheck = $datos['PORCENTAJE DE CUENTAS'] ?? '';
-        if (is_string($valCheck) && !empty($valCheck) && !is_numeric($valCheck) && !str_contains($valCheck, '%')) {
+        if (is_string($valCheck) && ! empty($valCheck) && ! is_numeric($valCheck) && ! str_contains($valCheck, '%')) {
             $isShifted = true;
         }
 

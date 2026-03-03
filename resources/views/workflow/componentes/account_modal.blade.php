@@ -111,10 +111,20 @@
                                 </div>
                                 @if ($hist->estadoOrigen)
                                     <div class="timeline-transition">
-                                        <span>From:
-                                            {{ $hist->estadoOrigen->nombre }}</span><i
-                                            class="fas fa-arrow-right"></i><span>To:
-                                            {{ $hist->estadoDestino->nombre }}</span>
+                                        <div class="mb-1">
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="fas fa-layer-group me-1"></i>
+                                                Bloque {{ $hist->estadoOrigen->bloque->codigo ?? $hist->estadoOrigen->bloque_id }} 
+                                                <i class="fas fa-arrow-right mx-1"></i> 
+                                                Bloque {{ $hist->estadoDestino->bloque->codigo ?? $hist->estadoDestino->bloque_id }}
+                                            </span>
+                                        </div>
+                                        <div class="small">
+                                            <span class="text-muted">Estado:</span>
+                                            {{ $hist->estadoOrigen->nombre }}
+                                            <i class="fas fa-arrow-right mx-1 text-muted"></i>
+                                            {{ $hist->estadoDestino->nombre }}
+                                        </div>
                                     </div>
                                 @endif
                                 <div class="timeline-meta">

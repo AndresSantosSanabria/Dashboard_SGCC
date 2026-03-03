@@ -2,21 +2,20 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Factories\HasFactory; // Added this line
-
 use App\Traits\Auditable;
+use Illuminate\Database\Eloquent\Factories\HasFactory; // Added this line
+use Illuminate\Database\Eloquent\Model;
 
 class SeguimientoRequisito extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $table = 'seguimiento_requisitos';
 
     protected $fillable = [
         'contrato_id',
         'nombre',
-        'estado'
+        'estado',
     ];
 
     public function contrato()

@@ -42,7 +42,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
             // 3. Crear Estados por Bloque
             echo "🏷️  Creando estados...\n";
 
-            // Estructura de estados 
+            // Estructura de estados
             $estadosPorBloque = [
                 1 => [
                     ['nombre' => 'Sin tramite', 'codigo' => 'REV1_SIN', 'tipo' => 'INICIAL', 'es_inicial' => 1],
@@ -129,7 +129,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
                 // Si el ID antiguo ya no existe, usamos el mapping guardado al inicio del script
                 // Pero necesitamos asegurarnos de que la cuenta tenga el estado correcto.
                 // $estadosAntiguos lo vamos a guardar ANTES de limpiar los datos (ver próximo paso).
-                
+
                 // Por defecto, si algo sale mal o si no hay estado antiguo mapeable o es un contrato
                 // nuevo (estado_actual_id null pero bloque_actual_id 1), asignamos el inicial:
                 $nuevoId = null;
@@ -145,7 +145,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
                     }
                 }
 
-                if (!$nuevoId) {
+                if (! $nuevoId) {
                     $inicial = DB::table('estados_workflow')
                         ->where('bloque_id', $cuenta->bloque_actual_id)
                         ->where('es_inicial', 1)
@@ -167,7 +167,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
         } catch (\Exception $e) {
             DB::rollBack();
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-            echo "❌ ERROR: " . $e->getMessage() . "\n";
+            echo '❌ ERROR: '.$e->getMessage()."\n";
             throw $e;
         }
     }
@@ -199,7 +199,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
                     $esDevueltaInterna = $destino->tipo === 'DEVUELTO';
                     $esBloque1 = $origen->bloque_id == 1;
 
-                    if (!$esDevueltaInterna || $esBloque1) {
+                    if (! $esDevueltaInterna || $esBloque1) {
                         $accion = $esDevueltaInterna ? 'DEVOLVER' : 'CAMBIAR_ESTADO';
                         $this->insertTransition($origen, $destino, $accion);
                     }
@@ -253,7 +253,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
             ->where('estado_destino_id', $destino->id)
             ->exists();
 
-        if (!$exists) {
+        if (! $exists) {
             DB::table('transiciones_permitidas')->insert([
                 'estado_origen_id' => $origen->id,
                 'estado_destino_id' => $destino->id,

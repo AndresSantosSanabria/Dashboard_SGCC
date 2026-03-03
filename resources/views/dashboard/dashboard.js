@@ -579,3 +579,33 @@ window.startNextAccount = function (id, contrato, siguienteCuenta) {
 };
 
 
+window.deleteContrato = function (id, numero) {
+    if (!confirm(`¿Está seguro de eliminar de forma GLOBAL el contrato #${numero}? Esta acción eliminará también sus cuentas de cobro, historial y documentos. No se puede deshacer.`)) {
+        return;
+    }
+
+    fetch(`/seguimiento/${id}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
+            'Accept': 'application/json'
+        }
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success || (data.message && data.message.toLowerCase().includes('éxito'))) {
+                showSnackbar("✅ " + (data.message || "Contrato eliminado"), "success");
+                if (typeof fetchFilteredData === 'function') {
+                    fetchFilteredData();
+                } else {
+                    location.reload();
+                }
+            } else {
+                showSnackbar("⚠️ " + (data.message || 'No se pudo eliminar el contrato'), "error");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            showSnackbar("❌ Error de conexión al intentar eliminar", "error");
+        });
+};

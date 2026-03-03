@@ -17,10 +17,10 @@ return new class extends Migration
         Schema::create('contratos', function (Blueprint $table) {
             $table->id();
             $table->string('numero_proceso', 50)->nullable();
-            
+
             // EL CAMBIO ESTÁ AQUÍ: Unique asegura integridad a nivel de motor de BD
             $table->string('numero_contrato', 50)->unique()->comment('NUMERO DE CONTRATO del Excel (col 1)');
-            
+
             $table->foreignId('modalidad_id')->nullable()->constrained('modalidades');
             $table->foreignId('contratista_id')->constrained('contratistas');
             $table->foreignId('supervisor_id')->nullable()->constrained('supervisores')->comment('SUPERVISOR@ del Excel (col 9)');
@@ -33,7 +33,7 @@ return new class extends Migration
             $table->date('fecha_fin')->nullable()->comment('FECHA DE TERMINACIÓN del Excel (col 8)');
             $table->boolean('es_activo')->default(true);
             $table->timestamps();
-            
+
             // Índices de búsqueda (Unique ya actúa como índice para numero_contrato)
             $table->index('numero_proceso');
             $table->index('contratista_id');
@@ -49,7 +49,7 @@ return new class extends Migration
             $table->string('estado', 50)->default('ACTIVO');
             $table->text('observaciones')->nullable();
             $table->timestamps();
-            
+
             $table->index('numero_rp');
             $table->index('contrato_id');
         });

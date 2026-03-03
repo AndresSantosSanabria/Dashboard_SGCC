@@ -358,6 +358,19 @@
     color: var(--govco-red);
 }
 
+.kpi-gray .kpi-accent {
+    background: linear-gradient(90deg, #64748b, #94a3b8);
+}
+
+.kpi-gray .kpi-icon-wrap {
+    background: rgba(100, 116, 139, 0.1);
+    color: #64748b;
+}
+
+.kpi-gray .kpi-value {
+    color: #64748b;
+}
+
 .kpi-gold .kpi-accent {
     background: linear-gradient(90deg, #b8860b, #daa520);
 }

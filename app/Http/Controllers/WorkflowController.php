@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Contrato;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
-use App\Models\Contrato;
 
 class WorkflowController extends Controller
 {
@@ -22,7 +22,7 @@ class WorkflowController extends Controller
         $user = Auth::user();
 
         // 1. Check if user can access workflow
-        if (!$user->puedeAccederWorkflow()) {
+        if (! $user->puedeAccederWorkflow()) {
             abort(403, 'No tienes permiso para acceder al Workflow');
         }
 
@@ -53,8 +53,8 @@ class WorkflowController extends Controller
 
         if ($request->filled('contratista')) {
             $query->whereHas('contrato.contratista', function ($q) use ($request) {
-                $q->where('razon_social', 'like', '%' . $request->contratista . '%')
-                    ->orWhere('representante_legal', 'like', '%' . $request->contratista . '%');
+                $q->where('razon_social', 'like', '%'.$request->contratista.'%')
+                    ->orWhere('representante_legal', 'like', '%'.$request->contratista.'%');
             });
         }
 
@@ -70,7 +70,7 @@ class WorkflowController extends Controller
 
         if ($request->filled('numero_contrato')) {
             $query->whereHas('contrato', function ($q) use ($request) {
-                $q->where('numero_contrato', 'like', '%' . $request->numero_contrato . '%');
+                $q->where('numero_contrato', 'like', '%'.$request->numero_contrato.'%');
             });
         }
 
@@ -86,13 +86,13 @@ class WorkflowController extends Controller
         $bloquesPermitidos = $user->bloquesPermitidos();
 
         // Debug: Log blocks permitidos (remove in production)
-        Log::debug('Workflow blocks permitidos for user ' . $user->id . ': ', ['bloques' => $bloquesPermitidos]);
+        Log::debug('Workflow blocks permitidos for user '.$user->id.': ', ['bloques' => $bloquesPermitidos]);
 
         if (is_array($bloquesPermitidos) && count($bloquesPermitidos) > 0) {
             $bloquesQuery->whereIn('codigo', $bloquesPermitidos);
         } elseif ($bloquesPermitidos !== true) {
             // If not true (all blocks) and not valid array, show no blocks
-            Log::warning('Invalid bloques_permitidos for user ' . $user->id . ': ', ['value' => $bloquesPermitidos]);
+            Log::warning('Invalid bloques_permitidos for user '.$user->id.': ', ['value' => $bloquesPermitidos]);
             $bloquesQuery->whereRaw('1 = 0');
         }
 
@@ -120,14 +120,14 @@ class WorkflowController extends Controller
                 $columnas[$estado->id] = [
                     'nombre' => $estado->nombre,
                     'tipo' => $estado->tipo,
-                    'cuentas' => []
+                    'cuentas' => [],
                 ];
             }
 
             $workflow[$bloque->id] = [
                 'nombre' => $bloque->nombre,
                 'color' => $this->getColorPorBloque($bloque->codigo),
-                'columnas' => $columnas
+                'columnas' => $columnas,
             ];
         }
 
@@ -240,7 +240,7 @@ class WorkflowController extends Controller
             ->where('es_activa', true)
             ->first();
 
-        if (!$transicion) {
+        if (! $transicion) {
             return response()->json([
                 'success' => false,
                 'message' => 'Transición no permitida',
@@ -258,7 +258,7 @@ class WorkflowController extends Controller
                 'cuenta_id' => $cuentaId,
                 'estado_destino_id' => $estadoDestinoId,
                 'estado_codigo' => $estadoDestino->codigo,
-                'message' => 'Se requiere asignar responsable'
+                'message' => 'Se requiere asignar responsable',
             ]);
         }
 
@@ -283,9 +283,10 @@ class WorkflowController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'cambiarEstado', 'cuenta_id' => $cuentaId]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al cambiar estado: ' . $e->getMessage(),
+                'message' => 'Error al cambiar estado: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -311,7 +312,7 @@ class WorkflowController extends Controller
             ->where('es_activa', true)
             ->first();
 
-        if (!$transicion) {
+        if (! $transicion) {
             return response()->json([
                 'success' => false,
                 'message' => 'Transición no permitida',
@@ -368,9 +369,10 @@ class WorkflowController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'assignResponsible', 'cuenta_id' => $cuentaId]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al cambiar estado: ' . $e->getMessage(),
+                'message' => 'Error al cambiar estado: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -414,7 +416,7 @@ class WorkflowController extends Controller
 
         // 3. Update account state and observations
         $cuenta->estado_actual_id = $estadoDestinoId;
-        if ($comentario && !str_starts_with($comentario, 'Automatismo:')) {
+        if ($comentario && ! str_starts_with($comentario, 'Automatismo:')) {
             $cuenta->observaciones = $comentario;
         }
 
@@ -424,13 +426,13 @@ class WorkflowController extends Controller
         $esDevolucion = $this->esDevolucionDeBloque($bloqueAnteriorId, $bloqueNuevoId);
 
         // **CERRAR BLOQUE ANTERIOR SI CAMBIA DE BLOQUE (AVANCE)**
-        if ($bloqueAnteriorId != $bloqueNuevoId && !$esDevolucion) {
+        if ($bloqueAnteriorId != $bloqueNuevoId && ! $esDevolucion) {
             \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)
                 ->where('bloque_id', $bloqueAnteriorId)
                 ->update([
                     'bloque_completado' => true,
                     'fecha_completado_bloque' => now(),
-                    'fecha_ultima_actualizacion' => now()
+                    'fecha_ultima_actualizacion' => now(),
                 ]);
         }
 
@@ -465,7 +467,7 @@ class WorkflowController extends Controller
             'estado_actual_id' => $estadoDestinoId,
             'responsable_id' => $responsableId, // ✅ Usar el responsable determinado (previo o actual)
             'fecha_ultima_actualizacion' => now(),
-            'bloque_completado' => (bool)$estadoDestino->es_final,
+            'bloque_completado' => (bool) $estadoDestino->es_final,
             'fecha_completado_bloque' => $estadoDestino->es_final ? now() : null,
         ];
 
@@ -486,7 +488,7 @@ class WorkflowController extends Controller
         // LÓGICA DE TIEMPOS:
         // 1. fecha_ultima_actualizacion: Se actualiza en CADA movimiento (Resetea el reloj de la tarjeta).
         // 2. fecha_ingreso_bloque: Solo se actualiza al ENTRAR al bloque (Mantiene el tiempo total de la fase para analítica).
-        if ($estadoDestino->bloque_id != $cuenta->bloque_actual_id || !$existeRegistro) {
+        if ($estadoDestino->bloque_id != $cuenta->bloque_actual_id || ! $existeRegistro) {
             $updateData['fecha_ingreso_bloque'] = now();
             $cuenta->bloque_actual_id = $estadoDestino->bloque_id;
         }
@@ -550,7 +552,7 @@ class WorkflowController extends Controller
         $bloqueOrigen = \App\Models\BloqueWorkflow::find($bloqueOrigenId);
         $bloqueDestino = \App\Models\BloqueWorkflow::find($bloqueDestinoId);
 
-        if (!$bloqueOrigen || !$bloqueDestino) {
+        if (! $bloqueOrigen || ! $bloqueDestino) {
             return false;
         }
 
@@ -637,7 +639,7 @@ class WorkflowController extends Controller
             'bloque',
             'estadoOrigen',
             'estadoDestino',
-            'usuarioAccion'
+            'usuarioAccion',
         ])
             ->where('cuenta_cobro_id', $cuentaId)
             ->orderBy('fecha_transicion', 'asc')
@@ -648,7 +650,7 @@ class WorkflowController extends Controller
             'success' => true,
             'historial' => $historial,
             'tiempo_total' => $cuenta->tiempo_total_ejecucion,
-            'fecha_inicio' => $historial->count() > 0 ? $historial->first()->fecha_transicion->format('d/m/Y H:i') : null
+            'fecha_inicio' => $historial->count() > 0 ? $historial->first()->fecha_transicion->format('d/m/Y H:i') : null,
         ]);
     }
 
@@ -670,8 +672,8 @@ class WorkflowController extends Controller
                 ->map(function ($user) {
                     return [
                         'id' => $user->id,
-                        'nombre' => $user->primer_nombre . ' ' . $user->primer_apellido,
-                        'tipo_responsable' => 'SAP'
+                        'nombre' => $user->primer_nombre.' '.$user->primer_apellido,
+                        'tipo_responsable' => 'SAP',
                     ];
                 });
         } elseif ($estadoCodigo === 'SAP_OK') {
@@ -683,8 +685,8 @@ class WorkflowController extends Controller
                 ->map(function ($user) {
                     return [
                         'id' => $user->id,
-                        'nombre' => $user->primer_nombre . ' ' . $user->primer_apellido,
-                        'tipo_responsable' => 'Facturación'
+                        'nombre' => $user->primer_nombre.' '.$user->primer_apellido,
+                        'tipo_responsable' => 'Facturación',
                     ];
                 });
         }
@@ -692,12 +694,11 @@ class WorkflowController extends Controller
         return response()->json([
             'success' => true,
             'usuarios' => $usuarios,
-            'responsable_type' => $responsableType
+            'responsable_type' => $responsableType,
         ]);
     }
 
     /**
-
      * Inicia manualmente la siguiente cuenta de cobro para un contrato finalizado
      */
     public function iniciarSiguienteCuenta(Request $request, $cuentaId)
@@ -705,7 +706,7 @@ class WorkflowController extends Controller
         $cuenta = \App\Models\CuentaCobro::findOrFail($cuentaId);
 
         // Validar que esté finalizada y tenga pagos pendientes
-        if (!$cuenta->finalizada) {
+        if (! $cuenta->finalizada) {
             return response()->json(['success' => false, 'message' => 'La cuenta actual no ha finalizado su proceso.'], 422);
         }
 
@@ -727,7 +728,7 @@ class WorkflowController extends Controller
             // 3. Buscar el estado inicial del Bloque 1
             $estadoInicialBloque1 = \App\Models\EstadoWorkflow::where('codigo', 'REV1_REV')->first();
 
-            if (!$estadoInicialBloque1) {
+            if (! $estadoInicialBloque1) {
                 throw new \Exception('No se encontró el estado inicial del Bloque 1 (REV1_REV).');
             }
 
@@ -746,9 +747,10 @@ class WorkflowController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'iniciarSiguienteCuenta', 'cuenta_id' => $cuentaId]);
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al iniciar el ciclo: ' . $e->getMessage(),
+                'message' => 'Error al iniciar el ciclo: '.$e->getMessage(),
             ], 500);
         }
     }

@@ -15,10 +15,11 @@ class RoleController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             abort(403);
         }
         $roles = Role::orderBy('created_at', 'desc')->get();
+
         return view('configuracion.roles.index', compact('roles'));
     }
 
@@ -29,10 +30,11 @@ class RoleController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             abort(403);
         }
         $bloques = \App\Models\BloqueWorkflow::where('es_activo', true)->orderBy('orden')->get();
+
         return view('configuracion.roles.create', compact('bloques'));
     }
 
@@ -44,7 +46,7 @@ class RoleController extends Controller
         try {
             /** @var \App\Models\Usuario $user */
             $user = Auth::user();
-            if (!$user->isAdmin()) {
+            if (! $user->isAdmin()) {
                 abort(403);
             }
 
@@ -53,7 +55,7 @@ class RoleController extends Controller
                 'descripcion' => 'nullable|string|max:255',
                 'permisos_matrix' => 'required|array',
                 'ver_solo_asignados' => 'nullable|boolean',
-                'bloques_permitidos' => 'nullable|array'
+                'bloques_permitidos' => 'nullable|array',
             ]);
 
             // Logic to Map Matrix -> System Permissions
@@ -85,12 +87,12 @@ class RoleController extends Controller
                 'descripcion' => $validated['descripcion'],
                 'tipo' => 'PERSONALIZADO',
                 'es_activo' => true,
-                'permisos' => $systemPermissions
+                'permisos' => $systemPermissions,
             ]);
 
             return redirect()->route('configuracion.roles.index')->with('success', 'Rol personalizado creado exitosamente.');
         } catch (\Exception $e) {
-            return back()->withInput()->withErrors(['error' => 'Error inesperado al crear el rol: ' . $e->getMessage()]);
+            return back()->withInput()->withErrors(['error' => 'Error inesperado al crear el rol: '.$e->getMessage()]);
         }
     }
 
@@ -120,10 +122,10 @@ class RoleController extends Controller
         ];
 
         // 1. Dashboard Module
-        if (!empty($matrix['dashboard']['view'])) {
+        if (! empty($matrix['dashboard']['view'])) {
             $permissions['acceder_dashboard'] = true; // Gestión
         }
-        if (!empty($matrix['dashboard']['readonly'])) {
+        if (! empty($matrix['dashboard']['readonly'])) {
             $permissions['acceder_consolidado'] = true; // Vista Consolidada
         }
         // If edit is unchecked, they can't manage dashboard
@@ -134,40 +136,40 @@ class RoleController extends Controller
         }
 
         // 2. Users Module
-        if (!empty($matrix['users']['view'])) {
+        if (! empty($matrix['users']['view'])) {
             // Basic view? System currently only has "usuarios_gestionar" which is full admin.
             // For now, if they check 'edit/create/delete', we give them manage.
-            if (!empty($matrix['users']['create']) || !empty($matrix['users']['edit']) || !empty($matrix['users']['delete'])) {
+            if (! empty($matrix['users']['create']) || ! empty($matrix['users']['edit']) || ! empty($matrix['users']['delete'])) {
                 $permissions['usuarios_gestionar'] = true;
             }
         }
 
         // 3. Contracts Module
-        if (!empty($matrix['contracts']['view'])) {
+        if (! empty($matrix['contracts']['view'])) {
             $permissions['contratos_ver'] = true;
         }
-        if (!empty($matrix['contracts']['edit'])) {
+        if (! empty($matrix['contracts']['edit'])) {
             $permissions['contratos_editar'] = true;
         }
 
         // 4. Accounts Module
-        if (!empty($matrix['accounts']['view'])) {
+        if (! empty($matrix['accounts']['view'])) {
             $permissions['cuentas_ver'] = true;
         }
-        if (!empty($matrix['accounts']['edit'])) {
+        if (! empty($matrix['accounts']['edit'])) {
             $permissions['cuentas_editar'] = true;
         }
 
         // 5. Workflow Module
-        if (!empty($matrix['workflow']['view'])) {
+        if (! empty($matrix['workflow']['view'])) {
             $permissions['acceder_workflow'] = true;
         }
-        if (!empty($matrix['workflow']['edit'])) {
+        if (! empty($matrix['workflow']['edit'])) {
             $permissions['editar_workflow'] = true;
         }
 
         // 6. Reports
-        if (!empty($matrix['reports']['export'])) {
+        if (! empty($matrix['reports']['export'])) {
             $permissions['reportes_exportar'] = true;
         }
 
@@ -181,7 +183,7 @@ class RoleController extends Controller
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
-        if (!$user->isAdmin()) {
+        if (! $user->isAdmin()) {
             abort(403);
         }
 
@@ -199,18 +201,18 @@ class RoleController extends Controller
         try {
             /** @var \App\Models\Usuario $user */
             $user = Auth::user();
-            if (!$user->isAdmin()) {
+            if (! $user->isAdmin()) {
                 abort(403);
             }
 
             $role = Role::findOrFail($id);
 
             $validated = $request->validate([
-                'nombre' => 'required|string|max:50|unique:roles,nombre,' . $id,
+                'nombre' => 'required|string|max:50|unique:roles,nombre,'.$id,
                 'descripcion' => 'nullable|string|max:255',
                 'permisos_matrix' => 'required|array',
                 'ver_solo_asignados' => 'nullable|boolean',
-                'bloques_permitidos' => 'nullable|array'
+                'bloques_permitidos' => 'nullable|array',
             ]);
 
             // Logic to Map Matrix -> System Permissions
@@ -241,12 +243,12 @@ class RoleController extends Controller
             $role->update([
                 'nombre' => $validated['nombre'],
                 'descripcion' => $validated['descripcion'],
-                'permisos' => $systemPermissions
+                'permisos' => $systemPermissions,
             ]);
 
             return redirect()->route('configuracion.roles.index')->with('success', 'Rol actualizado exitosamente.');
         } catch (\Exception $e) {
-            return back()->withInput()->withErrors(['error' => 'Error inesperado al actualizar el rol: ' . $e->getMessage()]);
+            return back()->withInput()->withErrors(['error' => 'Error inesperado al actualizar el rol: '.$e->getMessage()]);
         }
     }
 
@@ -258,7 +260,7 @@ class RoleController extends Controller
         try {
             /** @var \App\Models\Usuario $user */
             $user = Auth::user();
-            if (!$user->isAdmin()) {
+            if (! $user->isAdmin()) {
                 return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
             }
 
@@ -270,24 +272,25 @@ class RoleController extends Controller
                 if ($usuariosActivos > 0) {
                     return response()->json([
                         'success' => false,
-                        'message' => "No se puede desactivar este rol porque tiene {$usuariosActivos} usuario(s) activo(s) asignado(s)."
+                        'message' => "No se puede desactivar este rol porque tiene {$usuariosActivos} usuario(s) activo(s) asignado(s).",
                     ], 400);
                 }
             }
 
-            $role->es_activo = !$role->es_activo;
+            $role->es_activo = ! $role->es_activo;
             $role->save();
 
             $status = $role->es_activo ? 'activado' : 'desactivado';
+
             return response()->json([
                 'success' => true,
                 'message' => "Rol {$status} exitosamente.",
-                'es_activo' => $role->es_activo
+                'es_activo' => $role->es_activo,
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error inesperado: ' . $e->getMessage()
+                'message' => 'Error inesperado: '.$e->getMessage(),
             ], 500);
         }
     }

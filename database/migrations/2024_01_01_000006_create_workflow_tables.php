@@ -29,7 +29,7 @@ return new class extends Migration
             $table->string('color_hex', 7)->nullable();
             $table->boolean('es_activo')->default(true);
             $table->timestamps();
-            
+
             $table->index('orden');
             $table->index('codigo');
         });
@@ -48,7 +48,7 @@ return new class extends Migration
             $table->text('descripcion')->nullable();
             $table->boolean('es_activo')->default(true);
             $table->timestamps();
-            
+
             $table->index('bloque_id');
             $table->index('tipo');
             $table->index('codigo');
@@ -65,7 +65,7 @@ return new class extends Migration
             $table->text('descripcion')->nullable();
             $table->boolean('es_activa')->default(true);
             $table->timestamps();
-            
+
             $table->unique(['estado_origen_id', 'estado_destino_id'], 'uk_transicion');
         });
     }

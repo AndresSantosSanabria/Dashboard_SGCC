@@ -25,7 +25,7 @@ return new class extends Migration
             $table->text('comentarios')->nullable();
             $table->json('documentos_adjuntos')->nullable();
             $table->json('metadata')->nullable();
-            
+
             $table->index('cuenta_cobro_id');
             $table->index('bloque_id');
             $table->index('fecha_transicion');

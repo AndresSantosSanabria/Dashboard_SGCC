@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('ip_origen', 45)->nullable();
             $table->string('user_agent', 200)->nullable();
             $table->timestamps();
-            
+
             $table->index('tabla_afectada');
             $table->index('created_at');
             $table->index('usuario_id');
@@ -42,7 +42,7 @@ return new class extends Migration
             $table->boolean('leida')->default(false);
             $table->foreignId('usuario_destino_id')->nullable()->constrained('usuarios');
             $table->timestamps();
-            
+
             $table->index(['usuario_destino_id', 'leida']);
             $table->index('cuenta_cobro_id');
         });
@@ -56,7 +56,7 @@ return new class extends Migration
             $table->integer('cantidad_devuelta')->default(0);
             $table->decimal('promedio_tiempo_horas', 10, 2)->nullable();
             $table->integer('cumplimiento_sla_pct')->nullable();
-            
+
             $table->primary(['fecha', 'bloque_id']);
             $table->index('fecha');
         });

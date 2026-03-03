@@ -28,7 +28,7 @@ return new class extends Migration
             $table->foreignId('responsable_actual_id')->nullable()->constrained('usuarios');
             $table->text('observaciones')->nullable()->comment('OBSERVACIONES del Excel (col 20)');
             $table->timestamps();
-            
+
             $table->index('numero_cuenta');
             $table->index('contrato_id');
             $table->index(['bloque_actual_id', 'estado_actual_id']);

@@ -2,16 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\SeguimientoMensual;
-use App\Models\SeguimientoRequisito;
-
-use App\Traits\Auditable;
 
 class Contrato extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $table = 'contratos';
 
@@ -118,6 +115,7 @@ class Contrato extends Model
     public function scopeVigentes($query)
     {
         $hoy = now();
+
         return $query->where('fecha_inicio', '<=', $hoy)
             ->where('fecha_fin', '>=', $hoy);
     }

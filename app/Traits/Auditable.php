@@ -17,7 +17,7 @@ trait Auditable
         static::updated(function ($model) {
             $oldValues = array_intersect_key($model->getOriginal(), $model->getChanges());
             $newValues = $model->getChanges();
-            
+
             // Ignorar si solo cambió updated_at
             if (count($newValues) === 1 && isset($newValues['updated_at'])) {
                 return;
@@ -38,7 +38,7 @@ trait Auditable
     {
         $tabla = $tablaManual ?? ($model ? $model->getTable() : 'SISTEMA');
         $nuevo = is_array($mensaje) ? $mensaje : ['detalle' => $mensaje];
-        
+
         if ($datosIntento) {
             $nuevo['intentado'] = $datosIntento;
         }
@@ -55,12 +55,12 @@ trait Auditable
             self::logAudit(null, 'FAILURE_DATABASE', null, [
                 'error' => $e->getMessage(),
                 'clase' => get_class($e),
-                'ubicacion' => $e->getFile() . ':' . $e->getLine(),
+                'ubicacion' => $e->getFile().':'.$e->getLine(),
                 'contexto' => $datosExtra,
-                'trace' => substr($e->getTraceAsString(), 0, 800)
+                'trace' => substr($e->getTraceAsString(), 0, 800),
             ], $tabla);
         } catch (\Exception $ex) {
-            \Log::error("Fallo crítico al intentar auditar un error: " . $ex->getMessage());
+            \Log::error('Fallo crítico al intentar auditar un error: '.$ex->getMessage());
         }
     }
 
@@ -68,8 +68,12 @@ trait Auditable
     {
         try {
             // Evitar loggear la propia tabla de auditoría
-            if ($model && $model->getTable() === 'auditorias') return;
-            if ($tablaManual === 'auditorias') return;
+            if ($model && $model->getTable() === 'auditorias') {
+                return;
+            }
+            if ($tablaManual === 'auditorias') {
+                return;
+            }
 
             Auditoria::create([
                 'usuario_id' => Auth::id(),
@@ -82,8 +86,7 @@ trait Auditable
                 'user_agent' => substr(Request::userAgent() ?? 'none', 0, 200),
             ]);
         } catch (\Exception $e) {
-            \Log::error("Error guardando auditoría: " . $e->getMessage());
+            \Log::error('Error guardando auditoría: '.$e->getMessage());
         }
     }
 }
-

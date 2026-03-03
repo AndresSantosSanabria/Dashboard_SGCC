@@ -669,5 +669,36 @@
                 alert('Error de conexión');
             }
         }
+
+        async function deleteContrato(id, numero) {
+            if (!confirm(`¿Está seguro de eliminar de forma GLOBAL el contrato #${numero}? Esta acción eliminará también sus cuentas de cobro, historial y documentos. No se puede deshacer.`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`{{ url('/seguimiento') }}/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    if (window.showSnackbar) {
+                        window.showSnackbar(data.message, 'success');
+                    } else {
+                        alert(data.message);
+                    }
+                    applyAdvancedFilters();
+                } else {
+                    alert('Error: ' + (data.message || 'No se pudo eliminar el contrato'));
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error de conexión al intentar eliminar');
+            }
+        }
     </script>
 @endsection

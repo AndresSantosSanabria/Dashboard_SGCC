@@ -108,6 +108,31 @@
     border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+.column-content {
+    max-height: 520px;
+    /* Alrededor de 3.5 tarjetas para asegurar que el scroll se note */
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+    padding-right: 5px;
+}
+
+/* Scrollbar estilizada sutil */
+.column-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.column-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 10px;
+}
+
+.column-content::-webkit-scrollbar-thumb {
+    background-color: #64748b;
+    /* Slate-500 for better contrast */
+    border-radius: 10px;
+}
+
 .column-title {
     font-size: 0.8rem;
     font-weight: bold;

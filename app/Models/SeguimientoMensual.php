@@ -2,15 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Contrato;
-
-use App\Traits\Auditable;
 
 class SeguimientoMensual extends Model
 {
-    use HasFactory, Auditable;
+    use Auditable, HasFactory;
 
     protected $table = 'seguimiento_mensual';
 
@@ -18,7 +16,7 @@ class SeguimientoMensual extends Model
         'contrato_id',
         'mes',
         'fuente',
-        'estado'
+        'estado',
     ];
 
     public function contrato()

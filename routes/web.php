@@ -1,13 +1,11 @@
 
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\CuentaCobroController;
-use App\Http\Controllers\BackupController;
-use App\Models\CuentaCobro;
+use App\Http\Controllers\WorkflowController;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 // Root: if authenticated, go to dashboard; otherwise show welcome
 Route::get('/', function () {
@@ -19,7 +17,7 @@ Route::get('/', function () {
             return redirect()->route('dashboard');
         }
         if ($user->puedeAccederConsolidado()) {
-            return redirect()->route('consolidado'); // Cambia a la ruta correcta si existe
+            return redirect()->route('seguimiento.index');
         }
         if ($user->puedeAccederWorkflow()) {
             return redirect()->route('workflow');
@@ -27,9 +25,11 @@ Route::get('/', function () {
         if ($user->isAdmin()) {
             return redirect()->route('configuracion.index');
         }
+
         // Si no tiene acceso a ninguna sección, mostrar mensaje
         return response('No tienes permisos para acceder a ninguna sección.', 403);
     }
+
     return view('login.login');
 });
 
@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/seguimiento/status', [\App\Http\Controllers\SeguimientoController::class, 'updateStatus'])->name('seguimiento.update-status');
     Route::post('/seguimiento/store', [\App\Http\Controllers\SeguimientoController::class, 'store'])->name('seguimiento.store');
     Route::put('/seguimiento/{id}', [\App\Http\Controllers\SeguimientoController::class, 'update'])->name('seguimiento.update');
+    Route::delete('/seguimiento/{contrato}', [\App\Http\Controllers\SeguimientoController::class, 'destroy'])->name('seguimiento.destroy');
 });
 
 // Workflow (protected)
@@ -74,7 +75,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/workflow/usuarios-responsables/{estadoCodigo}', [WorkflowController::class, 'getUsuariosResponsables'])->name('workflow.usuarios-responsables');
     Route::post('/workflow/iniciar-siguiente-cuenta/{cuenta}', [WorkflowController::class, 'iniciarSiguienteCuenta'])->name('workflow.iniciar-siguiente-cuenta');
 });
-
 
 // Configuración (admin only)
 Route::middleware('auth')->prefix('configuracion')->group(function () {
@@ -96,19 +96,4 @@ Route::middleware('auth')->prefix('configuracion')->group(function () {
     // Auditoría
     Route::get('/auditoria', [\App\Http\Controllers\AuditoriaController::class, 'index'])->name('configuracion.auditoria.index');
     Route::get('/auditoria/{id}', [\App\Http\Controllers\AuditoriaController::class, 'show'])->name('configuracion.auditoria.show');
-});
-
-Route::get('/debug-permisos', function () {
-    $user = \Illuminate\Support\Facades\Auth::user();
-    if (!$user) return 'No logged in user';
-
-    return [
-        'user_id' => $user->id,
-        'email' => $user->email,
-        'rol' => $user->rol,
-        'permisos_explicit' => $user->permisos,
-        'is_admin_check' => $user->isAdmin(),
-        'has_dashboard' => $user->tienePermiso('acceder_dashboard'),
-        'has_consolidado' => $user->tienePermiso('acceder_consolidado'),
-    ];
 });

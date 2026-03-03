@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -61,7 +61,7 @@ return new class extends Migration
                 'requiere_acta_liq_status',
                 'acta_liq_repositorio_status',
                 'acta_liq_secop_status',
-                'acta_liq_sia_status'
+                'acta_liq_sia_status',
             ];
 
             foreach ($requisitos as $req) {
@@ -101,7 +101,7 @@ return new class extends Migration
                 'requiere_acta_liq_status',
                 'acta_liq_repositorio_status',
                 'acta_liq_secop_status',
-                'acta_liq_sia_status'
+                'acta_liq_sia_status',
             ]);
 
             $table->dropColumn($colsToRemove);

@@ -142,11 +142,6 @@
                         .catch(err => console.error('Error al filtrar:', err));
                 }
 
-                // ── Auto-refresh cada 30 segundos ──
-                setInterval(function() {
-                    if (document.querySelector('.modal.show')) return;
-                    recargarKanban();
-                }, 30000);
             });
         </script>
     @endpush

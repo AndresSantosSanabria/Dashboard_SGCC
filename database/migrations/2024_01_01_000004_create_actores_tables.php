@@ -27,7 +27,7 @@ return new class extends Migration
             $table->text('direccion_fisica')->nullable();
             $table->boolean('es_activo')->default(true);
             $table->timestamps();
-            
+
             $table->index('nit');
             $table->index('razon_social');
         });
@@ -40,7 +40,7 @@ return new class extends Migration
             $table->string('codigo', 20)->nullable();
             $table->boolean('es_activa')->default(true);
             $table->timestamps();
-            
+
             $table->index(['tipo', 'nombre']);
         });
 
@@ -55,7 +55,7 @@ return new class extends Migration
             $table->date('fecha_fin')->nullable();
             $table->boolean('es_vigente')->default(true);
             $table->timestamps();
-            
+
             $table->index('contratista_id');
             $table->index('es_vigente');
         });
@@ -70,7 +70,7 @@ return new class extends Migration
             $table->string('telefono', 20)->nullable();
             $table->boolean('es_activo')->default(true);
             $table->timestamps();
-            
+
             $table->index(['nombres', 'apellidos']);
         });
     }

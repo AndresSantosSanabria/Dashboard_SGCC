@@ -19,10 +19,17 @@
     @endphp
     <tr class="contract-row">
         <td class="stk-gest text-center">
-            <button class="btn btn-sm btn-light border p-1" onclick='openEditModal({!! json_encode($c) !!})'
-                title="Gestionar">
-                <i class="bi bi-pencil-square text-primary"></i>
-            </button>
+            <div class="d-flex flex-column gap-1 align-items-center">
+                <button class="btn btn-sm btn-light border p-1" onclick='openEditModal({!! json_encode($c) !!})'
+                    title="Gestionar">
+                    <i class="bi bi-pencil-square text-primary"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger border p-1 shadow-sm" style="border-radius:6px; background: rgba(220, 38, 38, 0.05);" 
+                    onclick="deleteContrato({{ $c->id }}, '{{ $c->numero_contrato }}')"
+                    title="Eliminar Contrato GLOBALMENTE">
+                    <i class="bi bi-trash-fill px-1"></i>
+                </button>
+            </div>
         </td>
         <td class="stk-risk text-center">
             <div class="badge-pill-saas {{ $riskClass }} w-100 justify-content-center" style="font-size: 0.6rem;">

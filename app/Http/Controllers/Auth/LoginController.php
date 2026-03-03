@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 
 class LoginController extends Controller
 {
@@ -26,8 +25,9 @@ class LoginController extends Controller
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $user = Auth::user();
 
-            if (property_exists($user, 'es_activo') && !$user->es_activo) {
+            if (property_exists($user, 'es_activo') && ! $user->es_activo) {
                 Auth::logout();
+
                 return back()->withErrors(['user' => 'La cuenta está inactiva.'])->withInput($request->only('user'));
             }
 

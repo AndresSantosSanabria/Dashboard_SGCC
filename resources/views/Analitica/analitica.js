@@ -209,32 +209,55 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 300);
         }
 
-        // KPI Cards
-        const kpiElements = document.querySelectorAll('.kpi-value');
-        kpiElements.forEach(el => {
-            el.style.opacity = '0';
+        // KPI Cards dynamic update
+        const cards = document.querySelectorAll('.kpi-card');
+        cards.forEach(card => {
+            const val = card.querySelector('.kpi-value');
+            if (!val) return;
+            val.style.opacity = '0';
+
+            setTimeout(() => {
+                if (card.classList.contains('kpi-blue')) val.textContent = fmt.format(data.contratistasUnicos);
+                else if (card.classList.contains('kpi-amber')) val.textContent = fmt.format(data.cuentasTramite);
+                else if (card.classList.contains('kpi-green')) val.textContent = fmt.format(data.cuentasRadicadas);
+                else if (card.classList.contains('kpi-red')) val.textContent = fmt.format(Math.max(0, data.pagosTotales - data.cuentasRadicadas));
+                else if (card.classList.contains('kpi-indigo')) val.textContent = fmt.format(data.pagosTotales);
+                else if (card.classList.contains('kpi-teal')) val.textContent = fmtDec.format(data.avanceGlobal) + '%';
+                else if (card.classList.contains('kpi-gray')) val.textContent = fmt.format(data.chartData ? data.chartData.total_sin_tramite : 0);
+
+                val.style.transition = 'opacity 0.5s ease';
+                val.style.opacity = '1';
+            }, 300);
         });
 
-        setTimeout(() => {
-            if (kpiElements.length >= 6) {
-                kpiElements[0].textContent = fmt.format(data.contratistasUnicos);
-                kpiElements[1].textContent = fmt.format(data.cuentasTramite);
-                kpiElements[2].textContent = fmt.format(data.cuentasRadicadas);
-                kpiElements[3].textContent = fmt.format(Math.max(0, data.pagosTotales - data.cuentasRadicadas));
-                kpiElements[4].textContent = fmt.format(data.pagosTotales);
-                kpiElements[5].textContent = fmtDec.format(data.avanceGlobal) + '%';
-            }
-            kpiElements.forEach(el => {
-                el.style.transition = 'opacity 0.5s ease';
-                el.style.opacity = '1';
-            });
-        }, 300);
-
         // Global progress bar
-        const globalProgress = document.querySelector('.kpi-indigo + .kpi-teal .progress-bar, .kpi-teal .progress-bar');
+        const globalProgress = document.querySelector('.kpi-teal .progress-bar');
         if (globalProgress) {
             globalProgress.style.width = Math.min(data.avanceGlobal, 100) + '%';
         }
+    }
+
+    function updateSinTramiteTable(lista) {
+        const tbody = document.querySelector('#tableSinTramite tbody');
+        if (!tbody) return;
+
+        if (!lista || lista.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted small">No hay contratos sin trámite actual</td></tr>';
+            return;
+        }
+
+        const fmt = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+        let html = '';
+        lista.forEach(item => {
+            html += `
+                <tr>
+                    <td class="px-3 border-0 fw-bold text-muted">${item.numero_contrato}</td>
+                    <td class="px-3 border-0 small">${item.contratista}</td>
+                    <td class="px-3 border-0 text-end fw-bold text-govco-blue">$${fmt.format(item.monto)}</td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
     }
 
     function updateTable(html) {
@@ -267,6 +290,7 @@ document.addEventListener('DOMContentLoaded', function () {
             updateKPIs(data);
             initCharts(data.chartData);
             updateTable(data.tableHtml);
+            updateSinTramiteTable(data.chartData.lista_sin_tramite);
 
             // Update URL without reload
             const newUrl = window.location.pathname + '?' + params.toString();

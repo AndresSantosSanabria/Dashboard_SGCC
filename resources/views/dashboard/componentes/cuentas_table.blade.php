@@ -262,6 +262,11 @@
                                     title="Editar Cuenta">
                                     <span class="govco-svg govco-edit"></span>
                                 </button>
+                                <button type="button" class="btn-action-premium"
+                                    onclick="deleteContrato({{ $contrato->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')"
+                                    title="Eliminar Contrato GLOBALMENTE" style="color: #dc2626; background: rgba(220, 38, 38, 0.05);">
+                                    <i class="bi bi-trash fs-6"></i>
+                                </button>
                             </div>
                         </td>
                     @endif

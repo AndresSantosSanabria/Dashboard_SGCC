@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\CuentaCobro;
-use App\Models\Contrato;
-use App\Models\Supervisor;
-use App\Models\Usuario;
 use App\Models\BloqueWorkflow;
+use App\Models\Contrato;
+use App\Models\CuentaCobro;
 use App\Models\EstadoWorkflow;
 use App\Models\HistorialWorkflow;
+use App\Models\Supervisor;
+use App\Models\Usuario;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class AnaliticaController extends Controller
 {
@@ -26,18 +26,18 @@ class AnaliticaController extends Controller
             'contrato.registrosPresupuestales',
             'responsableActual',
             'estadoActual',
-            'bloqueActual'
+            'bloqueActual',
         ]);
 
         // Aplicar filtros
         if ($request->filled('contrato')) {
             $query->whereHas('contrato', function ($q) use ($request) {
-                $q->where('numero_contrato', 'like', '%' . $request->contrato . '%');
+                $q->where('numero_contrato', 'like', '%'.$request->contrato.'%');
             });
         }
 
         if ($request->filled('numero_cuenta')) {
-            $query->where('numero_cuenta', 'like', '%' . $request->numero_cuenta . '%');
+            $query->where('numero_cuenta', 'like', '%'.$request->numero_cuenta.'%');
         }
 
         if ($request->filled('supervisor')) {
@@ -75,19 +75,20 @@ class AnaliticaController extends Controller
 
         // Lógica de Negocio BI
         $cuentas = $cuentas->transform(function ($c) {
-            $c->radicadas_bi = (int)($c->numero_facturas_radicadas ?? 0);
-            $meta = (int)($c->numero_pagos_totales ?? 1);
+            $c->radicadas_bi = (int) ($c->numero_facturas_radicadas ?? 0);
+            $meta = (int) ($c->numero_pagos_totales ?? 1);
             $c->avance_bi = $meta > 0 ? round(($c->radicadas_bi / $meta) * 100, 2) : 0;
+
             return $c;
         });
 
         // Filtrar por avance calculado (BI) para coherencia total con la UI
         if ($request->filled('porcentaje_min')) {
-            $cuentas = $cuentas->where('avance_bi', '>=', (float)$request->porcentaje_min);
+            $cuentas = $cuentas->where('avance_bi', '>=', (float) $request->porcentaje_min);
         }
 
         if ($request->filled('porcentaje_max')) {
-            $cuentas = $cuentas->where('avance_bi', '<=', (float)$request->porcentaje_max);
+            $cuentas = $cuentas->where('avance_bi', '<=', (float) $request->porcentaje_max);
         }
 
         // Agrupación por contrato para KPIs globales para evitar duplicidad de metas
@@ -98,10 +99,23 @@ class AnaliticaController extends Controller
         $contratistasUnicos = $cuentas->pluck('contrato.contratista_id')->unique()->count();
 
         // Cuentas en trámite (procesos activos en el workflow)
+        // EXCLUYE: Finalizadas, Radicadas y SIN TRÁMITE
         $cuentasTramite = $cuentas->filter(function ($c) {
             $estado = strtolower($c->estadoActual->nombre ?? '');
-            return !($c->finalizada || str_contains($estado, 'radicad') || str_contains($estado, 'completado'));
+            $esFinalizada = $c->finalizada;
+            $esRadicada = str_contains($estado, 'radicad') || str_contains($estado, 'completado');
+            $esSinTramite = $estado === 'sin tramite';
+
+            return ! ($esFinalizada || $esRadicada || $esSinTramite);
         })->count();
+
+        // Nueva métrica: Contratos Sin Trámite Actual (Independiente)
+        $cuentasSinTramite = $cuentas->filter(function ($c) {
+            $estado = strtolower($c->estadoActual->nombre ?? '');
+
+            return $estado === 'sin tramite' && ! $c->finalizada;
+        });
+        $totalSinTramite = $cuentasSinTramite->count();
 
         // Métricas agregadas por CONTRATO (Meta y Radicadas)
         $pagosTotales = 0;
@@ -143,16 +157,22 @@ class AnaliticaController extends Controller
 
         // Datos para Gráficos
         $chartData = [
-            'gap_chart'          => $this->getGapData($cuentas),
-            'estado_anillos'     => $this->getDonutData($cuentas, $cuentasTramite),
-            'heatmap'            => $this->getHeatmapData($cuentas),
-            'diferencia_barras'  => $this->getDiferenciaData($cuentas),
-            'demora_bloques'     => $this->getDemoraBloquesData($cuentas),
-            'estados_uso'        => $this->getEstadosUsoData($cuentas),
-            'timeline'           => $this->getTimelineData($cuentas),
-            'supervisor_perf'    => $this->getSupervisorPerformance($cuentas),
-            'sla_compliance'     => $this->getSlaComplianceData($cuentas),
+            'gap_chart' => $this->getGapData($cuentas),
+            'estado_anillos' => $this->getDonutData($cuentas, $cuentasTramite),
+            'heatmap' => $this->getHeatmapData($cuentas),
+            'diferencia_barras' => $this->getDiferenciaData($cuentas),
+            'demora_bloques' => $this->getDemoraBloquesData($cuentas),
+            'estados_uso' => $this->getEstadosUsoData($cuentas),
+            'timeline' => $this->getTimelineData($cuentas),
+            'supervisor_perf' => $this->getSupervisorPerformance($cuentas),
+            'sla_compliance' => $this->getSlaComplianceData($cuentas),
             'bloque_distribucion' => $this->getBloqueDistribucionData($cuentas),
+            'total_sin_tramite' => $totalSinTramite,
+            'lista_sin_tramite' => $cuentasSinTramite->map(fn ($c) => [
+                'numero_contrato' => $c->contrato->numero_contrato,
+                'contratista' => $c->contrato->contratista->nombre_completo ?? 'N/A',
+                'monto' => (float) ($c->valor_cobro ?? 0),
+            ])->values(),
         ];
 
         if ($request->ajax()) {
@@ -167,7 +187,7 @@ class AnaliticaController extends Controller
                 'avanceGlobal' => $avanceGlobal,
                 'indicadorTotalUnico' => $indicadorTotalUnico,
                 'chartData' => $chartData,
-                'tableHtml' => view('Analitica.componentes.tabla_contratos', compact('cuentas'))->render()
+                'tableHtml' => view('Analitica.componentes.tabla_contratos', compact('cuentas'))->render(),
             ]);
         }
 
@@ -201,7 +221,7 @@ class AnaliticaController extends Controller
         // Ordenar por el orden natural de los bloques si es posible
         return [
             'labels' => $data->keys()->values(),
-            'series' => $data->values()
+            'series' => $data->values(),
         ];
     }
 
@@ -209,13 +229,14 @@ class AnaliticaController extends Controller
     {
         $devueltas = $cuentas->filter(function ($c) {
             $estado = strtolower($c->estadoActual->nombre ?? '');
+
             return str_contains($estado, 'devuelta') || str_contains($estado, 'rechaz');
         })->count();
         $enProceso = max(0, $cuentasTramite - $devueltas);
 
         return [
             'labels' => ['En Proceso', 'Devueltas'],
-            'series' => [$enProceso, $devueltas]
+            'series' => [$enProceso, $devueltas],
         ];
     }
 
@@ -235,16 +256,17 @@ class AnaliticaController extends Controller
                 $duracionesMinutos = $group->map(function ($ebc) {
                     $inicio = $ebc->fecha_ingreso_bloque;
                     $fin = $ebc->fecha_completado_bloque ?? now();
+
                     return max(0, $inicio->diffInMinutes($fin));
                 });
 
                 $promedioMinutos = $duracionesMinutos->avg();
 
                 return [
-                    'bloque'          => $group->first()->bloque->nombre ?? 'N/A',
-                    'promedio_horas'  => round($promedioMinutos / 60, 2),
-                    'total_casos'     => $group->count(),
-                    'orden'           => $group->first()->bloque->orden ?? 99
+                    'bloque' => $group->first()->bloque->nombre ?? 'N/A',
+                    'promedio_horas' => round($promedioMinutos / 60, 2),
+                    'total_casos' => $group->count(),
+                    'orden' => $group->first()->bloque->orden ?? 99,
                 ];
             })
             ->sortBy('orden')
@@ -257,8 +279,8 @@ class AnaliticaController extends Controller
             return trim($c->estadoActual->nombre ?? 'N/A');
         })->map(function ($group, $name) {
             return [
-                'estado'   => $name,
-                'cantidad' => $group->count()
+                'estado' => $name,
+                'cantidad' => $group->count(),
             ];
         })->sortByDesc('cantidad')->take(8)->values();
     }
@@ -269,10 +291,11 @@ class AnaliticaController extends Controller
             return $c->responsableActual ? $c->responsableActual->nombre_completo : 'Sin Asignar';
         })->map(function ($group, $name) {
             return [
-                'name'      => $name,
-                'tramite'   => $group->where('finalizada', false)->count(),
+                'name' => $name,
+                'tramite' => $group->where('finalizada', false)->count(),
                 'devueltas' => $group->filter(function ($c) {
                     $estado = strtolower($c->estadoActual->nombre ?? '');
+
                     return str_contains($estado, 'devuelta');
                 })->count(),
                 'finalizadas' => $group->where('finalizada', true)->count(),
@@ -284,8 +307,8 @@ class AnaliticaController extends Controller
     {
         return $cuentas->map(function ($c) {
             return [
-                'contrato'   => $c->contrato->numero_contrato ?? 'N/A',
-                'diferencia' => ($c->numero_pagos_totales ?? 0) - ($c->radicadas_bi ?? 0)
+                'contrato' => $c->contrato->numero_contrato ?? 'N/A',
+                'diferencia' => ($c->numero_pagos_totales ?? 0) - ($c->radicadas_bi ?? 0),
             ];
         })->sortByDesc('diferencia')->take(10)->values();
     }
@@ -309,7 +332,7 @@ class AnaliticaController extends Controller
             ->get();
 
         return [
-            'labels' => $data->pluck('fecha')->map(fn($f) => Carbon::parse($f)->format('d M')),
+            'labels' => $data->pluck('fecha')->map(fn ($f) => Carbon::parse($f)->format('d M')),
             'series' => $data->pluck('total_transiciones'),
         ];
     }
@@ -321,12 +344,13 @@ class AnaliticaController extends Controller
         })->map(function ($group, $name) {
             $total = $group->count();
             $finalizadas = $group->where('finalizada', true)->count();
+
             return [
-                'supervisor'  => $name,
-                'total'       => $total,
+                'supervisor' => $name,
+                'total' => $total,
                 'finalizadas' => $finalizadas,
-                'pendientes'  => $total - $finalizadas,
-                'eficiencia'  => $total > 0 ? round(($finalizadas / $total) * 100, 1) : 0,
+                'pendientes' => $total - $finalizadas,
+                'eficiencia' => $total > 0 ? round(($finalizadas / $total) * 100, 1) : 0,
             ];
         })->sortByDesc('total')->take(8)->values();
     }
@@ -338,24 +362,28 @@ class AnaliticaController extends Controller
         $result = [];
 
         foreach ($bloques as $bloque) {
-            if (!$bloque->sla_horas) continue;
+            if (! $bloque->sla_horas) {
+                continue;
+            }
 
             $historial = HistorialWorkflow::where('bloque_id', $bloque->id)
                 ->whereIn('cuenta_cobro_id', $cuentaIds)
                 ->whereNotNull('tiempo_en_estado_anterior_minutos')
                 ->get();
 
-            if ($historial->isEmpty()) continue;
+            if ($historial->isEmpty()) {
+                continue;
+            }
 
             $slaMinutos = $bloque->sla_horas * 60;
-            $cumple = $historial->filter(fn($h) => abs($h->tiempo_en_estado_anterior_minutos) <= $slaMinutos)->count();
+            $cumple = $historial->filter(fn ($h) => abs($h->tiempo_en_estado_anterior_minutos) <= $slaMinutos)->count();
             $total = $historial->count();
 
             $result[] = [
-                'bloque'     => $bloque->nombre,
-                'sla_horas'  => $bloque->sla_horas,
-                'cumple'     => $cumple,
-                'no_cumple'  => $total - $cumple,
+                'bloque' => $bloque->nombre,
+                'sla_horas' => $bloque->sla_horas,
+                'cumple' => $cumple,
+                'no_cumple' => $total - $cumple,
                 'porcentaje' => $total > 0 ? round(($cumple / $total) * 100, 1) : 0,
             ];
         }
@@ -369,8 +397,8 @@ class AnaliticaController extends Controller
             return $c->bloqueActual->nombre ?? 'Sin Bloque';
         })->map(function ($group, $name) {
             return [
-                'bloque'   => $name,
-                'cantidad' => $group->count()
+                'bloque' => $name,
+                'cantidad' => $group->count(),
             ];
         })->sortByDesc('cantidad')->values();
     }

@@ -25,7 +25,7 @@ return new class extends Migration
             $table->date('fecha_pago')->nullable();
             $table->boolean('es_ultima')->default(false);
             $table->timestamps();
-            
+
             $table->index('cuenta_cobro_id');
             $table->index(['mes_planilla', 'anio_planilla']);
         });
@@ -41,7 +41,7 @@ return new class extends Migration
             $table->foreignId('subido_por_id')->nullable()->constrained('usuarios');
             $table->smallInteger('version')->default(1);
             $table->timestamps();
-            
+
             $table->index('contrato_id');
             $table->index('tipo_documento_id');
         });
@@ -62,10 +62,10 @@ return new class extends Migration
             $table->text('observaciones')->nullable();
             $table->json('metadata')->nullable()->comment('Datos específicos por bloque');
             $table->timestamps();
-            
+
             // CONSTRAINT CRÍTICO: Una cuenta solo puede tener UN registro por bloque
             $table->unique(['cuenta_cobro_id', 'bloque_id'], 'uk_cuenta_bloque');
-            
+
             $table->index('cuenta_cobro_id');
             $table->index(['bloque_id', 'estado_actual_id']);
             $table->index('bloque_completado');

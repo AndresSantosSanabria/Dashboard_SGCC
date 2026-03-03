@@ -19,7 +19,7 @@ return new class extends Migration
             $table->json('permisos')->comment('Estructura de permisos');
             $table->boolean('es_activo')->default(true);
             $table->timestamps();
-            
+
             $table->index('nombre');
         });
     }
