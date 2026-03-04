@@ -14,6 +14,9 @@
     {{-- GOV.CO v5 CDN - Fuente de verdad para estilos institucionales --}}
     <link rel="stylesheet" href="https://cdn.www.gov.co/layout-govco-v5/all.css">
 
+    {{-- SweetAlert2 para diálogos premium --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     {{-- Assets locales procesados por Vite --}}
     @vite(['resources/css/app.css', 'resources/css/snackbar.css'])
     <link rel="stylesheet" href="{{ asset('css/premium-bi.css') }}">

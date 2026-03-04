@@ -3,9 +3,10 @@
     "private": true,
     "type": "module",
     "scripts": {
+        "dev": "concurrently --names \"vite,scheduler\" --prefix-colors \"blue,yellow\" \"vite\" \"php artisan schedule:work --no-interaction\"",
         "build": "vite build",
-        "dev": "vite",
-        "serve": "php artisan serve"
+        "start": "concurrently --names \"serve,scheduler\" --prefix-colors \"green,yellow\" \"php artisan serve\" \"php artisan schedule:work --no-interaction\"",
+        "scheduler": "php artisan schedule:work --no-interaction"
     },
     "devDependencies": {
         "axios": "^1.11.0",

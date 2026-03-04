@@ -198,15 +198,7 @@
                         <div class="kpi-value">{{ number_format($pagosTotales) }}</div>
                         <div class="kpi-label">Meta Total</div>
                     </div>
-                    <div class="kpi-card kpi-gray animate-in">
-                        <div class="kpi-accent"></div>
-                        <div class="kpi-icon-wrap"><i class="bi bi-pause-circle"></i></div>
-                        <div class="kpi-value" id="kpiSinTramite">{{ number_format($chartData['total_sin_tramite']) }}</div>
-                        <div class="kpi-label">Sin Trámite</div>
-                        <div class="kpi-trend text-muted">
-                            <i class="bi bi-info-circle"></i> No computan tiempos
-                        </div>
-                    </div>
+
                     <div class="kpi-card kpi-teal animate-in">
                         <div class="kpi-accent"></div>
                         <div class="kpi-icon-wrap"><i class="bi bi-speedometer"></i></div>
@@ -299,45 +291,7 @@
                     </div>
                 </div>
 
-                <!-- ===== ROW 3: Sin Trámite (NUEVO) ===== -->
-                <div class="section-title animate-in">Contratos sin trámite actual</div>
-                <div class="card card-premium mb-4 animate-in" style="border-left: 5px solid #64748b;">
-                    <div class="card-header bg-transparent border-0">
-                        <h6>
-                            <span class="chart-icon" style="background:rgba(100,116,139,.1); color:#64748b;">
-                                <i class="bi bi-pause-btn-fill"></i>
-                            </span>
-                            Listado Independiente de Contratos en Espera
-                        </h6>
-                        <span class="chart-badge" style="background:rgba(100,116,139,.06); color:#64748b;">EXCLUIDOS DE INDICADORES DE TIEMPO</span>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover align-middle border-0" id="tableSinTramite">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th class="border-0 px-3 py-2" style="font-size: 0.7rem;">N° CONTRATO</th>
-                                        <th class="border-0 px-3 py-2" style="font-size: 0.7rem;">CONTRATISTA</th>
-                                        <th class="border-0 px-3 py-2 text-end" style="font-size: 0.7rem;">VALOR COBRO</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($chartData['lista_sin_tramite'] as $item)
-                                        <tr>
-                                            <td class="px-3 border-0 fw-bold text-muted">{{ $item['numero_contrato'] }}</td>
-                                            <td class="px-3 border-0 small">{{ $item['contratista'] }}</td>
-                                            <td class="px-3 border-0 text-end fw-bold text-govco-blue">${{ number_format($item['monto'], 0, ',', '.') }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="3" class="text-center py-4 text-muted small">No hay contratos sin trámite actual</td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+
 
                 <!-- ===== ALERT TABLE ===== -->
                 <div class="section-title animate-in">Detalle por Contrato</div>

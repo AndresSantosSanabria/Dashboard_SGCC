@@ -237,8 +237,8 @@
     {{-- MODAL GESTIÓN --}}
     <div class="modal fade" id="modalManagement" tabindex="-1">
         <div class="modal-dialog modal-xl modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-                <div class="modal-header bg-primary text-white">
+            <div class="modal-content">
+                <div class="modal-header">
                     <h5 class="modal-title fw-bold" id="mTitle">Gestión Contractual</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -328,8 +328,8 @@
                             </div>
                         </div>
                         <div class="mt-4 text-end">
-                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cerrar</button>
-                            <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">Guardar Cambios</button>
+                            <button type="button" class="btn btn-outline-secondary px-4 me-2" data-bs-dismiss="modal" style="border-radius:12px;">Cerrar</button>
+                            <button type="submit" class="btn btn-premium-confirm px-4">Guardar Cambios</button>
                         </div>
                     </form>
                 </div>
@@ -340,8 +340,8 @@
     {{-- MODAL ESPECÍFICO PARA LINK SECOP --}}
     <div class="modal fade" id="modalLink" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
-                <div class="modal-header bg-primary text-white">
+            <div class="modal-content">
+                <div class="modal-header">
                     <h6 class="modal-title fw-bold">Actualizar Link SECOP</h6>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -352,9 +352,9 @@
                         <input type="hidden" id="linkContratoId">
                     </div>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary px-4 fw-bold" onclick="saveLink()">Guardar Link</button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary px-4 me-2" data-bs-dismiss="modal" style="border-radius:12px;">Cancelar</button>
+                    <button type="button" class="btn btn-premium-confirm px-4" onclick="saveLink()">Guardar Link</button>
                 </div>
             </div>
         </div>
@@ -425,7 +425,7 @@
             } catch (e) {
                 parentDiv.innerHTML = originalHTML;
                 parentDiv.className = originalClass;
-                alert('Error al actualizar el estado. Intente de nuevo.');
+                window.showSnackbar('Error al actualizar el estado. Intente de nuevo.', 'error');
             }
         }
 
@@ -583,20 +583,16 @@
                     const modalEl = document.getElementById('modalManagement');
                     bootstrap.Modal.getInstance(modalEl).hide();
                     
-                    if (window.showSnackbar) {
-                        window.showSnackbar(data.message || 'Operación exitosa', 'success');
-                    } else {
-                        alert(data.message || 'Operación exitosa');
-                    }
+                    window.showSnackbar(data.message || 'Operación exitosa', 'success');
                     
                     applyAdvancedFilters(); // Recarga la tabla sin recargar la página
                 } else {
                     const errorData = await res.json();
-                    alert('Error: ' + (errorData.message || 'No se pudo procesar la solicitud'));
+                    window.showSnackbar('Error: ' + (errorData.message || 'No se pudo procesar la solicitud'), 'error');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Ocurrió un error inesperado al conectar con el servidor');
+                window.showSnackbar('Ocurrió un error inesperado al conectar con el servidor', 'error');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
@@ -610,9 +606,23 @@
             document.getElementById('mTitle').innerText = 'Registrar Nuevo Contrato';
             new bootstrap.Modal(document.getElementById('modalManagement')).show();
         }
-        function editDirectField(id, field, currentVal, element) {
-            const newVal = prompt('Ingrese el nuevo valor:', currentVal);
-            if (newVal !== null) {
+        async function editDirectField(id, field, currentVal, element) {
+            const { value: newVal, isConfirmed } = await Swal.fire({
+                title: 'Editar Campo',
+                input: 'text',
+                inputLabel: `Modificar contenido del campo: ${field}`,
+                inputValue: currentVal,
+                showCancelButton: true,
+                confirmButtonText: 'Guardar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: '#0057b8',
+                customClass: {
+                    popup: 'premium-swal-popup',
+                    title: 'premium-swal-title'
+                }
+            });
+
+            if (isConfirmed && newVal !== null) {
                 updateBadgeStatus(null, id, field, newVal, element);
             }
         }
@@ -650,30 +660,40 @@
                         id,
                         field: 'link_secop',
                         status: link
-                    })
+                     })
                 });
 
                 if (res.ok) {
                     bootstrap.Modal.getInstance(document.getElementById('modalLink')).hide();
-                    if (window.showSnackbar) {
-                        window.showSnackbar('Link actualizado correctamente', 'success');
-                    } else {
-                        alert('Link actualizado correctamente');
-                    }
+                    window.showSnackbar('Link actualizado correctamente', 'success');
                     applyAdvancedFilters();
                 } else {
-                    alert('Error al actualizar el link');
+                    window.showSnackbar('Error al actualizar el link', 'error');
                 }
             } catch (e) {
                 console.error(e);
-                alert('Error de conexión');
+                window.showSnackbar('Error de conexión', 'error');
             }
         }
 
         async function deleteContrato(id, numero) {
-            if (!confirm(`¿Está seguro de eliminar de forma GLOBAL el contrato #${numero}? Esta acción eliminará también sus cuentas de cobro, historial y documentos. No se puede deshacer.`)) {
-                return;
-            }
+            const result = await Swal.fire({
+                title: '¿Confirmar eliminación?',
+                text: `¿Está seguro de eliminar de forma GLOBAL el contrato #${numero}? Esta acción eliminará también sus cuentas de cobro, historial y documentos. No se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar todo',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true,
+                customClass: {
+                    popup: 'premium-swal-popup',
+                    title: 'premium-swal-title'
+                }
+            });
+
+            if (!result.isConfirmed) return;
 
             try {
                 const res = await fetch(`{{ url('/seguimiento') }}/${id}`, {
@@ -687,17 +707,15 @@
                 const data = await res.json();
                 if (res.ok) {
                     if (window.showSnackbar) {
-                        window.showSnackbar(data.message, 'success');
-                    } else {
-                        alert(data.message);
+                         window.showSnackbar(data.message, 'success');
                     }
                     applyAdvancedFilters();
                 } else {
-                    alert('Error: ' + (data.message || 'No se pudo eliminar el contrato'));
+                    Swal.fire('Error', data.message || 'No se pudo eliminar el contrato', 'error');
                 }
             } catch (e) {
                 console.error(e);
-                alert('Error de conexión al intentar eliminar');
+                window.showSnackbar('Error de conexión al intentar eliminar', 'error');
             }
         }
     </script>

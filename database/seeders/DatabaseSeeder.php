@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             UsuarioSeeder::class,
             UpdateWorkflowStatesSeeder::class,
             SimulationDataSeeder::class,
+            AlertaConfigSeeder::class,  // Configuraciones del sistema de alertas
         ]);
     }
 }

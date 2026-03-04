@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 else if (card.classList.contains('kpi-red')) val.textContent = fmt.format(Math.max(0, data.pagosTotales - data.cuentasRadicadas));
                 else if (card.classList.contains('kpi-indigo')) val.textContent = fmt.format(data.pagosTotales);
                 else if (card.classList.contains('kpi-teal')) val.textContent = fmtDec.format(data.avanceGlobal) + '%';
-                else if (card.classList.contains('kpi-gray')) val.textContent = fmt.format(data.chartData ? data.chartData.total_sin_tramite : 0);
+
 
                 val.style.transition = 'opacity 0.5s ease';
                 val.style.opacity = '1';
@@ -237,28 +237,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    function updateSinTramiteTable(lista) {
-        const tbody = document.querySelector('#tableSinTramite tbody');
-        if (!tbody) return;
 
-        if (!lista || lista.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-4 text-muted small">No hay contratos sin trámite actual</td></tr>';
-            return;
-        }
-
-        const fmt = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
-        let html = '';
-        lista.forEach(item => {
-            html += `
-                <tr>
-                    <td class="px-3 border-0 fw-bold text-muted">${item.numero_contrato}</td>
-                    <td class="px-3 border-0 small">${item.contratista}</td>
-                    <td class="px-3 border-0 text-end fw-bold text-govco-blue">$${fmt.format(item.monto)}</td>
-                </tr>
-            `;
-        });
-        tbody.innerHTML = html;
-    }
 
     function updateTable(html) {
         const table = $('#alertTable').DataTable();
@@ -290,7 +269,7 @@ document.addEventListener('DOMContentLoaded', function () {
             updateKPIs(data);
             initCharts(data.chartData);
             updateTable(data.tableHtml);
-            updateSinTramiteTable(data.chartData.lista_sin_tramite);
+
 
             // Update URL without reload
             const newUrl = window.location.pathname + '?' + params.toString();

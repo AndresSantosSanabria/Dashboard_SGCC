@@ -1,19 +1,22 @@
-<div class="modal fade" id="modalCuenta{{ $cuenta->id }}" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalCuenta{{ $cuenta->id }}" aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-        <div class="modal-content" style="border: none; border-radius: 12px;">
-            <div class="modal-header-custom">
-                <div class="modal-title-custom">Cambiar Estado de la Cuenta
+        <div class="modal-content">
+            <div class="modal-header d-block position-relative">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="modal-title fw-bold text-white">
+                        <i class="bi bi-file-earmark-diff me-2"></i>Gestión de Cuenta #{{ $cuenta->numero_cuenta }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 @if ($canEdit)
                     <div class="status-buttons-row" id="statusButtons{{ $cuenta->id }}">
-                        <div class="spinner-border spinner-border-sm text-light" role="status"><span
-                                class="visually-hidden">Cargando...</span></div>
+                        <div class="spinner-border spinner-border-sm text-light" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
                     </div>
                 @endif
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"
-                    style="position: absolute; top: 20px; right: 20px;"></button>
             </div>
-            <div class="modal-body" style="padding: 30px;">
+            <div class="modal-body">
                 <div class="info-cards-row">
                     <div class="info-card">
                         <div class="info-card-icon"><i class="fas fa-file-contract"></i></div>
@@ -152,10 +155,15 @@
                     @endforeach
                 </div>
             </div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary"
-                    data-bs-dismiss="modal">Cerrar</button><a
-                    href="{{ route('dashboard') }}?searchContrato={{ $cuenta->contrato?->numero_contrato }}"
-                    class="btn btn-primary">Ver Dashboard</a></div>
+            <div class="modal-footer justify-content-between">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal" style="border-radius:12px;">
+                    <i class="bi bi-x-lg me-1"></i> Cerrar
+                </button>
+                <a href="{{ route('dashboard') }}?searchContrato={{ $cuenta->contrato?->numero_contrato }}"
+                    class="btn btn-premium-confirm">
+                    <i class="bi bi-speedometer2 me-1"></i> Ver en Dashboard
+                </a>
+            </div>
         </div>
     </div>
 </div>

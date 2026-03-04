@@ -105,3 +105,158 @@ h3,
 #sidebar.collapsed .user-profile-info .rounded-circle {
     margin-right: 0 !important;
 }
+
+/* ── Campana de Notificaciones ──────────────────────────────── */
+#btnCampana {
+    transition: transform 0.2s ease;
+}
+
+#btnCampana:hover {
+    transform: scale(1.15);
+}
+
+#btnCampana:hover .bi-bell-fill {
+    animation: shake 0.4s ease;
+}
+
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(-12deg);
+    }
+
+    75% {
+        transform: rotate(12deg);
+    }
+}
+
+#badgeNotif {
+    font-size: 0.58rem !important;
+    min-width: 17px;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 5px rgba(220, 38, 38, 0);
+    }
+}
+
+/* Colapsado: ocultar texto campana, sólo mostrar ícono */
+#sidebar.collapsed #btnCampana .sidebar-text {
+    display: none !important;
+}
+
+/* ── Modal Notificaciones ───────────────────────────────────── */
+.notif-item:hover {
+    background: #f1f5f9 !important;
+}
+
+.notif-item+.notif-item {
+    border-top: 1px solid #f1f5f9;
+}
+
+/* ── Panel de Alertas (Configuración) ───────────────────────── */
+.badge-danger-soft {
+    background: rgba(220, 38, 38, .10);
+    color: #dc2626;
+}
+
+.badge-success-soft {
+    background: rgba(10, 135, 84, .10);
+    color: #0a8754;
+}
+
+/* ── Premium Modals Styling ──────────────────────────────────── */
+.modal-content {
+    border: none !important;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+    overflow: hidden;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #003f7f 0%, #0057b8 100%);
+    padding: 1.5rem 2rem !important;
+    border-bottom: none !important;
+}
+
+.modal-header .modal-title {
+    font-weight: 700 !important;
+    color: #ffffff !important;
+}
+
+.modal-body {
+    padding: 2rem !important;
+    background-color: #ffffff;
+}
+
+.modal-footer {
+    padding: 1.5rem 2rem !important;
+    border-top: 1px solid #f1f5f9 !important;
+    background-color: #f8fafc;
+}
+
+.btn-premium-confirm {
+    background: linear-gradient(135deg, #0057b8 0%, #00428a 100%) !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 0.6rem 1.5rem !important;
+    font-weight: 600 !important;
+    color: #fff !important;
+    transition: all 0.3s ease !important;
+}
+
+.btn-premium-confirm:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 15px rgba(0, 87, 184, 0.3);
+}
+
+/* SweetAlert2 Premium Customization */
+.premium-swal-popup {
+    border-radius: 24px !important;
+    padding: 2rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+}
+
+.premium-swal-title {
+    font-size: 1.5rem !important;
+    font-weight: 800 !important;
+    color: #003f7f !important;
+    margin-bottom: 1rem !important;
+}
+
+.swal2-textarea {
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    padding: 1rem !important;
+    font-size: 0.95rem !important;
+    transition: border-color 0.2s;
+}
+
+.swal2-textarea:focus {
+    border-color: #0057b8 !important;
+    box-shadow: 0 0 0 3px rgba(0, 87, 184, 0.1) !important;
+}
+
+.swal2-styled.swal2-confirm {
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+    padding: 0.7rem 2rem !important;
+}
+
+.swal2-styled.swal2-cancel {
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+}

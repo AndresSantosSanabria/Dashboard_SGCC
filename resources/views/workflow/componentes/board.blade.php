@@ -56,11 +56,13 @@
                                     </span>
                                 </div>
                                 <div class="card-footer-info"><span><i
-                                            class="far fa-calendar-alt"></i>{{ $cuenta->created_at->format('d/m/Y') }}</span><span
-                                        class="timer-badge"
-                                        data-start="{{ $fechaIngreso ? $fechaIngreso->toIso8601String() : '' }}"><i
-                                            class="far fa-clock"></i><span
-                                            class="elapsed-time">{{ $fechaIngreso ? $fechaIngreso->diffForHumans(null, true) : 'N/A' }}</span></span>
+                                            class="far fa-calendar-alt"></i>{{ $cuenta->created_at->format('d/m/Y') }}</span>
+                                        @if(strtolower($cuenta->estadoActual?->nombre ?? '') !== 'sin tramite')
+                                        <span class="timer-badge"
+                                            data-start="{{ $fechaIngreso ? $fechaIngreso->toIso8601String() : '' }}"><i
+                                                class="far fa-clock"></i><span
+                                                class="elapsed-time">{{ $fechaIngreso ? $fechaIngreso->diffForHumans(null, true) : 'N/A' }}</span></span>
+                                    @endif
                                 </div>
                                 <div class="card-footer-info mt-1"
                                     style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 4px;">

@@ -8,7 +8,10 @@
             <h1 class="h3 mb-0 text-gray-800">
                 <i class="fas fa-users-cog me-2"></i>Gestión de Usuarios
             </h1>
-            <div class="d-flex gap-2">
+        <div class="d-flex gap-2">
+                <a href="{{ route('configuracion.alertas.index') }}" class="btn btn-warning">
+                    <i class="bi bi-bell-fill me-2"></i>Alertas
+                </a>
                 <a href="{{ route('configuracion.auditoria.index') }}" class="btn btn-dark">
                     <i class="fas fa-history me-2"></i>Historial de Auditoría
                 </a>

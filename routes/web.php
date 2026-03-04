@@ -63,6 +63,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/seguimiento/store', [\App\Http\Controllers\SeguimientoController::class, 'store'])->name('seguimiento.store');
     Route::put('/seguimiento/{id}', [\App\Http\Controllers\SeguimientoController::class, 'update'])->name('seguimiento.update');
     Route::delete('/seguimiento/{contrato}', [\App\Http\Controllers\SeguimientoController::class, 'destroy'])->name('seguimiento.destroy');
+
+    // Notificaciones
+    Route::get('/notificaciones/latest', [\App\Http\Controllers\NotificationController::class, 'getLatest'])->name('notificaciones.latest');
+    Route::post('/notificaciones/leer/{id}', [\App\Http\Controllers\NotificationController::class, 'markAsRead'])->name('notificaciones.leer');
+    Route::post('/notificaciones/leer-todas', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead'])->name('notificaciones.leer-todas');
 });
 
 // Workflow (protected)
@@ -96,4 +101,13 @@ Route::middleware('auth')->prefix('configuracion')->group(function () {
     // Auditoría
     Route::get('/auditoria', [\App\Http\Controllers\AuditoriaController::class, 'index'])->name('configuracion.auditoria.index');
     Route::get('/auditoria/{id}', [\App\Http\Controllers\AuditoriaController::class, 'show'])->name('configuracion.auditoria.show');
+
+    // Panel de Alertas
+    Route::get('/alertas', [\App\Http\Controllers\AlertaAdminController::class, 'index'])->name('configuracion.alertas.index');
+    Route::post('/alertas/config', [\App\Http\Controllers\AlertaAdminController::class, 'saveConfig'])->name('configuracion.alertas.config');
+    Route::post('/alertas/festivos', [\App\Http\Controllers\AlertaAdminController::class, 'storeFestivo'])->name('configuracion.alertas.festivos.store');
+    Route::post('/alertas/festivos/sync', [\App\Http\Controllers\AlertaAdminController::class, 'syncFestivos'])->name('configuracion.alertas.festivos.sync');
+    Route::delete('/alertas/festivos/{id}', [\App\Http\Controllers\AlertaAdminController::class, 'destroyFestivo'])->name('configuracion.alertas.festivos.destroy');
+    Route::post('/alertas/destinatarios', [\App\Http\Controllers\AlertaAdminController::class, 'storeDestinatario'])->name('configuracion.alertas.destinatarios.store');
+    Route::delete('/alertas/destinatarios/{id}', [\App\Http\Controllers\AlertaAdminController::class, 'destroyDestinatario'])->name('configuracion.alertas.destinatarios.destroy');
 });

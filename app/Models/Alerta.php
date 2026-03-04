@@ -18,6 +18,8 @@ class Alerta extends Model
         'mensaje',
         'leida',
         'usuario_destino_id',
+        'created_at',
+        'updated_at',
     ];
 
     protected $casts = [

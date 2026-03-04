@@ -168,11 +168,6 @@ class AnaliticaController extends Controller
             'sla_compliance' => $this->getSlaComplianceData($cuentas),
             'bloque_distribucion' => $this->getBloqueDistribucionData($cuentas),
             'total_sin_tramite' => $totalSinTramite,
-            'lista_sin_tramite' => $cuentasSinTramite->map(fn ($c) => [
-                'numero_contrato' => $c->contrato->numero_contrato,
-                'contratista' => $c->contrato->contratista->nombre_completo ?? 'N/A',
-                'monto' => (float) ($c->valor_cobro ?? 0),
-            ])->values(),
         ];
 
         if ($request->ajax()) {
@@ -245,11 +240,15 @@ class AnaliticaController extends Controller
         // Obtener IDs de las cuentas filtradas
         $cuentaIds = $cuentas->pluck('id')->toArray();
 
-        // Usamos la tabla especializada filtrando por las cuentas que el usuario seleccionó
-        return \App\Models\EstadoBloqueCuenta::with('bloque')
+        return \App\Models\EstadoBloqueCuenta::with(['bloque', 'estadoActual'])
             ->whereIn('cuenta_cobro_id', $cuentaIds)
             ->whereNotNull('fecha_ingreso_bloque')
             ->get()
+            ->filter(function ($ebc) {
+                // Excluir registros que se encuentren actualmente en "Sin trámite"
+                // ya que no se consideran en ejecución para métricas de tiempo.
+                return strtolower($ebc->estadoActual?->nombre ?? '') !== 'sin tramite';
+            })
             ->groupBy('bloque_id')
             ->map(function ($group) {
                 // Calcular duración para cada registro (histórico o actual)

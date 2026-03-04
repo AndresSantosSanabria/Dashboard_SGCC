@@ -87,11 +87,36 @@ document.addEventListener('show.bs.modal', function (event) {
         });
 });
 
-function cambiarEstado(cuentaId, estadoDestinoId, requiereComentario, estadoNombre) {
+async function cambiarEstado(cuentaId, estadoDestinoId, requiereComentario, estadoNombre) {
     let comentario = null;
     if (requiereComentario) {
-        comentario = prompt(`Ingrese un comentario para el cambio a: ${estadoNombre} (Opcional)`);
-        if (comentario === null) return; // User cancelled
+        const { value: text, isConfirmed } = await Swal.fire({
+            title: 'Comentario de Seguimiento',
+            input: 'textarea',
+            inputLabel: `Ingrese un mensaje para el cambio a: ${estadoNombre}`,
+            inputPlaceholder: 'Escriba aquí su comentario (Opcional)...',
+            inputAttributes: {
+                'aria-label': 'Ingrese su comentario'
+            },
+            showCancelButton: true,
+            confirmButtonText: 'Confirmar',
+            cancelButtonText: 'Cancelar',
+            reverseButtons: true,
+            confirmButtonColor: '#0057b8',
+            customClass: {
+                popup: 'premium-swal-popup',
+                title: 'premium-swal-title'
+            },
+            didOpen: () => {
+                const input = Swal.getInput();
+                if (input) {
+                    input.focus();
+                }
+            }
+        });
+
+        if (!isConfirmed) return;
+        comentario = text;
     }
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');

@@ -180,24 +180,23 @@ class CuentaCobro extends Model
         // 2. Calcular "Tiempo Muerto" en estado "Sin trámite"
         $tiempoMuertoMinutos = 0;
         
-        // Obtener historial ordenado ascendente para recorrer los periodos
-        $historial = $this->historialWorkflow()
-            ->with(['estadoDestino'])
-            ->orderBy('fecha_transicion', 'asc')
-            ->get();
+        // USAR LA COLECCIÓN YA CARGADA (Evita N+1)
+        // Se ordena ascendentemente para procesar la línea de tiempo cronológicamente
+        $historial = $this->historialWorkflow->sortBy('fecha_transicion');
 
         $fechaEntradaSinTramite = null;
 
-        foreach ($historial as $index => $h) {
+        foreach ($historial as $h) {
             $nombreEstado = strtolower($h->estadoDestino->nombre ?? '');
+            $esSinTramite = str_contains($nombreEstado, 'sin tramite') || str_contains($nombreEstado, 'sin trámite');
             
             // Si entra a Sin Trámite y no estábamos ya en ese estado
-            if ($nombreEstado === 'sin tramite' && !$fechaEntradaSinTramite) {
-                $fechaEntradaSinTramite = $h->fecha_transicion;
+            if ($esSinTramite && !$fechaEntradaSinTramite) {
+                $fechaEntradaSinTramite = \Carbon\Carbon::parse($h->fecha_transicion);
             } 
             // Si sale de Sin Trámite
-            elseif ($nombreEstado !== 'sin tramite' && $fechaEntradaSinTramite) {
-                $tiempoMuertoMinutos += $fechaEntradaSinTramite->diffInMinutes($h->fecha_transicion);
+            elseif (!$esSinTramite && $fechaEntradaSinTramite) {
+                $tiempoMuertoMinutos += $fechaEntradaSinTramite->diffInMinutes(\Carbon\Carbon::parse($h->fecha_transicion));
                 $fechaEntradaSinTramite = null;
             }
         }
@@ -209,6 +208,10 @@ class CuentaCobro extends Model
 
         // 3. Tiempo Neto
         $minutosNetos = max(0, $totalMinutos - $tiempoMuertoMinutos);
+
+        // Si el resultado es 0 o el estado actual es sin trámite, mostrar 0s o N/A según prefiera el usuario
+        // pero aquí mostramos el tiempo neto "fluctuado"
+        if ($minutosNetos <= 0) return '0m';
 
         // Formatear salida
         $d = floor($minutosNetos / 1440);

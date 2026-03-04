@@ -194,6 +194,7 @@ class CuentaCobroController extends Controller
             'responsableActual',
             'estadoActual',
             'bloqueActual',
+            'historialWorkflow.estadoDestino', // Eager loading para cálculo de tiempo total
         ]);
 
         // 2. Filter by "Solo asignados" if applicable
