@@ -42,7 +42,8 @@
                 <span class="label text-primary">Cumplimiento Global</span>
                 <div class="val"><span id="stat-avg">{{ number_format($stats['avg_cumplimiento'], 1) }}</span>%</div>
                 <div class="progress mt-1" style="height: 6px; background: #e2e8f0;">
-                    <div class="progress-bar bg-primary" id="stat-bar" style="width: {{ $stats['avg_cumplimiento'] }}%"></div>
+                    <div class="progress-bar bg-primary" id="stat-bar" style="width: {{ $stats['avg_cumplimiento'] }}%">
+                    </div>
                 </div>
             </div>
             <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #8b5cf6 !important;">
@@ -53,7 +54,8 @@
         </div>
 
         {{-- SEGUNDA FILA: ANALÍTICA SECOP --}}
-        <div class="analytics-summary animate-fadeIn" style="margin-top: 1rem; margin-bottom: 2rem; grid-template-columns: repeat(4, 1fr);">
+        <div class="analytics-summary animate-fadeIn"
+            style="margin-top: 1rem; margin-bottom: 2rem; grid-template-columns: repeat(4, 1fr);">
             <div class="summary-mini-card shadow-sm border-0" style="border-left: 4px solid #10b981 !important;">
                 <span class="label" style="color: #059669;">Cerrados/Terminados SECOP</span>
                 <span class="val" id="stat-sec-cerrado">{{ number_format($stats['sec_cerrado']) }}</span>
@@ -132,7 +134,8 @@
                 <button class="btn btn-saas-primary w-100 py-2" onclick="applyAdvancedFilters()">Filtrar</button>
             </div>
             <div class="form-group-saas" style="flex: 0 0 50px;">
-                <button class="btn btn-link text-muted" onclick="window.location.href='{{ route('seguimiento.index') }}'"><i
+                <button class="btn btn-link text-muted"
+                    onclick="window.location.href='{{ route('seguimiento.index') }}'"><i
                         class="bi bi-x-circle"></i></button>
             </div>
         </div>
@@ -146,10 +149,12 @@
                             <th class="stk-gest"></th>
                             <th class="stk-risk"></th>
                             <th class="stk-saas stk-proc" style="z-index: 12 !important;"></th>
-                            <th class="stk-saas stk-cont-merged" colspan="2" style="z-index: 12 !important; border-right: 2px solid #e2e8f0; text-align: center;">
+                            <th class="stk-saas stk-cont-merged" colspan="2"
+                                style="z-index: 12 !important; border-right: 2px solid #e2e8f0; text-align: center;">
                                 NUMERO DE CONTRATO / CONTRATISTA</th>
 
-                            <th colspan="4" style="border-right: 2px solid #e2e8f0; text-align: center;">INFORMACIÓN BASE
+                            <th colspan="4" style="border-right: 2px solid #e2e8f0; text-align: center;">INFORMACIÓN
+                                BASE
                             </th>
                             <th colspan="13"
                                 style="border-right: 2px solid #e2e8f0; text-align: center; background: #FEF9C3; color: #854D0E;">
@@ -171,7 +176,8 @@
                             <th class="stk-risk text-center">PROGRESO</th>
                             <th class="stk-saas stk-proc text-center">PROCESO</th>
                             <th class="stk-saas stk-num text-center">Nº CONTRATO</th>
-                            <th class="stk-saas stk-nom text-center" style="border-right: 2px solid #e2e8f0;">CONTRATISTA</th>
+                            <th class="stk-saas stk-nom text-center" style="border-right: 2px solid #e2e8f0;">CONTRATISTA
+                            </th>
 
                             <th class="col-md-saas">TIPO CONTRATISTA</th>
                             <th class="col-md-saas">SUPERVISOR</th>
@@ -200,10 +206,13 @@
 
                             {{-- Ejecución (1 a 12) --}}
                             @for ($i = 1; $i <= 12; $i++)
-                                <th class="col-narrow-saas" title="Cuenta {{ $i }}">REP {{ $i }}</th>
-                                <th class="col-narrow-saas" title="Cuenta {{ $i }}">SEC {{ $i }}</th>
+                                <th class="col-narrow-saas" title="Cuenta {{ $i }}">REP {{ $i }}
+                                </th>
+                                <th class="col-narrow-saas" title="Cuenta {{ $i }}">SEC {{ $i }}
+                                </th>
                                 <th class="col-narrow-saas" title="Cuenta {{ $i }}"
-                                    style="{{ $i == 12 ? 'border-right: 2px solid #e2e8f0' : '' }}">SIA {{ $i }}</th>
+                                    style="{{ $i == 12 ? 'border-right: 2px solid #e2e8f0' : '' }}">SIA
+                                    {{ $i }}</th>
                             @endfor
 
                             {{-- Cierre --}}
@@ -228,7 +237,9 @@
                     </tbody>
                 </table>
             </div>
-            <div id="pagination-container" class="d-flex justify-content-center align-items-center p-3 border-top bg-white" style="border-radius: 0 0 12px 12px;">
+            <div id="pagination-container"
+                class="d-flex justify-content-center align-items-center p-3 border-top bg-white"
+                style="border-radius: 0 0 12px 12px;">
                 {{ $contratos->appends(request()->query())->links('pagination::bootstrap-5') }}
             </div>
         </div>
@@ -249,7 +260,8 @@
                         <div class="row g-3">
                             <!-- Sección: Información Base -->
                             <div class="col-12">
-                                <h6 class="fw-bold mb-3" style="color: #1e40af; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+                                <h6 class="fw-bold mb-3"
+                                    style="color: #1e40af; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
                                     <i class="bi bi-info-circle me-1"></i> INFORMACIÓN BASE
                                 </h6>
                             </div>
@@ -265,7 +277,8 @@
                                 </select>
                             </div>
                             <div class="col-md-6"><label class="small fw-bold">CONTRATISTA / RAZÓN SOCIAL</label>
-                                <input type="text" name="contratista_nombre" id="mContratistaNom" class="form-control" required>
+                                <input type="text" name="contratista_nombre" id="mContratistaNom"
+                                    class="form-control" required>
                             </div>
                             <div class="col-md-6"><label class="small fw-bold">VALOR CONTRATO</label><input
                                     type="number" name="monto_total" id="mValor" class="form-control" required>
@@ -285,16 +298,19 @@
 
                             <!-- Sección: Checklist Técnico -->
                             <div class="col-12 mt-4">
-                                <h6 class="fw-bold mb-3" style="color: #854d0e; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+                                <h6 class="fw-bold mb-3"
+                                    style="color: #854d0e; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
                                     <i class="bi bi-check2-square me-1"></i> CHECKLIST TÉCNICO
                                 </h6>
                             </div>
-                            <div class="col-md-12"><label class="small fw-bold text-warning">LINK SECOP</label><input type="text"
-                                    name="link_secop" id="mLink" class="form-control" placeholder="URL del contrato"></div>
+                            <div class="col-md-12"><label class="small fw-bold text-warning">LINK SECOP</label><input
+                                    type="text" name="link_secop" id="mLink" class="form-control"
+                                    placeholder="URL del contrato"></div>
 
                             <!-- Sección: Gestión -->
                             <div class="col-12 mt-4">
-                                <h6 class="fw-bold mb-3" style="color: #166534; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
+                                <h6 class="fw-bold mb-3"
+                                    style="color: #166534; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">
                                     <i class="bi bi-gear me-1"></i> GESTIÓN Y CIERRE
                                 </h6>
                             </div>
@@ -305,7 +321,8 @@
                                     <option value="Pagado">Pagado</option>
                                 </select>
                             </div>
-                            <div class="col-md-4"><label class="small fw-bold text-success">MODIFICACIONES Y CIERRE</label>
+                            <div class="col-md-4"><label class="small fw-bold text-success">MODIFICACIONES Y
+                                    CIERRE</label>
                                 <select name="modificaciones_y_cierre" id="mMcierre" class="form-select">
                                     <option value="">VACÍO</option>
                                     <option value="con supervisor">con supervisor</option>
@@ -313,10 +330,11 @@
                                     <option value="Secretaria">Secretaria</option>
                                 </select>
                             </div>
-                            <div class="col-md-4"><label class="small fw-bold text-success">ABOGADO RESP.</label><input type="text"
-                                    name="abogado_responsable" id="mAbogado" class="form-control"></div>
-                            <div class="col-md-4"><label class="small fw-bold">CONTADOR RESP.</label><input type="text"
-                                    name="contador_responsable" id="mContador" class="form-control"></div>
+                            <div class="col-md-4"><label class="small fw-bold text-success">ABOGADO RESP.</label><input
+                                    type="text" name="abogado_responsable" id="mAbogado" class="form-control"></div>
+                            <div class="col-md-4"><label class="small fw-bold">CONTADOR RESP.</label><input
+                                    type="text" name="contador_responsable" id="mContador" class="form-control">
+                            </div>
                             <div class="col-md-8"><label class="small fw-bold">RAZÓN NO LIQUIDACIÓN</label>
                                 <textarea name="razon_no_liquidacion" id="mRazonNoLiq" class="form-control" rows="1"></textarea>
                             </div>
@@ -328,7 +346,8 @@
                             </div>
                         </div>
                         <div class="mt-4 text-end">
-                            <button type="button" class="btn btn-outline-secondary px-4 me-2" data-bs-dismiss="modal" style="border-radius:12px;">Cerrar</button>
+                            <button type="button" class="btn btn-outline-secondary px-4 me-2" data-bs-dismiss="modal"
+                                style="border-radius:12px;">Cerrar</button>
                             <button type="submit" class="btn btn-premium-confirm px-4">Guardar Cambios</button>
                         </div>
                     </form>
@@ -348,18 +367,21 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="small fw-bold mb-1">URL del contrato en SECOP</label>
-                        <input type="url" id="linkInput" class="form-control" placeholder="https://www.secop.gov.co/...">
+                        <input type="url" id="linkInput" class="form-control"
+                            placeholder="https://www.secop.gov.co/...">
                         <input type="hidden" id="linkContratoId">
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary px-4 me-2" data-bs-dismiss="modal" style="border-radius:12px;">Cancelar</button>
-                    <button type="button" class="btn btn-premium-confirm px-4" onclick="saveLink()">Guardar Link</button>
+                    <button type="button" class="btn btn-outline-secondary px-4 me-2" data-bs-dismiss="modal"
+                        style="border-radius:12px;">Cancelar</button>
+                    <button type="button" class="btn btn-premium-confirm px-4" onclick="saveLink()">Guardar
+                        Link</button>
                 </div>
             </div>
         </div>
     </div>
-</div>
+    </div>
 
     <script>
         async function updateBadgeStatus(event, id, field, status, element) {
@@ -418,7 +440,7 @@
                     parentDiv.innerHTML = `<i class="bi ${b.icon}"></i> ${status || 'VACÍO'}`;
 
                     // Recargar stats y estado global sin perder posición
-                    applyAdvancedFilters(); 
+                    applyAdvancedFilters();
                 } else {
                     throw new Error('Server error');
                 }
@@ -430,6 +452,7 @@
         }
 
         let filterTimeout;
+
         function debouncedFilter() {
             clearTimeout(filterTimeout);
             filterTimeout = setTimeout(() => {
@@ -464,7 +487,8 @@
                     numero_contrato: document.getElementById('filterContrato').value,
                     tipo_contratista: document.getElementById('filterTipo').value,
                     supervisor_id: document.getElementById('filterSup').value,
-                    estado_filtro: document.getElementById('filterEstado') ? document.getElementById('filterEstado').value : '',
+                    estado_filtro: document.getElementById('filterEstado') ? document.getElementById(
+                        'filterEstado').value : '',
                     secop_filtro: document.getElementById('filterSecop').value,
                     mes_filtro: document.getElementById('filterMes').value
                 });
@@ -474,7 +498,7 @@
             // Preservar Scroll
             const scrollPos = window.scrollY;
             const tableScroll = document.querySelector('.table-scroll-container')?.scrollLeft;
-            
+
             // Estabilizar altura para prevenir saltos
             const tableCard = document.querySelector('.table-card-saas');
             if (tableCard) {
@@ -501,7 +525,7 @@
                 window.scrollTo(0, scrollPos);
                 if (tableScroll !== undefined) {
                     const tableContainer = document.querySelector('.table-scroll-container');
-                    if(tableContainer) tableContainer.scrollLeft = tableScroll;
+                    if (tableContainer) tableContainer.scrollLeft = tableScroll;
                 }
 
                 // Actualizar Stats
@@ -509,16 +533,19 @@
                 document.getElementById('stat-pend').innerText = parseInt(data.stats.pend_contratos).toLocaleString();
                 document.getElementById('stat-avg').innerText = parseFloat(data.stats.avg_cumplimiento).toFixed(1);
                 document.getElementById('stat-bar').style.width = data.stats.avg_cumplimiento + '%';
-                if(document.getElementById('stat-val-total')){
+                if (document.getElementById('stat-val-total')) {
                     document.getElementById('stat-val-total').innerText = parseInt(data.stats.total).toLocaleString();
                 }
 
                 // Actualizar Stats SECOP
-                document.getElementById('stat-sec-cerrado').innerText = parseInt(data.stats.sec_cerrado).toLocaleString();
-                document.getElementById('stat-sec-ejecucion').innerText = parseInt(data.stats.sec_ejecucion).toLocaleString();
+                document.getElementById('stat-sec-cerrado').innerText = parseInt(data.stats.sec_cerrado)
+                .toLocaleString();
+                document.getElementById('stat-sec-ejecucion').innerText = parseInt(data.stats.sec_ejecucion)
+                    .toLocaleString();
                 document.getElementById('stat-sec-vacio').innerText = parseInt(data.stats.sec_vacio).toLocaleString();
-                if(document.getElementById('stat-total-con-seg')){
-                    document.getElementById('stat-total-con-seg').innerText = parseInt(data.stats.total).toLocaleString();
+                if (document.getElementById('stat-total-con-seg')) {
+                    document.getElementById('stat-total-con-seg').innerText = parseInt(data.stats.total)
+                    .toLocaleString();
                 }
 
             } catch (e) {
@@ -528,7 +555,7 @@
                 // Quitar restricción de altura
                 const tableCard = document.querySelector('.table-card-saas');
                 if (tableCard) tableCard.style.minHeight = '';
-                
+
                 btn.innerHTML = originalText;
                 btn.disabled = false;
             }
@@ -582,13 +609,14 @@
                     const data = await res.json();
                     const modalEl = document.getElementById('modalManagement');
                     bootstrap.Modal.getInstance(modalEl).hide();
-                    
+
                     window.showSnackbar(data.message || 'Operación exitosa', 'success');
-                    
+
                     applyAdvancedFilters(); // Recarga la tabla sin recargar la página
                 } else {
                     const errorData = await res.json();
-                    window.showSnackbar('Error: ' + (errorData.message || 'No se pudo procesar la solicitud'), 'error');
+                    window.showSnackbar('Error: ' + (errorData.message || 'No se pudo procesar la solicitud'),
+                        'error');
                 }
             } catch (err) {
                 console.error(err);
@@ -607,7 +635,10 @@
             new bootstrap.Modal(document.getElementById('modalManagement')).show();
         }
         async function editDirectField(id, field, currentVal, element) {
-            const { value: newVal, isConfirmed } = await Swal.fire({
+            const {
+                value: newVal,
+                isConfirmed
+            } = await Swal.fire({
                 title: 'Editar Campo',
                 input: 'text',
                 inputLabel: `Modificar contenido del campo: ${field}`,
@@ -648,7 +679,7 @@
         async function saveLink() {
             const id = document.getElementById('linkContratoId').value;
             const link = document.getElementById('linkInput').value;
-            
+
             try {
                 const res = await fetch('{{ route('seguimiento.update-status') }}', {
                     method: 'POST',
@@ -660,7 +691,7 @@
                         id,
                         field: 'link_secop',
                         status: link
-                     })
+                    })
                 });
 
                 if (res.ok) {
@@ -707,7 +738,7 @@
                 const data = await res.json();
                 if (res.ok) {
                     if (window.showSnackbar) {
-                         window.showSnackbar(data.message, 'success');
+                        window.showSnackbar(data.message, 'success');
                     }
                     applyAdvancedFilters();
                 } else {

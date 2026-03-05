@@ -1,8 +1,16 @@
+/**
+ * MOTOR DE VISUALIZACIÓN BI (ApexCharts)
+ * 
+ * Este script gestiona la interactividad del tablero analítico.
+ * Sigue un patrón de "Data-Driven UI", donde los gráficos se destruyen y 
+ * recrean dinámicamente según la respuesta del servidor (AJAX).
+ */
 document.addEventListener('DOMContentLoaded', function () {
     let chartData = window.chartData || {};
     let charts = {};
 
-    // Paleta de colores
+    // PALETA DE COLORES INSTITUCIONAL
+    // Basada en la guía GOV.CO con extensiones para semántica de BI (Green/Amber/Red).
     const P = {
         blue: '#004884',
         blueLt: '#0070cc',
@@ -22,11 +30,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const baseFont = { fontFamily: 'Inter, sans-serif' };
     const noToolbar = { show: false };
 
-    // ==============================
-    // INITIALIZE CHARTS
-    // ==============================
+    /**
+     * Inicialización Dinámica de Gráficos
+     * Esta función separa la lógica de configuración de la lógica de datos.
+     */
     function initCharts(data) {
-        // 1. DONUT – Estado de Cuentas
+        // 1. DISTRIBUCIÓN POR ESTADO (Donut)
+        // Permite ver rápidamente la proporción de cuentas devueltas vs proceso.
         if (data.estado_anillos) {
             if (charts.donut) charts.donut.destroy();
             charts.donut = new ApexCharts(document.querySelector("#donutChart"), {
@@ -247,15 +257,20 @@ document.addEventListener('DOMContentLoaded', function () {
         applyMinimizedColumns();
     }
 
-    // ==============================
-    // AJAX REFRESH
-    // ==============================
+    /**
+     * ESTRATEGIA DE REFRESCO AJAX (Seamless BI)
+     * 
+     * Implementa un patrón de "Single Page Component" dentro de la vista de analítica.
+     * En lugar de recargar la página, solicitamos los datos al controlador, 
+     * actualizamos los KPIs, redibujamos los gráficos y reemplazamos el HTML 
+     * de la tabla de forma atómica.
+     */
     async function refreshDashboard() {
         const form = document.getElementById('filterForm');
         const formData = new FormData(form);
         const params = new URLSearchParams(formData);
 
-        // Mostrar loading state
+        // INDICADOR DE CARGA: Feedback visual inmediato al usuario
         const captureArea = document.getElementById('captureArea');
         captureArea.classList.add('loading');
 
@@ -265,18 +280,21 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const data = await response.json();
 
-            // Update elements
+            // ACTUALIZACIÓN DE ESTADO: 
+            // Sincronizamos KPIs, Gráficos y Tabla sin perder el scroll del usuario.
             updateKPIs(data);
             initCharts(data.chartData);
             updateTable(data.tableHtml);
 
-
-            // Update URL without reload
+            // MANEJO DE HISTORIAL (Browser History API): 
+            // Permite que el usuario pueda usar el botón "Atrás" o compartir 
+            // la URL con los filtros actuales aplicados.
             const newUrl = window.location.pathname + '?' + params.toString();
             window.history.pushState({ path: newUrl }, '', newUrl);
 
         } catch (error) {
             console.error('Error refreshing dashboard:', error);
+            window.showSnackbar("Error al actualizar los datos. Intente de nuevo.", "error");
         } finally {
             captureArea.classList.remove('loading');
         }

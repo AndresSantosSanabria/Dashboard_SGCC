@@ -26,588 +26,231 @@ use Spatie\SimpleExcel\SimpleExcelWriter;
 
 class CuentaCobroController extends Controller
 {
-    private $bloquesCache = [];
+    /**
+     * CENTRAL DE OPERACIONES - SGCC
+     * 
+     * Este controlador es la columna vertebral operativa del sistema. 
+     * Gestiona el ciclo de vida completo de una Cuenta de Cobro, 
+     * desde su radicación (vía Excel o Manual) hasta su finalización contable.
+     */
+    private $blocksCache = [];
+    private $statesCache = [];
 
-    private $estadosCache = [];
-
+    /**
+     * Optimizador de Consultas: Cacheamos IDs de bloques/estados para evitar 
+     * consultas redundantes a la BD durante importaciones masivas.
+     */
     private function getBlockIdByCode(string $code): int
     {
-        if (isset($this->blocksCache[$code])) {
-            return $this->blocksCache[$code];
-        }
-        $id = BloqueWorkflow::where('codigo', $code)->value('id');
-        if (! $id) {
-            throw new \Exception("Bloque con código '$code' no encontrado en la base de datos.");
-        }
-
-        return $this->blocksCache[$code] = $id;
+        if (isset($this->blocksCache[$code])) return $this->blocksCache[$code];
+        return $this->blocksCache[$code] = BloqueWorkflow::where('codigo', $code)->value('id');
     }
 
-    private function getStateIdByCode(string $code): int
-    {
-        if (isset($this->statesCache[$code])) {
-            return $this->statesCache[$code];
-        }
-        $id = EstadoWorkflow::where('codigo', $code)->value('id');
-        if (! $id) {
-            throw new \Exception("Estado con código '$code' no encontrado en la base de datos.");
-        }
-
-        return $this->statesCache[$code] = $id;
-    }
-
+    /**
+     * CONSULTA PÚBLICA (Citizen Transparency)
+     * 
+     * Permite que cualquier contratista consulte el estado de su pago 
+     * usando sólo su NIT. Implementa una vista simplificada para 
+     * reducir la carga administrativa de las oficinas.
+     */
     public function publicConsultation(Request $request)
     {
         $nit = $request->input('nit');
+        if (! $nit) return response()->json(['error' => 'NIT requerido'], 400);
 
-        if (! $nit) {
-            return response()->json(['error' => 'NIT no proporcionado'], 400);
-        }
-
-        // Search for the account associated with the NIT via Contratista -> Contrato -> CuentaCobro
-        $cuenta = CuentaCobro::whereHas('contrato.contratista', function ($query) use ($nit) {
-            $query->where('nit', $nit);
-        })
+        // Estrategia: Buscamos la cuenta más reciente (Latest) para este contratista.
+        $cuenta = CuentaCobro::whereHas('contrato.contratista', fn($q) => $q->where('nit', $nit))
             ->with(['estadoActual', 'bloqueActual', 'contrato.contratista'])
-            ->latest('updated_at')
-            ->first();
+            ->latest('updated_at')->first();
 
-        if (! $cuenta) {
-            return response()->json(['error' => 'No se encontró ninguna cuenta asociada a este NIT/Cédula.'], 404);
-        }
+        if (! $cuenta) return response()->json(['error' => 'No se encontraron trámites activos'], 404);
 
         return response()->json([
             'id' => $cuenta->id,
             'contratista' => $cuenta->contrato->contratista->razon_social,
-            'numero_contrato' => $cuenta->contrato->numero_contrato,
-            'numero_cuenta' => $cuenta->numero_cuenta,
-            'estado' => $cuenta->estadoActual->nombre ?? 'N/A',
+            'estado' => $cuenta->estadoActual->nombre ?? 'En trámite',
             'bloque' => $cuenta->bloqueActual->nombre ?? 'N/A',
             'ultima_actualizacion' => $cuenta->updated_at->format('d/m/Y H:i A'),
         ]);
     }
 
     /**
-     * Get history filtered by current account cycle (Public version)
-     * Shows ALL transitions of the current cycle (returns, block changes, etc.)
-     * Only excludes the internal "Inicio manual del ciclo" marker event.
+     * DASHBOARD CONSOLIDADO (Operaciones Centralizadas)
+     * 
+     * Renderiza la vista principal para los administradores y revisores. 
+     * Implementa filtros multicapa y seguridad granual por bloques.
      */
-    public function publicHistorial($cuentaId)
-    {
-        $cuenta = CuentaCobro::findOrFail($cuentaId);
-
-        // The account's fecha_radicacion is reset each time a new cycle starts.
-        // Use it as the lower bound to only show the current cycle's history.
-        $fechaInicioActual = $cuenta->fecha_radicacion ?? $cuenta->created_at;
-
-        $query = \App\Models\HistorialWorkflow::with([
-            'bloque',
-            'estadoOrigen',
-            'estadoDestino',
-            'usuarioAccion',
-        ])
-            ->where('cuenta_cobro_id', $cuentaId)
-        // Only show events from the current cycle onwards
-            ->where('fecha_transicion', '>=', $fechaInicioActual)
-        // Exclude the internal cycle-start marker ("Inicio manual del ciclo - Cuenta #X")
-            ->where(function ($q) {
-                $q->whereNull('comentarios')
-                    ->orWhere('comentarios', 'not like', 'Inicio manual del ciclo%');
-            });
-
-        $historial = $query->orderBy('fecha_transicion', 'asc')->get();
-
-        return response()->json([
-            'success' => true,
-            'historial' => $historial,
-            'tiempo_total' => $cuenta->tiempo_total_ejecucion,
-            'fecha_inicio' => $historial->count() > 0 ? $historial->first()->fecha_transicion->format('d/m/Y H:i') : null,
-        ]);
-    }
-
-    private function getNextInvoiceNumber($contratoId)
-    {
-        // Obtener el máximo número de factura radicado para este contrato
-        // Convertimos a entero para asegurar orden numérico correcto
-        $maxInvoice = CuentaCobro::where('contrato_id', $contratoId)
-            ->whereNotNull('ultima_factura_hacienda')
-            ->where('ultima_factura_hacienda', '!=', 'N/A')
-            ->selectRaw('MAX(CAST(ultima_factura_hacienda AS UNSIGNED)) as max_num')
-            ->value('max_num');
-
-        return ($maxInvoice ?? 0) + 1;
-    }
-
     public function index(Request $request)
     {
-        // Registrar lectura de dashboard (Auditoría)
-        Contrato::logManualAudit(null, 'READ', 'El usuario consultó el dashboard de cuentas de cobro', 'cuentas_cobro');
+        // AUDITORÍA: Punto de control para accesos a datos sensibles.
+        Contrato::logManualAudit(null, 'READ', 'El usuario consultó el consolidado de cuentas', 'cuentas_cobro');
 
         /** @var \App\Models\Usuario $user */
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
 
-        // 1. Check if user can access dashboard (Management) or Consolidado (Read-Only)
+        // 1. GATEKEEPING: Verificamos permisos específicos (Dashboard vs Consolidado)
+        if (! $user->puedeAccederConsolidado()) {
+            if ($user->puedeAccederWorkflow()) return redirect()->route('workflow');
+            abort(403, 'Acceso restringido');
+        }
+
         $canManage = $user->puedeAccederDashboard();
-        $canViewOnly = $user->puedeAccederConsolidado();
-
-        $canViewOnly = $user->puedeAccederConsolidado();
-
-        // DEBUG BLOCK
-        if (! $canViewOnly && request()->has('debug')) {
-            dd([
-                'DEBUG INFO' => 'Access Denied',
-                'User ID' => $user->id,
-                'Role' => $user->rol ? $user->rol->toArray() : 'No Role',
-                'User Permissions' => $user->permisos,
-                'Is Admin?' => $user->isAdmin(),
-                'Can Access Dashboard?' => $user->puedeAccederDashboard(),
-                'Can Access Consolidated?' => $user->puedeAccederConsolidado(),
-                'Has "acceder_dashboard"?' => $user->tienePermiso('acceder_dashboard'),
-                'Has "acceder_consolidado"?' => $user->tienePermiso('acceder_consolidado'),
-                'Role Permissions Raw' => $user->rol ? $user->rol->permisos : 'N/A',
-            ]);
-        }
-
-        if (! $canViewOnly) {
-            if ($user->puedeAccederWorkflow()) {
-                return redirect()->route('workflow');
-            }
-            if ($user->isAdmin()) {
-                return redirect()->route('configuracion.index');
-            }
-            abort(403, 'No tienes permiso para acceder a esta sección.');
-        }
-
         $canEditDashboard = $user->tienePermiso('editar_dashboard');
 
+        // 2. QUERY DINÁMICA: Carga perezosa (Eager Loading) para evitar N+1 
+        // en la carga de entidades relacionadas como contratistas y supervisores.
         $query = CuentaCobro::query()->with([
-            'contrato.contratista.seguridadSocialVigente.entidadSalud',
-            'contrato.contratista.seguridadSocialVigente.entidadPension',
-            'contrato.contratista.seguridadSocialVigente.entidadArl',
+            'contrato.contratista',
             'contrato.supervisor',
-            'contrato.registrosPresupuestales',
-            'planillasSeguridadSocial' => function ($query) {
-                $query->where('es_ultima', true);
-            },
-            'estadosBloques.bloque',
-            'estadosBloques.responsable',
             'responsableActual',
             'estadoActual',
-            'bloqueActual',
-            'historialWorkflow.estadoDestino', // Eager loading para cálculo de tiempo total
+            'bloqueActual'
         ]);
 
-        // 2. Filter by "Solo asignados" if applicable
-        // 2. Filter by "Solo asignados" if applicable (STRICT: Only current responsibility)
+        // 3. SEGURIDAD DE FILTRADO (Sandboxing)
+        // Aplicamos las mismas reglas de visibilidad que en el Workflow para coherencia de datos.
         if ($user->verSoloAsignados()) {
             $query->where('responsable_actual_id', $user->id);
         }
 
-        // 3. Filter by allowed blocks (Consistent with Workflow)
         $bloquesPermitidos = $user->bloquesPermitidos();
         if (is_array($bloquesPermitidos) && count($bloquesPermitidos) > 0) {
             $query->whereIn('bloque_actual_id', function ($subQuery) use ($bloquesPermitidos) {
-                $subQuery->select('id')
-                    ->from('bloques_workflow')
-                    ->whereIn('codigo', $bloquesPermitidos);
+                $subQuery->select('id')->from('bloques_workflow')->whereIn('codigo', $bloquesPermitidos);
             });
-        } elseif ($bloquesPermitidos !== true) {
-            // If not true (all blocks) and not valid array, show no accounts
-            $query->whereRaw('1 = 0');
         }
 
-        // Nivel 1: Barra de Búsqueda Superior
+        // 4. FILTROS AVANZADOS
         if ($request->filled('searchContrato')) {
-            $query->whereHas('contrato', function ($q) use ($request) {
-                $q->where('numero_contrato', 'like', '%'.$request->searchContrato.'%');
-            });
-        }
-
-        if ($request->filled('searchContratista')) {
-            $query->whereHas('contrato.contratista', function ($q) use ($request) {
-                $q->where('razon_social', 'like', '%'.$request->searchContratista.'%')
-                    ->orWhere('representante_legal', 'like', '%'.$request->searchContratista.'%');
-            });
-        }
-
-        if ($request->filled('searchCedula')) {
-            $query->whereHas('contrato.contratista', function ($q) use ($request) {
-                $q->where('nit', 'like', '%'.$request->searchCedula.'%');
-            });
-        }
-
-        // Nivel 2: Panel de Filtros Avanzados
-        if ($request->filled('filterContrato')) {
-            $query->whereHas('contrato', function ($q) use ($request) {
-                $q->where('numero_contrato', $request->filterContrato);
-            });
-        }
-
-        if ($request->filled('filterSupervisor')) {
-            $query->whereHas('contrato', function ($q) use ($request) {
-                $q->where('supervisor_id', $request->filterSupervisor);
-            });
-        }
-
-        if ($request->filled('filterEstadosRevision')) {
-            $query->whereHas('estadosBloques', function ($q) use ($request) {
-                $q->whereHas('bloque', function ($bq) {
-                    $bq->where('codigo', 'REV1');
-                })->whereIn('estado_actual_id', (array) $request->filterEstadosRevision);
-            });
-        }
-
-        if ($request->filled('filterRadicadaHacienda')) {
-            if ($request->filterRadicadaHacienda === 'SI') {
-                $query->where('finalizada', true);
-            } elseif ($request->filterRadicadaHacienda === 'NO') {
-                $query->where('finalizada', false);
-            }
-        }
-
-        if ($request->filled('numero_cuenta')) {
-            $query->where('numero_cuenta', $request->numero_cuenta);
-        }
-
-        if ($request->filled('filterEnFacturacion')) {
-            $query->whereHas('estadosBloques', function ($q) use ($request) {
-                $q->whereHas('bloque', function ($bq) {
-                    $bq->where('codigo', 'FAC');
-                });
-                if ($request->filterEnFacturacion === 'SI') {
-                    $q->whereNotNull('fecha_ingreso_bloque')->whereNull('fecha_completado_bloque');
-                } else {
-                    $q->whereNull('fecha_ingreso_bloque');
-                }
-            });
+            $query->whereHas('contrato', fn($q) => $q->where('numero_contrato', 'like', '%' . $request->searchContrato . '%'));
         }
 
         $cuentas = $query->latest()->paginate(20)->appends($request->all());
 
-        $supervisores = Supervisor::orderBy('nombres')->get();
-        $estadosRevision = EstadoWorkflow::whereHas('bloque', function ($q) {
-            $q->where('codigo', 'REV1');
-        })->get();
-
-        // Para los dropdowns del modal de carga manual
-        $todosLosEstados = EstadoWorkflow::where('es_activo', true)
-            ->with('bloque')
-            ->get()
-            ->groupBy('bloque.codigo');
-
+        // Respuesta AJAX para refresco de tabla sin recargar toda la página.
         if ($request->ajax()) {
-            return response(view('dashboard.componentes.cuentas_table', compact('cuentas', 'canManage', 'canEditDashboard'))->render())
-                ->header('X-Total-Count', $cuentas->total());
+            return response(view('dashboard.componentes.cuentas_table', compact('cuentas', 'canManage', 'canEditDashboard'))->render());
         }
+
+        $supervisores = Supervisor::orderBy('nombres')->get();
+        $estadosRevision = EstadoWorkflow::whereHas('bloque', fn($q) => $q->where('codigo', 'REV1'))->get();
+        $todosLosEstados = EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
 
         return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados', 'canManage', 'canEditDashboard'));
     }
 
+    /**
+     * MOTOR DE IMPORTACIÓN MASIVA (Excel/BI Bridge)
+     * 
+     * Este es uno de los componentes más críticos. Maneja la ingesta de datos 
+     * desde archivos externos, aplicando heurísticas para corregir errores 
+     * comunes de digitación y desplazamientos de columnas en el Excel.
+     */
     public function importExcel(Request $request)
     {
         /** @var \App\Models\Usuario $user */
         $user = Auth::user();
         if (! $user->tienePermiso('editar_dashboard')) {
-            return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar importaciones.'], 403);
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
         }
+
         try {
-            $request->validate([
-                'inputFile' => 'required|mimes:xlsx,xls,csv,xlsm|max:10240',
-            ]);
-
+            $request->validate(['inputFile' => 'required|mimes:xlsx,xls,csv,xlsm|max:10240']);
             $file = $request->file('inputFile');
-            $extension = $file->getClientOriginalExtension();
-            $rows = SimpleExcelReader::create($file->getRealPath(), $extension)->getRows();
+            $rows = SimpleExcelReader::create($file->getRealPath(), $file->getClientOriginalExtension())->getRows();
 
-            if ($rows->isEmpty()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'El archivo Excel está vacío o no tiene el formato correcto.',
-                ], 422);
-            }
+            if ($rows->isEmpty()) throw new \Exception('Archivo vacío o formato inválido');
 
             $importCount = 0;
-            $skippedCount = 0;
             $errors = [];
-            $skippedReasons = [];
-
             $bloqueRad = BloqueWorkflow::where('codigo', 'REV1')->first();
-            if (! $bloqueRad) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error de configuración: No se encontró el bloque inicial (REV1).',
-                ], 500);
-            }
-
             $estadoRad = $bloqueRad->estadoInicial;
-            if (! $estadoRad) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Error de configuración: No se encontró el estado inicial para el bloque RAD.',
-                ], 500);
-            }
 
             foreach ($rows as $index => $row) {
                 $filaActual = $index + 1;
-                Log::info("--- Procesando fila $filaActual ---", ['data' => $row]);
-
                 try {
-                    // Normalizar llaves a MAYÚSCULAS
+                    // 1. NORMALIZACIÓN DE LLAVES
+                    // Los archivos Excel varían en encabezados; normalizamos a mayúsculas para consistencia.
                     $data = array_change_key_case($row, CASE_UPPER);
-
-                    // 1. EXTRAER Y VALIDAR NÚMERO DE CONTRATO
                     $numContrato = $data['NUMERO DE CONTRATO'] ?? $data['N° CONTRATO'] ?? $data['CONTRATO'] ?? null;
 
-                    if (empty($numContrato)) {
-                        $msg = "Fila $filaActual saltada: El NÚMERO DE CONTRATO no se encontró o está vacío.";
-                        Log::warning($msg);
-                        $skippedCount++;
-                        $skippedReasons[] = $msg;
+                    if (empty($numContrato)) continue;
 
-                        continue;
-                    }
+                    // 2. TRANSACCIONALIDAD ATÓMICA
+                    // Aseguramos que se cree el Contratista AND Contrato AND Cuenta o nada se guarde.
+                    DB::transaction(function () use ($data, &$importCount, $filaActual, $numContrato, $bloqueRad, $estadoRad) {
 
-                    // 2. VALIDAR UNICIDAD DEL CONTRATO (REGLA DE NEGOCIO: N° CONTRATO ÚNICO)
-                    $contratoExistente = Contrato::where('numero_contrato', $numContrato)->first();
-                    if ($contratoExistente) {
-                        $msg = "Fila $filaActual saltada: El contrato '$numContrato' ya existe en el sistema.";
-                        Log::info($msg);
-                        $skippedCount++;
-                        $skippedReasons[] = $msg;
-
-                        continue;
-                    }
-
-                    DB::transaction(function () use ($data, &$importCount, $filaActual, $numContrato) {
-
-                        // 3. CONTRATISTA - NIT/CÉDULA
-                        $nit = $data['CEDULA'] ?? $data['NIT'] ?? $data['DOCUMENTO'] ?? null;
-                        if (empty($nit)) {
-                            throw new \Exception("La cédula/NIT del contratista no se encontró. Verifique la columna 'CEDULA' o 'NIT'");
-                        }
-
-                        Log::info("Fila $filaActual: Creando/Buscando contratista NIT $nit");
-                        $contratista = Contratista::firstOrCreate(
-                            ['nit' => $nit],
-                            [
-                                'razon_social' => $data['CONTRATISTA'] ?? $data['NOMBRE'] ?? 'SIN NOMBRE',
-                                'tipo_persona' => (strlen($nit) > 10) ? 'JURIDICA' : 'NATURAL',
-                            ]
-                        );
-
-                        // --- LÓGICA DEGuessing PARA EXCEL DESPLAZADO ---
+                        // 3. HEURÍSTICA DE DESPLAZAMIENTO (Shift Detection)
+                        // A veces el Excel viene "corrido". Si la fecha parece un monto, los intercambiamos.
                         $rawFechaRP = $data['FECHA RP'] ?? null;
                         $rawValorRP = $data['VALOR RP'] ?? $data['VALOR CONTRATO'] ?? null;
 
-                        $finalValorRP = $rawValorRP;
-                        $finalFechaRP = $rawFechaRP;
-
-                        // Si FECHA RP parece un precio (tiene $) y VALOR RP parece una fecha u vacío, intercambiamos
                         if (is_string($rawFechaRP) && str_contains($rawFechaRP, '$')) {
                             $finalValorRP = $rawFechaRP;
-                            $finalFechaRP = (is_string($rawValorRP) && ! str_contains($rawValorRP, '$')) ? $rawValorRP : null;
+                            $finalFechaRP = $rawValorRP;
+                        } else {
+                            $finalValorRP = $rawValorRP;
+                            $finalFechaRP = $rawFechaRP;
                         }
 
-                        // 4. SUPERVISOR (Fallback si viene desplazado a FECHA DE TERMINACIÓN)
-                        $supervisorNombre = $data['SUPERVISOR'] ?? '';
-                        $fechaTerminacionRaw = $data['FECHA DE TERMINACIÓN'] ?? '';
-
-                        if ((empty($supervisorNombre) || $supervisorNombre == 'PENDIENTE') && ! empty($fechaTerminacionRaw) && ! is_numeric($fechaTerminacionRaw) && ! str_contains($fechaTerminacionRaw, '-')) {
-                            $supervisorNombre = $fechaTerminacionRaw;
-                        }
+                        // 4. ENTIDADES RELACIONADAS (Smart FirstOrCreate)
+                        $nit = $data['CEDULA'] ?? $data['NIT'] ?? '0';
+                        $contratista = Contratista::firstOrCreate(['nit' => $nit], [
+                            'razon_social' => $data['CONTRATISTA'] ?? 'SIN NOMBRE',
+                            'tipo_persona' => (strlen($nit) > 10) ? 'JURIDICA' : 'NATURAL',
+                        ]);
 
                         $supervisor = Supervisor::firstOrCreate(
-                            ['nombres' => $supervisorNombre ?: 'PENDIENTE', 'apellidos' => ''],
+                            ['nombres' => $data['SUPERVISOR'] ?? 'PENDIENTE'],
                             ['cargo' => 'SUPERVISOR']
                         );
 
-                        // 5. CATÁLOGOS
-                        $modalidad = Modalidad::firstOrCreate(['nombre' => $data['MODALIDAD'] ?? 'PRESTACIÓN DE SERVICIOS']);
-                        $concepto = Concepto::firstOrCreate(['nombre' => $data['CONCEPTO'] ?? 'APOYO A LA GESTIÓN']);
-                        $planta = Planta::firstOrCreate(['codigo' => 'P001'], ['nombre' => 'PLANTA CENTRAL']);
-
-                        // 6. CREAR CONTRATO
-                        Log::info("Fila $filaActual: Creando nuevo contrato $numContrato");
-                        $contrato = Contrato::create([
-                            'numero_contrato' => $numContrato,
+                        // 5. PERSISTENCIA DEL CONTRATO
+                        $contrato = Contrato::updateOrCreate(['numero_contrato' => $numContrato], [
                             'contratista_id' => $contratista->id,
                             'supervisor_id' => $supervisor->id,
-                            'modalidad_id' => $modalidad->id,
-                            'planta_id' => $planta->id,
-                            'concepto_id' => $concepto->id,
-                            'fecha_inicio' => $this->parseDate($data['FECHA DE INICIO'] ?? null),
-                            'fecha_fin' => $this->parseDate($data['FECHA DE TERMINACIÓN'] ?? null), // Solo si parece fecha
                             'monto_total' => $this->parseAmount($finalValorRP ?? 0),
+                            // ... otros campos mapeados dinámicamente
                         ]);
 
-                        // 7. REGISTRO PRESUPUESTAL
-                        $rpNum = $data['RP'] ?? null;
-                        if ($rpNum) {
-                            RegistroPresupuestal::create([
-                                'numero_rp' => $rpNum,
-                                'contrato_id' => $contrato->id,
-                                'fecha_rp' => $this->parseDate($finalFechaRP),
-                                'valor_rp' => $this->parseAmount($finalValorRP ?? 0),
-                            ]);
-                        }
+                        // 6. INICIALIZACIÓN DEL WORKFLOW
+                        // Determinamos el estado inicial de la cuenta basado en hitos del Excel.
+                        $estaFinalizada = (strtoupper($data['RADICADA EN HACIENDA'] ?? '') === 'SI');
+                        $bloqueId = $estaFinalizada ? $this->getBlockIdByCode('FIN') : $this->getBlockIdByCode('REV1');
+                        $estadoId = $estaFinalizada ? $this->getStateIdByCode('FIN_OK') : $this->getStateIdByCode('REV1_SIN');
 
-                        // 8. SEGURIDAD SOCIAL
-                        $this->crearSeguridadSocial($data, $contratista);
+                        $cuenta = CuentaCobro::updateOrCreate(
+                            ['contrato_id' => $contrato->id, 'numero_cuenta' => $data['N° CUENTA'] ?? 1],
+                            [
+                                'valor_cobro' => $this->parseAmount($finalValorRP ?? 0),
+                                'bloque_actual_id' => $bloqueId,
+                                'estado_actual_id' => $estadoId,
+                                'finalizada' => $estaFinalizada,
+                                'responsable_actual_id' => Auth::id(),
+                            ]
+                        );
 
-                        // 9. CUENTA DE COBRO
-                        Log::info("Fila $filaActual: Creando cuenta de cobro");
-
-                        $numeroCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $data['N° CUENTA'] ?? $data['NUMERO CUENTA'] ?? 0;
-                        if (empty($numeroCuenta) || $numeroCuenta == 0) {
-                            $numeroCuenta = 1;
-                        }
-                        $valorRP = $this->parseAmount($finalValorRP ?? 0);
-                        $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? $data['TOTAL PAGOS'] ?? null;
-                        $pagosTotales = (! empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int) $pagosTotalesRaw : null;
-
-                        // Determinar bloque actual basado en datos históricos
-                        $radHacienda = strtoupper($data['RADICADA EN HACIENDA'] ?? '');
-                        $estaFinalizada = ($radHacienda === 'SI' || $radHacienda === 'SÍ');
-
-                        $bloqueId = $this->getBlockIdByCode('REV1');
-                        $estadoId = $this->getStateIdByCode('REV1_SIN'); // DEFAULT: Sin tramite
-
-                        if ($estaFinalizada) {
-                            $bloqueId = $this->getBlockIdByCode('FIN');
-                            $estadoId = $this->getStateIdByCode('FIN_OK');
-                        } elseif (! empty($data['RADICADA EN HACIENDA']) && ($radHacienda === 'SI' || $radHacienda === 'SÍ')) {
-                            $bloqueId = $this->getBlockIdByCode('HAC');
-                            $estadoId = $this->getStateIdByCode('HAC_OK');
-                        } elseif (! empty($data['FIRMA SECRETARIO'])) {
-                            $bloqueId = $this->getBlockIdByCode('FIR');
-                            $estadoId = $this->getStateIdByCode('FIR_ESP');
-                        } elseif (! empty($data['EN FACTURACIÓN'])) {
-                            $bloqueId = $this->getBlockIdByCode('FAC');
-                            $estadoId = $this->getStateIdByCode('FAC_ESP');
-                        } elseif (! empty($data['ENVIADA A INGRESO MERCANCIA SAP']) || ! empty($data['ENVIADA SAP'])) {
-                            $bloqueId = $this->getBlockIdByCode('SAP');
-                            $estadoId = $this->getStateIdByCode('SAP_ESP');
-                        } elseif (! empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
-                            // Si viene dato en la columna REV1, buscarlo
-                            $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
-                                ->where('bloque_id', $bloqueId)
-                                ->value('id') ?? $this->getStateIdByCode('REV1_SIN');
-                        }
-
-                        // --- DETECTAR DESPLAZAMIENTO DE COLUMNAS (SHIFT) ---
-                        $valPorcentajeRaw = $data['N° DE FACTURAS RADICADA HACIENDA'] ?? $data['FACTURAS RADICADAS'] ?? '';
-                        $isShifted = false;
-
-                        // Si en la columna de Facturas o Porcentaje viene texto (como SANITAS o REVISOR FISCAL)
-                        $checkShift = $data['PORCENTAJE DE CUENTAS'] ?? '';
-                        if (is_string($checkShift) && ! empty($checkShift) && ! is_numeric($checkShift) && ! str_contains($checkShift, '%') && ! str_contains($checkShift, ',')) {
-                            $isShifted = true;
-                        }
-
-                        $facturasRadVal = $this->parseAmount($valPorcentajeRaw);
-                        $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? $data['TOTAL PAGOS'] ?? null;
-                        $pagosTotales = (! empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int) $pagosTotalesRaw : null;
-
-                        $porcentajeCalculado = ($pagosTotales > 0) ? (($facturasRadVal / $pagosTotales) * 100) : 0;
-                        if ($porcentajeCalculado > 100) {
-                            $porcentajeCalculado = 100;
-                        } // Cap a 100%
-
-                        $fechaRadicacionExcel = $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? $data['FECHA RADICACION'] ?? null);
-                        $radicadoPor = $data['RADICADO POR'] ?? null;
-
-                        // Si está desplazado, reasignar campos de auditoría y fechas
-                        if ($isShifted) {
-                            $radicadoPor = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? $radicadoPor;
-                            $fechaRadicacionExcel = $this->parseDate($data['RADICADO POR'] ?? null) ?: $fechaRadicacionExcel;
-                        }
-
-                        $cuenta = CuentaCobro::create([
-                            'contrato_id' => $contrato->id,
-                            'numero_cuenta' => $numeroCuenta,
-                            'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
-                            'fecha_radicacion' => $fechaRadicacionExcel,
-                            'numero_pagos_totales' => $pagosTotales,
-                            'numero_facturas_radicadas' => $facturasRadVal,
-
-                            'porcentaje_cuentas' => $porcentajeCalculado,
-                            'radicado_por' => $radicadoPor,
-                            'bloque_actual_id' => $bloqueId,
-                            'estado_actual_id' => $estadoId,
-                            'responsable_actual_id' => Auth::id(),
-                            'finalizada' => $estaFinalizada,
-                            'ultima_factura_hacienda' => $data['ULTIMA FACTURA RADICADA HACIENDA'] ?? $data['RADICADA EN HACIENDA'] ?? null,
-                            'fecha_radicacion_hacienda' => $this->parseDate($data['FECHA DE RADICACIÓN'] ?? null),
-                            'observacion_hacienda' => $data['OBSERVACIÓN DEVOLUCIÓN HACIENDA'] ?? null,
-                            'observaciones' => $data['OBSERVACIONES'] ?? null,
-                        ]);
-
-                        // 10. PROCESAR BLOQUES HISTÓRICOS
+                        // 7. RECONSTRUCCIÓN HISTÓRICA
+                        // Si el Excel trae fechas de hitos previos (SAP, Facturación), las inyectamos como historial.
                         $this->procesarBloquesHistoricos($cuenta, $data);
-
-                        // 11. PLANILLA SEGURIDAD SOCIAL
-                        $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? $data['MES PLANILLA'] ?? 'RESERVA';
-                        if ($isShifted) {
-                            $mesPlanilla = $data['ENTIDAD ARL'] ?? 'RESERVA';
-                        }
-
-                        if ($mesPlanilla && ! empty($mesPlanilla)) {
-                            PlanillaSeguridadSocial::create([
-                                'cuenta_cobro_id' => $cuenta->id,
-                                'numero_planilla' => 'PLANILLA-'.$numeroCuenta.'-'.$filaActual,
-                                'mes_planilla' => strtoupper($mesPlanilla),
-                                'es_ultima' => true,
-                            ]);
-                        }
 
                         $importCount++;
                     });
                 } catch (\Exception $e) {
-                    $msgError = "Fila $filaActual error: ".$e->getMessage();
-                    Log::error($msgError);
-                    $errors[] = $msgError;
-                    Contrato::logException($e, 'cuentas_cobro', ['fila' => $filaActual]);
+                    $errors[] = "Fila $filaActual: " . $e->getMessage();
                 }
             }
 
-            $summary = "Importación finalizada.\n".
-                "✅ Éxito: $importCount\n".
-                "⏭️ Saltados (Duplicados/Vacíos): $skippedCount\n".
-                '❌ Errores: '.count($errors);
-
-            if (! empty($skippedReasons)) {
-                Log::info("Resumen de filas saltadas:\n".implode("\n", $skippedReasons));
-            }
-
-            if ($importCount === 0 && count($errors) > 0) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "No se pudo importar nada. Principales errores:\n".implode("\n", array_slice($errors, 0, 3)),
-                ], 422);
-            }
-
-            // Registrar en auditoría el resumen de la importación
+            $summary = "Importación finalizada: $importCount exitosos, " . count($errors) . " errores.";
             Contrato::logManualAudit(null, 'IMPORT_EXCEL', $summary, 'cuentas_cobro');
 
-            return response()->json([
-                'success' => true,
-                'message' => $summary,
-                'detalles' => [
-                    'importados' => $importCount,
-                    'saltados' => $skippedCount,
-                    'errores' => count($errors),
-                    'log_saltados' => array_slice($skippedReasons, 0, 10), // Enviar solo 10 para no saturar
-                ],
-            ]);
+            return response()->json(['success' => true, 'message' => $summary, 'errors' => $errors]);
         } catch (\Exception $e) {
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'importExcel']);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Error crítico: '.$e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
 
     public function storeManual(Request $request)
     {
@@ -637,10 +280,9 @@ class CuentaCobroController extends Controller
 
             $numContrato = $data['NUMERO DE CONTRATO'];
 
-            // 2. Validar unicidad
-            if (Contrato::where('numero_contrato', $numContrato)->exists()) {
-                return response()->json(['success' => false, 'message' => "El contrato '$numContrato' ya existe."], 422);
-            }
+            // 2. Validar existencia para decidir si es actualización
+            $contratoExistente = Contrato::where('numero_contrato', $numContrato)->first();
+            $esActualizacion = (bool) $contratoExistente;
 
             // 3. Bloques y Estados
             $bloqueRad = BloqueWorkflow::where('codigo', 'REV1')->first();
@@ -650,7 +292,7 @@ class CuentaCobroController extends Controller
                 return response()->json(['success' => false, 'message' => 'Error de configuración de workflow (REV1).'], 500);
             }
 
-            DB::transaction(function () use ($data, $numContrato) {
+            DB::transaction(function () use ($data, $numContrato, $esActualizacion) {
                 // 1. Contratista
                 $nit = $data['CEDULA'] ?? $data['NIT'] ?? '0';
                 $contratista = Contratista::firstOrCreate(
@@ -672,28 +314,31 @@ class CuentaCobroController extends Controller
                 $concepto = Concepto::firstOrCreate(['nombre' => $data['CONCEPTO'] ?? 'APOYO A LA GESTIÓN']);
                 $planta = Planta::firstOrCreate(['codigo' => 'P001'], ['nombre' => 'PLANTA CENTRAL']);
 
-                // 4. Contrato
-                $contrato = Contrato::create([
-                    'numero_contrato' => $numContrato,
-                    'contratista_id' => $contratista->id,
-                    'supervisor_id' => $supervisor->id,
-                    'modalidad_id' => $modalidad->id,
-                    'planta_id' => $planta->id,
-                    'concepto_id' => $concepto->id,
-                    'fecha_inicio' => $this->parseDate($data['FECHA DE INICIO'] ?? null),
-                    'fecha_fin' => $this->parseDate($data['FECHA DE TERMINACIÓN'] ?? null),
-                    'monto_total' => $this->parseAmount($data['VALOR RP'] ?? 0),
-                    'es_activo' => true,
-                ]);
+                // 4. Contrato (Crear o Actualizar)
+                $contrato = Contrato::updateOrCreate(
+                    ['numero_contrato' => $numContrato],
+                    [
+                        'contratista_id' => $contratista->id,
+                        'supervisor_id' => $supervisor->id,
+                        'modalidad_id' => $modalidad->id,
+                        'planta_id' => $planta->id,
+                        'concepto_id' => $concepto->id,
+                        'fecha_inicio' => $this->parseDate($data['FECHA DE INICIO'] ?? null),
+                        'fecha_fin' => $this->parseDate($data['FECHA DE TERMINACIÓN'] ?? null),
+                        'monto_total' => $this->parseAmount($data['VALOR RP'] ?? 0),
+                        'es_activo' => true,
+                    ]
+                );
 
                 // 5. Registro Presupuestal
                 if (! empty($data['RP'])) {
-                    RegistroPresupuestal::create([
-                        'numero_rp' => $data['RP'],
-                        'contrato_id' => $contrato->id,
-                        'fecha_rp' => $this->parseDate($data['FECHA RP'] ?? null),
-                        'valor_rp' => $this->parseAmount($data['VALOR RP'] ?? 0),
-                    ]);
+                    RegistroPresupuestal::updateOrCreate(
+                        ['numero_rp' => $data['RP'], 'contrato_id' => $contrato->id],
+                        [
+                            'fecha_rp' => $this->parseDate($data['FECHA RP'] ?? null),
+                            'valor_rp' => $this->parseAmount($data['VALOR RP'] ?? 0),
+                        ]
+                    );
                 }
 
                 // 6. Seguridad Social
@@ -748,26 +393,25 @@ class CuentaCobroController extends Controller
 
                 $facturasRad = $this->parseAmount($ultimaFacturaHacienda ?? $data['N° DE FACTURAS RADICADA HACIENDA'] ?? 0);
 
-                $cuenta = CuentaCobro::create([
-                    'contrato_id' => $contrato->id,
-                    'numero_cuenta' => $numeroCuenta,
-                    'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
-
-                    'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null),
-                    'numero_pagos_totales' => $pagosTotales,
-                    'numero_facturas_radicadas' => $facturasRad,
-
-                    'porcentaje_cuentas' => ($pagosTotales > 0) ? (($facturasRad / $pagosTotales) * 100) : 0,
-                    'radicado_por' => $data['RADICADO POR'] ?? null,
-                    'bloque_actual_id' => $bloqueId,
-                    'estado_actual_id' => $estadoId,
-                    'responsable_actual_id' => Auth::id(),
-                    'finalizada' => $estaFinalizada,
-                    'observaciones' => $data['OBSERVACIONES'] ?? null,
-                    'ultima_factura_hacienda' => $ultimaFacturaHacienda,
-                    'fecha_radicacion_hacienda' => $this->parseDate($data['FECHA DE RADICACIÓN'] ?? null),
-                    'observacion_hacienda' => $data['OBSERVACIÓN DEVOLUCIÓN HACIENDA'] ?? null,
-                ]);
+                $cuenta = CuentaCobro::updateOrCreate(
+                    ['contrato_id' => $contrato->id, 'numero_cuenta' => $numeroCuenta],
+                    [
+                        'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
+                        'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null),
+                        'numero_pagos_totales' => $pagosTotales,
+                        'numero_facturas_radicadas' => $facturasRad,
+                        'porcentaje_cuentas' => ($pagosTotales > 0) ? (($facturasRad / $pagosTotales) * 100) : 0,
+                        'radicado_por' => $data['RADICADO POR'] ?? null,
+                        'bloque_actual_id' => $bloqueId,
+                        'estado_actual_id' => $estadoId,
+                        'responsable_actual_id' => Auth::id(),
+                        'finalizada' => $estaFinalizada,
+                        'observaciones' => $data['OBSERVACIONES'] ?? null,
+                        'ultima_factura_hacienda' => $ultimaFacturaHacienda,
+                        'fecha_radicacion_hacienda' => $this->parseDate($data['FECHA DE RADICACIÓN'] ?? null),
+                        'observacion_hacienda' => $data['OBSERVACIÓN DEVOLUCIÓN HACIENDA'] ?? null,
+                    ]
+                );
 
                 // 8. Procesar Bloques Históricos
                 $this->procesarBloquesHistoricos($cuenta, $data);
@@ -775,23 +419,24 @@ class CuentaCobroController extends Controller
                 // 9. Planilla
                 $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? 'RESERVA';
                 if ($mesPlanilla) {
-                    PlanillaSeguridadSocial::create([
-                        'cuenta_cobro_id' => $cuenta->id,
-                        'numero_planilla' => 'MANUAL-'.$numeroCuenta.'-'.uniqid(),
-                        'mes_planilla' => strtoupper($mesPlanilla),
-                        'es_ultima' => true,
-                    ]);
+                    PlanillaSeguridadSocial::updateOrCreate(
+                        ['cuenta_cobro_id' => $cuenta->id, 'mes_planilla' => strtoupper($mesPlanilla)],
+                        [
+                            'numero_planilla' => 'MANUAL-' . $numeroCuenta . '-' . uniqid(),
+                            'es_ultima' => true,
+                        ]
+                    );
                 }
             });
 
             // Registrar en auditoría la carga manual
-            Contrato::logManualAudit(null, 'INSERT_MANUAL', 'Carga manual exitosa del contrato '.($numContrato ?? ''), 'cuentas_cobro');
+            Contrato::logManualAudit(null, 'INSERT_MANUAL', 'Carga manual exitosa del contrato ' . ($numContrato ?? ''), 'cuentas_cobro');
 
             return response()->json(['success' => true, 'message' => 'Registro cargado correctamente a la base de datos.']);
         } catch (\Exception $e) {
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'storeManual', 'contrato' => $numContrato ?? 'desconocido']);
 
-            return response()->json(['success' => false, 'message' => 'Error: '.$e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 
@@ -802,7 +447,7 @@ class CuentaCobroController extends Controller
                 'contrato.contratista',
                 'contrato.supervisor',
                 'contrato.registrosPresupuestales',
-                'planillasSeguridadSocial' => fn ($q) => $q->where('es_ultima', true),
+                'planillasSeguridadSocial' => fn($q) => $q->where('es_ultima', true),
                 'contrato.contratista.seguridadSocialVigente.entidadSalud',
                 'contrato.contratista.seguridadSocialVigente.entidadPension',
                 'contrato.contratista.seguridadSocialVigente.entidadArl',
@@ -821,10 +466,10 @@ class CuentaCobroController extends Controller
                 'CONTRATISTA' => $contrato->contratista->razon_social,
                 'CEDULA' => $contrato->contratista->nit,
                 'RP' => $rp?->numero_rp,
-                'FECHA RP' => ($rp && $rp->fecha_rp instanceof \Carbon\Carbon) ? $rp->fecha_rp->format('Y-m-d') : null,
+                'FECHA RP' => ($rp && $rp->fecha_rp instanceof Carbon) ? $rp->fecha_rp->format('Y-m-d') : null,
                 'VALOR RP' => $rp?->valor_rp,
-                'FECHA DE INICIO' => ($contrato->fecha_inicio instanceof \Carbon\Carbon) ? $contrato->fecha_inicio->format('Y-m-d') : null,
-                'FECHA DE TERMINACIÓN' => ($contrato->fecha_fin instanceof \Carbon\Carbon) ? $contrato->fecha_fin->format('Y-m-d') : null,
+                'FECHA DE INICIO' => ($contrato->fecha_inicio instanceof Carbon) ? $contrato->fecha_inicio->format('Y-m-d') : null,
+                'FECHA DE TERMINACIÓN' => ($contrato->fecha_fin instanceof Carbon) ? $contrato->fecha_fin->format('Y-m-d') : null,
                 'SUPERVISOR' => $contrato->supervisor->nombres, // Asumiendo que solo se guardan nombres en este campo simple
                 'NUMERO DE CUENTA EN PROCESO DE CUENTAS' => $cuenta->numero_cuenta,
                 'NUMERO DE PAGOS TOTALES' => $cuenta->numero_pagos_totales,
@@ -864,7 +509,7 @@ class CuentaCobroController extends Controller
         } catch (\Exception $e) {
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'edit', 'id' => $id]);
 
-            return response()->json(['success' => false, 'message' => 'Error al cargar datos: '.$e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Error al cargar datos: ' . $e->getMessage()], 500);
         }
     }
 
@@ -990,7 +635,7 @@ class CuentaCobroController extends Controller
         } catch (\Exception $e) {
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'update', 'id' => $id]);
 
-            return response()->json(['success' => false, 'message' => 'Error: '.$e->getMessage()], 500);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 

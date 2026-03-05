@@ -1,58 +1,51 @@
-// Update timers
+/**
+ * FRONTEND OPERATIVO - WORKFLOW KANBAN
+ * 
+ * Gestiona la reactividad del tablero, el cronómetro de las tarjetas 
+ * y la lógica de transición de estados vía AJAX.
+ */
+
+// 1. MOTOR DE TIEMPO REAL (Card Aging)
+// Actualiza los badges de tiempo cada segundo para mostrar cuánto lleva 
+// estancada una cuenta en su estado actual.
 function updateTimers() {
     document.querySelectorAll('.timer-badge[data-start]').forEach(badge => {
         const startTimeStr = badge.getAttribute('data-start');
         if (!startTimeStr) return;
+        
         const startTime = new Date(startTimeStr);
-        const now = new Date();
-        const diffMs = now - startTime;
+        const diffMs = new Date() - startTime;
         const diffSecs = Math.floor(diffMs / 1000);
         const diffMins = Math.floor(diffSecs / 60);
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
+        
         let display = "";
         if (diffDays > 0) display += `${diffDays}d `;
         if (diffHours > 0 || diffDays > 0) display += `${diffHours % 24}h `;
         if (diffMins > 0 || diffHours > 0 || diffDays > 0) display += `${diffMins % 60}m `;
         display += `${diffSecs % 60}s`;
+        
         badge.querySelector('.elapsed-time').textContent = display;
     });
 }
 setInterval(updateTimers, 1000);
 updateTimers();
 
-// Function to toggle block visibility
+// 2. PERSISTENCIA DE INTERFAZ (UI Memory)
+// Recuerda qué bloques ha colapsado el usuario para mantener su espacio de trabajo limpio.
 window.toggleBlockVisibility = function (btn, blockKey) {
     const block = btn.closest('.workflow-block');
     block.classList.toggle('collapsed');
-
-    // Save state to localStorage
+    
     const collapsedBlocks = JSON.parse(localStorage.getItem('collapsedBlocks') || '{}');
     collapsedBlocks[blockKey] = block.classList.contains('collapsed');
     localStorage.setItem('collapsedBlocks', JSON.stringify(collapsedBlocks));
 }
 
-// Restore collapsed blocks on load
-document.addEventListener('DOMContentLoaded', function () {
-    // Remove loading state
-    const container = document.querySelector('.premium-loading-container');
-    if (container) container.classList.remove('loading');
-
-    const collapsedBlocks = JSON.parse(localStorage.getItem('collapsedBlocks') || '{}');
-    document.querySelectorAll('.workflow-block').forEach((block) => {
-        const btn = block.querySelector('.btn-collapse');
-        if (!btn) return;
-
-        const onclickAttr = btn.getAttribute('onclick');
-        if (!onclickAttr) return;
-        const keyMatch = onclickAttr.match(/'([^']+)'/);
-        if (keyMatch && collapsedBlocks[keyMatch[1]]) {
-            block.classList.add('collapsed');
-        }
-    });
-});
-
-// Workflow Actions logic
+// 3. MOTOR DE ESTADOS DINÁMICOS (On-Demand Loading)
+// Cuando se abre el detalle de una cuenta, consultamos al servidor qué movimientos 
+// son válidos legalmente para ese estado específico.
 document.addEventListener('show.bs.modal', function (event) {
     const modal = event.target;
     if (!modal.id.startsWith('modalCuenta')) return;
@@ -69,15 +62,9 @@ document.addEventListener('show.bs.modal', function (event) {
                 statusButtons.innerHTML = '';
                 data.estados_disponibles.forEach(estado => {
                     const btn = document.createElement('button');
-                    btn.className = 'btn-estado';
-
-                    // Determinar color por tipo
-                    if (estado.tipo === 'APROBADO' || estado.tipo === 'FINAL') btn.classList.add('btn-aprobado');
-                    else if (estado.tipo === 'DEVUELTO') btn.classList.add('btn-devuelto');
-                    else btn.classList.add('btn-proceso');
-
+                    btn.className = `btn-estado ${estado.tipo === 'APROBADO' ? 'btn-aprobado' : (estado.tipo === 'DEVUELTO' ? 'btn-devuelto' : 'btn-proceso')}`;
+                    
                     if (estado.color) btn.style.backgroundColor = estado.color;
-
                     btn.textContent = estado.nombre;
                     btn.onclick = () => cambiarEstado(cuentaId, estado.id, estado.requiere_comentario, estado.nombre);
                     statusButtons.appendChild(btn);
@@ -87,32 +74,24 @@ document.addEventListener('show.bs.modal', function (event) {
         });
 });
 
+/**
+ * LÓGICA DE TRANSICIÓN:
+ * Maneja el cambio de estado, la captura de comentarios con SweetAlert2 
+ * y detecta si se requiere un "Handoff" (Asignación de responsable).
+ */
 async function cambiarEstado(cuentaId, estadoDestinoId, requiereComentario, estadoNombre) {
     let comentario = null;
     if (requiereComentario) {
         const { value: text, isConfirmed } = await Swal.fire({
             title: 'Comentario de Seguimiento',
             input: 'textarea',
-            inputLabel: `Ingrese un mensaje para el cambio a: ${estadoNombre}`,
-            inputPlaceholder: 'Escriba aquí su comentario (Opcional)...',
-            inputAttributes: {
-                'aria-label': 'Ingrese su comentario'
-            },
+            inputLabel: `Justificación para: ${estadoNombre}`,
+            inputPlaceholder: 'Escriba aquí su comentario operativo...',
             showCancelButton: true,
-            confirmButtonText: 'Confirmar',
+            confirmButtonText: 'Confirmar Cambio',
             cancelButtonText: 'Cancelar',
             reverseButtons: true,
             confirmButtonColor: '#0057b8',
-            customClass: {
-                popup: 'premium-swal-popup',
-                title: 'premium-swal-title'
-            },
-            didOpen: () => {
-                const input = Swal.getInput();
-                if (input) {
-                    input.focus();
-                }
-            }
         });
 
         if (!isConfirmed) return;
@@ -123,98 +102,68 @@ async function cambiarEstado(cuentaId, estadoDestinoId, requiereComentario, esta
 
     fetch(`/workflow/cambiar-estado/${cuentaId}`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': csrfToken
-        },
-        body: JSON.stringify({
-            estado_destino_id: estadoDestinoId,
-            comentario: comentario
-        })
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+        body: JSON.stringify({ estado_destino_id: estadoDestinoId, comentario: comentario })
     })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Check if responsible assignment is required
-                if (data.requires_responsible) {
-                    // Store data for later use
-                    document.getElementById('cuentaIdResponsable').value = data.cuenta_id;
-                    document.getElementById('estadoDestinoIdResponsable').value = data.estado_destino_id;
-                    document.getElementById('estadoCodigoResponsable').value = data.estado_codigo;
-
-                    // Fetch users based on estado_codigo
-                    fetch(`/workflow/usuarios-responsables/${data.estado_codigo}`)
-                        .then(response => response.json())
-                        .then(userData => {
-                            if (userData.success) {
-                                // Populate the select dropdown
-                                const select = document.getElementById('selectResponsable');
-                                select.innerHTML = '<option value="">-- Seleccione un responsable --</option>';
-
-                                userData.usuarios.forEach(usuario => {
-                                    const option = document.createElement('option');
-                                    option.value = usuario.id;
-                                    option.textContent = `${usuario.nombre} (${usuario.tipo_responsable})`;
-                                    option.dataset.tipoResponsable = usuario.tipo_responsable;
-                                    select.appendChild(option);
-                                });
-
-                                // Update modal message based on block
-                                const message = document.getElementById('modalResponsableMessage');
-                                const badgeContainer = document.getElementById('responsableBadgeContainer');
-                                const badge = document.getElementById('responsableBadge');
-
-                                if (data.estado_codigo === 'REV1_PASA') {
-                                    message.innerHTML = '<i class="fas fa-info-circle me-2"></i>Seleccione el responsable para el bloque SAP:';
-                                    badge.className = 'badge bg-primary';
-                                    badge.innerHTML = '<i class="fas fa-cogs me-1"></i>Responsable SAP';
-                                    badgeContainer.classList.remove('d-none');
-                                } else if (data.estado_codigo === 'SAP_OK') {
-                                    message.innerHTML = '<i class="fas fa-info-circle me-2"></i>Seleccione el responsable para el bloque Facturación:';
-                                    badge.className = 'badge bg-success';
-                                    badge.innerHTML = '<i class="fas fa-money-bill-wave me-1"></i>Responsable Facturación';
-                                    badgeContainer.classList.remove('d-none');
-                                }
-
-                                // Show the responsible assignment modal
-                                const modalResponsable = new bootstrap.Modal(document.getElementById('modalAsignarResponsable'));
-                                modalResponsable.show();
-
-                                // Close the account modal
-                                const modalCuenta = bootstrap.Modal.getInstance(document.getElementById('modalCuenta' + cuentaId));
-                                if (modalCuenta) {
-                                    modalCuenta.hide();
-                                }
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error fetching users:', error);
-                            window.showSnackbar('❌ Error al cargar usuarios', 'error');
-                        });
-
-                    return;
-                } else {
-                    // Normal flow - state changed successfully
-                    window.showSnackbar('✅ ' + data.message, 'success');
-
-                    // Cierre automático del modal para evitar conflictos
-                    const modalElement = document.getElementById('modalCuenta' + cuentaId);
-                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                    if (modalInstance) {
-                        modalInstance.hide();
-                    }
-
-                    if (window.recargarKanban) {
-                        setTimeout(() => window.recargarKanban(), 1000);
-                    } else {
-                        setTimeout(() => location.reload(), 1500);
-                    }
-                }
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // FLUJO ESPECIAL: Handoff de Responsable
+            if (data.requires_responsible) {
+                abrirModalResponsable(data, cuentaId);
             } else {
-                window.showSnackbar('❌ Error: ' + data.message, 'error');
+                actualizarInterfazWorkflow(data.message, cuentaId);
+            }
+        } else {
+            window.showSnackbar(`❌ ${data.message}`, 'error');
+        }
+    });
+}
+
+function abrirModalResponsable(data, cuentaId) {
+    document.getElementById('cuentaIdResponsable').value = data.cuenta_id;
+    document.getElementById('estadoDestinoIdResponsable').value = data.estado_destino_id;
+
+    fetch(`/workflow/usuarios-responsables/${data.estado_codigo}`)
+        .then(res => res.json())
+        .then(userData => {
+            if (userData.success) {
+                const select = document.getElementById('selectResponsable');
+                select.innerHTML = '<option value="">-- Seleccione un receptor --</option>';
+                userData.usuarios.forEach(u => {
+                    const opt = document.createElement('option');
+                    opt.value = u.id;
+                    opt.textContent = `${u.nombre} (${u.tipo_responsable})`;
+                    select.appendChild(opt);
+                });
+
+                // UI Feedback: Mostramos quién recibirá la cuenta
+                const badge = document.getElementById('responsableBadge');
+                if (data.estado_codigo === 'REV1_PASA') {
+                    badge.className = 'badge bg-primary';
+                    badge.innerHTML = '<i class="fas fa-cogs me-1"></i>Responsable SAP';
+                } else {
+                    badge.className = 'badge bg-success';
+                    badge.innerHTML = '<i class="fas fa-money-bill-wave me-1"></i>Responsable Facturación';
+                }
+
+                new bootstrap.Modal(document.getElementById('modalAsignarResponsable')).show();
+                const mOld = bootstrap.Modal.getInstance(document.getElementById('modalCuenta' + cuentaId));
+                if (mOld) mOld.hide();
             }
         });
 }
+
+function actualizarInterfazWorkflow(message, cuentaId) {
+    window.showSnackbar(`✅ ${message}`, 'success');
+    const mOld = bootstrap.Modal.getInstance(document.getElementById('modalCuenta' + cuentaId));
+    if (mOld) mOld.hide();
+    
+    // Refrescamos sólo el tablero si tenemos el motor AJAX listo
+    if (window.recargarKanban) setTimeout(() => window.recargarKanban(), 800);
+    else setTimeout(() => location.reload(), 1200);
+}
+
 
 // Handle responsible assignment confirmation
 document.addEventListener('DOMContentLoaded', function () {

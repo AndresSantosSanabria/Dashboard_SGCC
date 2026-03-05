@@ -7,45 +7,85 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * TABLAS 12, 13 DE 23: CONTRATOS
-     * - contratos
-     * - registros_presupuestales
+     * CONTRATOS Y REGISTROS PRESUPUESTALES
+     * 
+     * Esta migración define el núcleo legal y financiero del proyecto.
+     * Hemos optado por una estructura normalizada (3NF) para evitar la redundancia 
+     * que solía venir de los reportes en Excel, garantizando que cada entidad 
+     * (Contratistas, Supervisores, Modalidades) tenga su propia "fuente de verdad".
      */
     public function up(): void
     {
-        // TABLA 12: Contratos
+        // TABLA: Contratos
+        // Es la entidad principal. Centraliza la información del proceso contractual
+        // y vincula los actores responsables del seguimiento.
         Schema::create('contratos', function (Blueprint $table) {
             $table->id();
+
+            // Usamos un índice único en numero_contrato porque es nuestra clave de negocio.
+            // Esto evita duplicados accidentales incluso si la lógica de validación falla.
             $table->string('numero_proceso', 50)->nullable();
+            $table->string('numero_contrato', 50)->unique()->comment('Identificador único del contrato (Columna 1 del Excel)');
 
-            // EL CAMBIO ESTÁ AQUÍ: Unique asegura integridad a nivel de motor de BD
-            $table->string('numero_contrato', 50)->unique()->comment('NUMERO DE CONTRATO del Excel (col 1)');
-
+            // Relaciones normalizadas: Preferimos IDs sobre nombres en texto para:
+            // 1. Integridad referencial (no podemos borrar un contratista con contratos activos).
+            // 2. Performance en búsquedas y reportes consolidados.
             $table->foreignId('modalidad_id')->nullable()->constrained('modalidades');
             $table->foreignId('contratista_id')->constrained('contratistas');
-            $table->foreignId('supervisor_id')->nullable()->constrained('supervisores')->comment('SUPERVISOR@ del Excel (col 9)');
+            $table->foreignId('tipo_contratista_id')->nullable()->constrained('tipos_contratista');
+            $table->foreignId('supervisor_id')->nullable()->constrained('supervisores');
+
             $table->text('objeto')->nullable();
-            $table->decimal('monto_total', 19, 2);
+            $table->decimal('monto_total', 19, 2); // 19,2 para manejar grandes cifras con precisión monetaria
+
+            // Ubicación y Conceptos
             $table->foreignId('planta_id')->nullable()->constrained('plantas');
+            $table->string('no_planta')->nullable();
             $table->foreignId('concepto_id')->nullable()->constrained('conceptos');
+            $table->string('concepto_precontractual')->nullable();
+
+            // Integración con SECOP y trazabilidad financiera inicial
             $table->string('cdp_codigo', 50)->nullable();
-            $table->date('fecha_inicio')->nullable()->comment('FECHA DE INICIO del Excel (col 7)');
-            $table->date('fecha_fin')->nullable()->comment('FECHA DE TERMINACIÓN del Excel (col 8)');
+            $table->string('link_secop')->nullable();
+            $table->date('fecha_inicio')->nullable();
+            $table->date('fecha_fin')->nullable();
+            $table->string('plazo_ejecucion')->nullable();
+            $table->foreignId('estado_secop_id')->nullable()->constrained('estados_contrato_secop');
+
+            // Campos de estado para reportes ejecutivos rápidos
+            $table->string('aprobado_y_pagado')->nullable();
+            $table->string('modificaciones_y_cierre')->nullable();
+            $table->decimal('saldo', 19, 2)->default(0); // Cálculo derivado para visibilidad inmediata
+
+            // Notas de gestión humana y administrativa
+            $table->text('observacion_1_razon')->nullable();
+            $table->text('observacion_2_accion')->nullable();
+            $table->text('razon_no_liquidacion')->nullable();
+
+            // RESPONSABLES (Normalización a Usuarios del sistema)
+            // Permitimos auditoría de quién debe gestionar cada contrato en el flujo interno.
+            $table->foreignId('abogado_user_id')->nullable()->constrained('usuarios');
+            $table->foreignId('contador_user_id')->nullable()->constrained('usuarios');
+            $table->foreignId('ops_user_id')->nullable()->constrained('usuarios');
+
             $table->boolean('es_activo')->default(true);
             $table->timestamps();
 
-            // Índices de búsqueda (Unique ya actúa como índice para numero_contrato)
+            // ÍNDICES ESTRATÉGICOS: Optimizamos las búsquedas frecuentes por Número de Proceso
+            // y Contratista, que son los filtros más usados en el dashboard.
             $table->index('numero_proceso');
             $table->index('contratista_id');
         });
 
-        // TABLA 13: Registros Presupuestales
+        // TABLA: Registros Presupuestales (RP)
+        // Un contrato puede tener múltiples RPs asociados (Relación 1:N).
         Schema::create('registros_presupuestales', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('contrato_id')->constrained('contratos')->onDelete('cascade');
-            $table->string('numero_rp', 50)->comment('RP del Excel (col 4)');
-            $table->date('fecha_rp')->nullable()->comment('FECHA RP del Excel (col 5)');
-            $table->decimal('valor_rp', 19, 2)->nullable()->comment('VALOR RP del Excel (col 6)');
+            $table->foreignId('contrato_id')->constrained('contratos')->cascadeOnDelete();
+
+            $table->string('numero_rp', 50)->comment('Número de RP asignado');
+            $table->date('fecha_rp')->nullable();
+            $table->decimal('valor_rp', 19, 2)->nullable();
             $table->string('estado', 50)->default('ACTIVO');
             $table->text('observaciones')->nullable();
             $table->timestamps();

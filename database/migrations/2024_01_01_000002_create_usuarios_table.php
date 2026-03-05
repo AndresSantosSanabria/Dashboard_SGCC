@@ -6,10 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * TABLA 2 DE 23: USUARIOS
-     * Usuarios del sistema con acceso a la aplicación
-     */
     public function up(): void
     {
         Schema::create('usuarios', function (Blueprint $table) {
@@ -28,12 +24,19 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('user');
-            $table->index('rol_id');
+        });
+
+        // Relación Muchos a Muchos: Usuarios - Permisos (Individuales)
+        Schema::create('usuario_permiso', function (Blueprint $table) {
+            $table->foreignId('usuario_id')->constrained('usuarios')->cascadeOnDelete();
+            $table->foreignId('permiso_id')->constrained('permisos')->cascadeOnDelete();
+            $table->primary(['usuario_id', 'permiso_id']);
         });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('usuario_permiso');
         Schema::dropIfExists('usuarios');
     }
 };

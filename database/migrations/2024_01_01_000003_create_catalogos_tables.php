@@ -6,17 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * TABLAS 3, 4, 5, 6, 7 DE 23: CATÁLOGOS
-     * - modalidades
-     * - conceptos
-     * - plantas
-     * - tipos_documento
-     * - configuraciones
-     */
     public function up(): void
     {
-        // TABLA 3: Modalidades
+        // Modalidades
         Schema::create('modalidades', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 100)->unique();
@@ -25,7 +17,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // TABLA 4: Conceptos
+        // Conceptos
         Schema::create('conceptos', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 200)->unique();
@@ -34,7 +26,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // TABLA 5: Plantas
+        // Plantas
         Schema::create('plantas', function (Blueprint $table) {
             $table->id();
             $table->string('codigo', 50)->unique();
@@ -44,7 +36,7 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // TABLA 6: Tipos de Documento
+        // Tipos de Documento
         Schema::create('tipos_documento', function (Blueprint $table) {
             $table->id();
             $table->string('nombre', 100)->unique();
@@ -54,7 +46,31 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        // TABLA 7: Configuraciones
+        // Tipos de Contratista (3NF)
+        Schema::create('tipos_contratista', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre', 100)->unique();
+            $table->boolean('es_activo')->default(true);
+            $table->timestamps();
+        });
+
+        // Estados Contrato SECOP (3NF)
+        Schema::create('estados_contrato_secop', function (Blueprint $table) {
+            $table->id();
+            $table->string('nombre', 100)->unique();
+            $table->boolean('es_activo')->default(true);
+            $table->timestamps();
+        });
+
+        // Festivos
+        Schema::create('festivos', function (Blueprint $table) {
+            $table->id();
+            $table->date('fecha')->unique();
+            $table->string('descripcion')->nullable();
+            $table->timestamps();
+        });
+
+        // Configuraciones (Depende de Usuarios)
         Schema::create('configuraciones', function (Blueprint $table) {
             $table->id();
             $table->string('clave', 100)->unique();
@@ -69,6 +85,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('configuraciones');
+        Schema::dropIfExists('festivos');
+        Schema::dropIfExists('estados_contrato_secop');
+        Schema::dropIfExists('tipos_contratista');
         Schema::dropIfExists('tipos_documento');
         Schema::dropIfExists('plantas');
         Schema::dropIfExists('conceptos');

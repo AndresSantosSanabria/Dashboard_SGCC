@@ -110,4 +110,11 @@ Route::middleware('auth')->prefix('configuracion')->group(function () {
     Route::delete('/alertas/festivos/{id}', [\App\Http\Controllers\AlertaAdminController::class, 'destroyFestivo'])->name('configuracion.alertas.festivos.destroy');
     Route::post('/alertas/destinatarios', [\App\Http\Controllers\AlertaAdminController::class, 'storeDestinatario'])->name('configuracion.alertas.destinatarios.store');
     Route::delete('/alertas/destinatarios/{id}', [\App\Http\Controllers\AlertaAdminController::class, 'destroyDestinatario'])->name('configuracion.alertas.destinatarios.destroy');
+
+    // Workflow States Management
+    Route::get('/workflow-estados', [\App\Http\Controllers\WorkflowAdminController::class, 'index'])->name('configuracion.workflow.index');
+    Route::post('/workflow-estados/store', [\App\Http\Controllers\WorkflowAdminController::class, 'store'])->name('configuracion.workflow.store');
+    Route::put('/workflow-estados/actualizar/{id}', [\App\Http\Controllers\WorkflowAdminController::class, 'update'])->name('configuracion.workflow.update');
+    Route::delete('/workflow-estados/eliminar/{id}', [\App\Http\Controllers\WorkflowAdminController::class, 'destroy'])->name('configuracion.workflow.destroy');
+    Route::post('/workflow-estados/toggle-status/{id}', [\App\Http\Controllers\WorkflowAdminController::class, 'toggleStatus'])->name('configuracion.workflow.toggle-status');
 });

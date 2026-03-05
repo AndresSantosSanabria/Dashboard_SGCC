@@ -22,7 +22,8 @@
                         <span
                             class="badge rounded-pill bg-white text-dark shadow-sm">{{ count($columna['cuentas']) }}</span>
                     </div>
-                    <div class="column-content">
+                    <div class="column-content drop-zone" data-estado-id="{{ $estadoId }}"
+                        data-bloque-id="{{ $block['id'] ?? $key }}">
                         @forelse($columna['cuentas'] as $cuenta)
                             @php
                                 $alertClass = 'alert-amarillo';
@@ -39,8 +40,8 @@
                                     $estadoBloqueActual?->fecha_ultima_actualizacion ??
                                     ($estadoBloqueActual?->fecha_ingreso_bloque ?? $cuenta->created_at);
                             @endphp
-                            <div class="account-card {{ $alertClass }}" data-bs-toggle="modal"
-                                data-bs-target="#modalCuenta{{ $cuenta->id }}">
+                            <div class="account-card {{ $alertClass }} sortable-item" data-bs-toggle="modal"
+                                data-bs-target="#modalCuenta{{ $cuenta->id }}" data-cuenta-id="{{ $cuenta->id }}">
                                 <div class="card-id">CONTRATO: {{ $cuenta->contrato?->numero_contrato ?? 'N/A' }}
                                 </div>
                                 <div class="card-contractor text-truncate"
@@ -57,7 +58,7 @@
                                 </div>
                                 <div class="card-footer-info"><span><i
                                             class="far fa-calendar-alt"></i>{{ $cuenta->created_at->format('d/m/Y') }}</span>
-                                        @if(strtolower($cuenta->estadoActual?->nombre ?? '') !== 'sin tramite')
+                                    @if ($cuenta->estadoActual && $cuenta->estadoActual->contabiliza_tiempo)
                                         <span class="timer-badge"
                                             data-start="{{ $fechaIngreso ? $fechaIngreso->toIso8601String() : '' }}"><i
                                                 class="far fa-clock"></i><span

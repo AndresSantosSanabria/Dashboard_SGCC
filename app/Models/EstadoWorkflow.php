@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class EstadoWorkflow extends Model
 {
-    use HasFactory;
+    use HasFactory, \Illuminate\Database\Eloquent\SoftDeletes;
 
     protected $table = 'estados_workflow';
 
@@ -19,6 +19,8 @@ class EstadoWorkflow extends Model
         'es_inicial',
         'es_final',
         'permite_devolucion',
+        'contabiliza_tiempo',
+        'afecta_indicadores',
         'color_hex',
         'descripcion',
         'es_activo',
@@ -28,9 +30,12 @@ class EstadoWorkflow extends Model
         'es_inicial' => 'boolean',
         'es_final' => 'boolean',
         'permite_devolucion' => 'boolean',
+        'contabiliza_tiempo' => 'boolean',
+        'afecta_indicadores' => 'boolean',
         'es_activo' => 'boolean',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     // Relaciones

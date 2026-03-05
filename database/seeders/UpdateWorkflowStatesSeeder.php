@@ -45,7 +45,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
             // Estructura de estados
             $estadosPorBloque = [
                 1 => [
-                    ['nombre' => 'Sin tramite', 'codigo' => 'REV1_SIN', 'tipo' => 'INICIAL', 'es_inicial' => 1],
+                    ['nombre' => 'Sin tramite', 'codigo' => 'REV1_SIN', 'tipo' => 'INICIAL', 'es_inicial' => 1, 'contabiliza_tiempo' => 0, 'afecta_indicadores' => 0],
                     ['nombre' => 'en revision', 'codigo' => 'REV1_REV', 'tipo' => 'EN_PROCESO'],
                     ['nombre' => 'en espera firma jaime moncaleano', 'codigo' => 'REV1_ESP_MON', 'tipo' => 'EN_PROCESO'],
                     ['nombre' => 'pasa', 'codigo' => 'REV1_PASA', 'tipo' => 'APROBADO', 'es_final' => 1],
@@ -87,6 +87,8 @@ class UpdateWorkflowStatesSeeder extends Seeder
                         'es_inicial' => $est['es_inicial'] ?? 0,
                         'es_final' => $est['es_final'] ?? 0,
                         'permite_devolucion' => $est['tipo'] === 'DEVUELTO',
+                        'contabiliza_tiempo' => $est['contabiliza_tiempo'] ?? 1,
+                        'afecta_indicadores' => $est['afecta_indicadores'] ?? 1,
                         'color_hex' => $this->getColorPorTipo($est['tipo']),
                         'descripcion' => $est['nombre'],
                         'es_activo' => 1,
@@ -167,7 +169,7 @@ class UpdateWorkflowStatesSeeder extends Seeder
         } catch (\Exception $e) {
             DB::rollBack();
             DB::statement('SET FOREIGN_KEY_CHECKS=1;');
-            echo '❌ ERROR: '.$e->getMessage()."\n";
+            echo '❌ ERROR: ' . $e->getMessage() . "\n";
             throw $e;
         }
     }

@@ -21,7 +21,6 @@ class Usuario extends Authenticatable
         'user',
         'password',
         'rol_id',
-        'permisos',
         'es_activo',
         'fecha_inactivacion',
         'ultimo_login',
@@ -34,7 +33,6 @@ class Usuario extends Authenticatable
 
     protected $casts = [
         'es_activo' => 'boolean',
-        'permisos' => 'array',
         'fecha_inactivacion' => 'datetime',
         'ultimo_login' => 'datetime',
         'created_at' => 'datetime',
@@ -47,72 +45,30 @@ class Usuario extends Authenticatable
         return $this->belongsTo(Role::class, 'rol_id');
     }
 
-    public function configuracionesModificadas()
+    public function individualPermissions()
     {
-        return $this->hasMany(Configuracion::class, 'modificado_por_id');
+        return $this->belongsToMany(Permiso::class, 'usuario_permiso');
     }
 
-    public function documentosSubidos()
+    public function tienePermiso(string $slug): bool
     {
-        return $this->hasMany(Documento::class, 'subido_por_id');
-    }
-
-    public function cuentasCobroAsignadas()
-    {
-        return $this->hasMany(CuentaCobro::class, 'responsable_actual_id');
-    }
-
-    public function estadoBloquesCuenta()
-    {
-        return $this->hasMany(EstadoBloqueCuenta::class, 'responsable_id');
-    }
-
-    public function historialAcciones()
-    {
-        return $this->hasMany(HistorialWorkflow::class, 'usuario_accion_id');
-    }
-
-    public function auditorias()
-    {
-        return $this->hasMany(Auditoria::class, 'usuario_id');
-    }
-
-    public function alertas()
-    {
-        return $this->hasMany(Alerta::class, 'usuario_destino_id');
-    }
-
-    // Accessor para nombre completo
-    public function getNombreCompletoAttribute()
-    {
-        return trim(
-            $this->primer_nombre.' '.
-                $this->segundo_nombre.' '.
-                $this->primer_apellido.' '.
-                $this->segundo_apellido
-        );
-    }
-
-    public function tienePermiso(string $permiso): bool
-    {
-        // 1. Check if user has explicit permission defined
-        if (isset($this->permisos[$permiso])) {
-            return (bool) $this->permisos[$permiso];
+        // 1. Check if user has explicit individual permission
+        if ($this->individualPermissions()->where('slug', $slug)->exists()) {
+            return true;
         }
 
-        // 2. Administrators have all permissions by default
-        // We check 'es_admin' specifically to prevent infinite loops if isAdmin() is used
-        if ($permiso !== 'es_admin' && $this->isAdmin()) {
+        // 2. Administrators have all permissions
+        if ($slug !== 'es_admin' && $this->isAdmin()) {
             return true;
         }
 
         // 3. Fall back to role permissions
-        return $this->rol ? $this->rol->tienePermiso($permiso) : false;
+        return $this->rol ? $this->rol->tienePermiso($slug) : false;
     }
 
     public function isAdmin(): bool
     {
-        return $this->tienePermiso('es_admin');
+        return $this->rol?->nombre === 'Administrador' || $this->tienePermiso('es_admin');
     }
 
     public function puedeSerResponsableSap(): bool
@@ -155,75 +111,84 @@ class Usuario extends Authenticatable
         return $this->tienePermiso('editar_workflow');
     }
 
-    /**
-     * Check if user is restricted to seeing only their assigned accounts
-     */
     public function verSoloAsignados(): bool
     {
-        // 1. Explicit individual check
-        if (isset($this->permisos['ver_solo_asignados'])) {
-            return (bool) $this->permisos['ver_solo_asignados'];
-        }
-
-        // 2. Admin bypass (admins see everything by default)
         if ($this->isAdmin()) {
             return false;
         }
-
-        // 3. Fallback to role
-        return $this->rol ? $this->rol->tienePermiso('ver_solo_asignados') : false;
+        return $this->tienePermiso('ver_solo_asignados');
     }
 
-    /**
-     * Get the blocks the user is allowed to see/manage
-     * Returns true if all blocks, or an array of block codes
-     */
     public function bloquesPermitidos()
     {
-        // 1. Check individual user permisos
-        $bloquesUsuario = $this->permisos['bloques_permitidos'] ?? null;
-
-        // 2. Admin bypass (admins see all blocks by default)
         if ($this->isAdmin()) {
             return true;
         }
 
-        // 3. Fallback to role permisos if individual is null OR if individual is 'true' but we want to check role restrictions
-        // Logic: Individual ARRAY (explicit restriction) > Role (any) > Individual TRUE (all) > TRUE (default)
+        // Para simplificar esta implementación inicial en 3NF, 
+        // buscamos permisos con el patrón 'acceso_bloque_*'
+        $permisos = $this->individualPermissions()
+            ->where('slug', 'like', 'acceso_bloque_%')
+            ->pluck('slug')
+            ->map(fn($s) => str_replace('acceso_bloque_', '', $s))
+            ->toArray();
 
-        // If user has specific individual blocks assigned, use those (highest priority)
-        if (is_array($bloquesUsuario)) {
-            $filteredBloques = array_filter($bloquesUsuario, function ($b) {
-                return $b !== null && $b !== '' && $b !== false;
-            });
-
-            return array_values($filteredBloques);
+        if (empty($permisos) && $this->rol) {
+            $permisos = $this->rol->permisos()
+                ->where('slug', 'like', 'acceso_bloque_%')
+                ->pluck('slug')
+                ->map(fn($s) => str_replace('acceso_bloque_', '', $s))
+                ->toArray();
         }
 
-        // If no individual array, check the role
-        if ($this->rol && isset($this->rol->permisos['bloques_permitidos'])) {
-            $bloquesRole = $this->rol->permisos['bloques_permitidos'];
+        return !empty($permisos) ? $permisos : true;
+    }
 
-            if ($bloquesRole === true) {
-                return true;
-            }
 
-            if (is_array($bloquesRole)) {
-                $filteredBloques = array_filter($bloquesRole, function ($b) {
-                    return $b !== null && $b !== '' && $b !== false;
-                });
+    public function configuracionesModificadas()
+    {
+        return $this->hasMany(Configuracion::class, 'modificado_por_id');
+    }
 
-                return array_values($filteredBloques);
-            }
-        }
+    public function documentosSubidos()
+    {
+        return $this->hasMany(Documento::class, 'subido_por_id');
+    }
 
-        // If no role restrictions AND no individual array, fallback to individual 'true' or default true
-        if ($bloquesUsuario === true) {
-            return true;
-        }
+    public function cuentasCobroAsignadas()
+    {
+        return $this->hasMany(CuentaCobro::class, 'responsable_actual_id');
+    }
 
-        // 4. Default: all blocks
-        return true;
+    public function estadoBloquesCuenta()
+    {
+        return $this->hasMany(EstadoBloqueCuenta::class, 'responsable_id');
+    }
+
+    public function historialAcciones()
+    {
+        return $this->hasMany(HistorialWorkflow::class, 'usuario_accion_id');
+    }
+
+    public function auditorias()
+    {
+        return $this->hasMany(Auditoria::class, 'usuario_id');
+    }
+
+    public function alertas()
+    {
+        return $this->hasMany(Alerta::class, 'usuario_destino_id');
+    }
+
+    // Accessor para nombre completo
+    public function getNombreCompletoAttribute()
+    {
+        return implode(' ', array_filter([
+            $this->primer_nombre,
+            $this->segundo_nombre,
+            $this->primer_apellido,
+            $this->segundo_apellido,
+        ]));
     }
 
     // Scopes for filtering users
@@ -236,15 +201,11 @@ class Usuario extends Authenticatable
     {
         return $query->where('es_activo', true)
             ->where(function ($q) {
-                // Usuario con permiso individual explícito
-                $q->where('permisos->responsable_sap', true)
-                    ->orWhere(function ($sq) {
-                        // Sin permiso individual explícito, heredar del rol (solo responsable_sap, NO es_admin)
-                        $sq->whereNull('permisos->responsable_sap')
-                            ->whereHas('rol', function ($r) {
-                                $r->where('permisos->responsable_sap', true);
-                            });
-                    });
+                $q->whereHas('individualPermissions', function ($sq) {
+                    $sq->where('slug', 'responsable_sap');
+                })->orWhereHas('rol.permisos', function ($sq) {
+                    $sq->where('slug', 'responsable_sap');
+                });
             });
     }
 
@@ -252,15 +213,11 @@ class Usuario extends Authenticatable
     {
         return $query->where('es_activo', true)
             ->where(function ($q) {
-                // Usuario con permiso individual explícito
-                $q->where('permisos->responsable_facturacion', true)
-                    ->orWhere(function ($sq) {
-                        // Sin permiso individual explícito, heredar del rol (solo responsable_facturacion, NO es_admin)
-                        $sq->whereNull('permisos->responsable_facturacion')
-                            ->whereHas('rol', function ($r) {
-                                $r->where('permisos->responsable_facturacion', true);
-                            });
-                    });
+                $q->whereHas('individualPermissions', function ($sq) {
+                    $sq->where('slug', 'responsable_facturacion');
+                })->orWhereHas('rol.permisos', function ($sq) {
+                    $sq->where('slug', 'responsable_facturacion');
+                });
             });
     }
 }

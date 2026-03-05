@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('historial_workflow', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('cuenta_cobro_id')->constrained('cuentas_cobro')->onDelete('cascade');
+            $table->foreignId('cuenta_cobro_id')->constrained('cuentas_cobro')->cascadeOnDelete();
             $table->foreignId('bloque_id')->constrained('bloques_workflow');
             $table->foreignId('estado_origen_id')->nullable()->constrained('estados_workflow');
             $table->foreignId('estado_destino_id')->constrained('estados_workflow');
@@ -30,6 +30,7 @@ return new class extends Migration
             $table->index('bloque_id');
             $table->index('fecha_transicion');
             $table->index('usuario_accion_id');
+            $table->index(['cuenta_cobro_id', 'fecha_transicion'], 'idx_workflow_latest');
         });
     }
 

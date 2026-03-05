@@ -16,13 +16,21 @@ class AlertaAdminController extends Controller
     // ── Panel principal ──────────────────────────────────────────────
     public function index()
     {
-        $configuraciones = Configuracion::whereIn('clave', [
+        $claves = [
             'ALERTA_ESTANCAMIENTO_MINUTOS',
             'ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS',
             'ALERTA_ESTANCAMIENTO_ACTIVA',
             'ALERTA_ESTANCAMIENTO_MSG_WARNING',
             'ALERTA_ESTANCAMIENTO_MSG_DANGER',
-        ])->get()->keyBy('clave');
+        ];
+
+        $configuraciones = Configuracion::whereIn('clave', $claves)->get()->keyBy('clave');
+
+        foreach ($claves as $clave) {
+            if (!$configuraciones->has($clave)) {
+                $configuraciones->put($clave, (object)['valor' => '']);
+            }
+        }
 
         $festivos = Festivo::orderBy('fecha', 'asc')->paginate(50);
 
@@ -41,8 +49,8 @@ class AlertaAdminController extends Controller
             });
 
         // Desglosar minutos totales en horas y minutos para la vista
-        $limitTotal = (int)($configuraciones['ALERTA_ESTANCAMIENTO_MINUTOS']?->valor ?? 0);
-        $preLimitTotal = (int)($configuraciones['ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS']?->valor ?? 0);
+        $limitTotal = (int)($configuraciones['ALERTA_ESTANCAMIENTO_MINUTOS']->valor ?: 0);
+        $preLimitTotal = (int)($configuraciones['ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS']->valor ?: 0);
 
         $limitHours = floor($limitTotal / 60);
         $limitMins = $limitTotal % 60;
@@ -50,12 +58,19 @@ class AlertaAdminController extends Controller
         $preLimitHours = floor($preLimitTotal / 60);
         $preLimitMins = $preLimitTotal % 60;
 
-        $usuarios = Usuario::activos()->orderBy('primer_nombre')->get();
-        $roles = Role::all();
+        $usuarios = Usuario::where('es_activo', true)->orderBy('primer_nombre')->get();
+        $roles = Role::where('es_activo', true)->get();
 
         return view('configuracion.alertas.index', compact(
-            'configuraciones', 'festivos', 'destinatarios', 'usuarios', 'roles',
-            'limitHours', 'limitMins', 'preLimitHours', 'preLimitMins'
+            'configuraciones',
+            'festivos',
+            'destinatarios',
+            'usuarios',
+            'roles',
+            'limitHours',
+            'limitMins',
+            'preLimitHours',
+            'preLimitMins'
         ));
     }
 
@@ -131,7 +146,7 @@ class AlertaAdminController extends Controller
         }
 
         return response()->json([
-            'success' => true, 
+            'success' => true,
             'message' => "Se han sincronizado {$count} nuevos festivos correctamente."
         ]);
     }

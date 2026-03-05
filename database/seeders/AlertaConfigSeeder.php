@@ -34,6 +34,24 @@ class AlertaConfigSeeder extends Seeder
                 'tipo_dato' => 'BOOL',
                 'descripcion' => 'Activa o desactiva el sistema de alertas por estancamiento.',
             ],
+            [
+                'clave' => 'ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS',
+                'valor' => '10',
+                'tipo_dato' => 'INT',
+                'descripcion' => 'Tiempo de pre-aviso en minutos antes de llegar al límite crítico.',
+            ],
+            [
+                'clave' => 'ALERTA_ESTANCAMIENTO_MSG_WARNING',
+                'valor' => '⏳ PRE-AVISO: El contrato {numero_contrato} ({contratista}) lleva {tiempo} laborables estancado en {estado}.',
+                'tipo_dato' => 'STRING',
+                'descripcion' => 'Plantilla para mensaje de alerta preventiva.',
+            ],
+            [
+                'clave' => 'ALERTA_ESTANCAMIENTO_MSG_DANGER',
+                'valor' => '⚠️ ALERTA CRÍTICA: El contrato {numero_contrato} ({contratista}) lleva {tiempo} laborables estancado en {estado}.',
+                'tipo_dato' => 'STRING',
+                'descripcion' => 'Plantilla para mensaje de alerta de tiempo cumplido.',
+            ],
         ];
 
         foreach ($configs as $config) {

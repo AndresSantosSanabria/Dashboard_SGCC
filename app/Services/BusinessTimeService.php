@@ -4,130 +4,106 @@ namespace App\Services;
 
 use App\Models\Festivo;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
+use Illuminate\Support\Facades\DB;
 
 class BusinessTimeService
 {
+    protected static $festivosConfig = null;
+
     /**
-     * Calcula los segundos laborables entre dos fechas (24 horas, excluyendo fines de semana y festivos).
+     * Calcula los segundos laborables entre dos fechas.
+     * Versión ULTRA-OPTIMIZADA: Usa comparaciones de strings para evitar Carbon::parse.
      */
-    public function getWorkingSecondsBetween(Carbon $start, Carbon $end)
+    public function getWorkingSecondsBetween($startInput, $endInput)
     {
+        // Forzar objetos Carbon solo para el inicio del cálculo
+        $start = ($startInput instanceof Carbon) ? $startInput : Carbon::parse($startInput);
+        $end   = ($endInput instanceof Carbon)   ? $endInput   : Carbon::parse($endInput);
+
         if ($start->gt($end)) return 0;
 
-        $totalSeconds = 0;
-        $years = range($start->year, $end->year);
-        $festivos = [];
-        foreach ($years as $year) {
-            $festivos = array_merge($festivos, $this->getColombianHolidays($year));
-        }
-
-        $period = CarbonPeriod::create($start->copy()->startOfDay(), $end->copy()->startOfDay());
-
-        foreach ($period as $date) {
-            $dateStr = $date->format('Y-m-d');
-            
-            // Ignorar sábados (6) y domingos (0)
-            if ($date->isWeekend()) continue;
-
-            // Ignorar festivos (BD + Automáticos)
-            if (in_array($dateStr, $festivos)) continue;
-            if (Festivo::where('fecha', $dateStr)->exists()) continue;
-
-            $currentDayStart = $date->copy()->startOfDay();
-            $currentDayEnd = $date->copy()->endOfDay();
-
-            // Determinar el inicio efectivo para este día
-            $effectiveStart = $start->isSameDay($date) ? $start : $currentDayStart;
-            
-            // Determinar el fin efectivo para este día
-            $effectiveEnd = $end->isSameDay($date) ? $end : $currentDayEnd;
-
-            if ($effectiveEnd->gt($effectiveStart)) {
-                $totalSeconds += $effectiveStart->diffInSeconds($effectiveEnd);
+        // Cargar festivos pre-procesados una vez para toda la vida de la petición
+        if (is_null(self::$festivosConfig)) {
+            $raw = DB::table('festivos')->pluck('fecha')->toArray();
+            self::$festivosConfig = [];
+            foreach ($raw as $f) {
+                // $f ya viene como string YYYY-MM-DD del DB
+                $dateStr = substr($f, 0, 10);
+                $c = Carbon::parse($dateStr);
+                self::$festivosConfig[] = [
+                    'date' => $dateStr,
+                    'is_laborable' => ($c->dayOfWeek !== 0 && $c->dayOfWeek !== 6)
+                ];
             }
         }
 
-        return $totalSeconds;
+        $startStr = $start->format('Y-m-d');
+        $endStr   = $end->format('Y-m-d');
+
+        // Caso mismo día
+        if ($startStr === $endStr) {
+            if ($start->isWeekend()) return 0;
+            foreach (self::$festivosConfig as $f) {
+                if ($f['date'] === $startStr) return 0;
+            }
+            return (int) $start->diffInSeconds($end);
+        }
+
+        // 1. Días de calendario
+        $periodStart = $start->copy()->startOfDay();
+        $periodEnd   = $end->copy()->startOfDay();
+        $daysDiff    = $periodStart->diffInDays($periodEnd);
+
+        // 2. Fines de semana (Fórmula Matemática sin bucles)
+        $weeks = floor($daysDiff / 7);
+        $weekends = $weeks * 2;
+        $remaining = $daysDiff % 7;
+        if ($remaining > 0) {
+            $startDay = (int) $start->format('w');
+            for ($i = 1; $i <= $remaining; $i++) {
+                $day = ($startDay + $i) % 7;
+                if ($day == 0 || $day == 6) $weekends++;
+            }
+        }
+
+        // 3. Festivos (Bucle sobre ~500 registros de texto, muy rápido)
+        $holidaysCount = 0;
+        foreach (self::$festivosConfig as $f) {
+            if ($f['date'] >= $startStr && $f['date'] <= $endStr && $f['is_laborable']) {
+                $holidaysCount++;
+            }
+        }
+
+        $workingDays = max(0, $daysDiff - $weekends - $holidaysCount);
+        $totalSeconds = $workingDays * 86400;
+
+        // 4. Extremos (Inicio y Fin parciales)
+        $isStartWork = ($start->dayOfWeek !== 0 && $start->dayOfWeek !== 6);
+        $isEndWork   = ($end->dayOfWeek   !== 0 && $end->dayOfWeek   !== 6);
+        foreach (self::$festivosConfig as $f) {
+            if ($f['date'] === $startStr) $isStartWork = false;
+            if ($f['date'] === $endStr)   $isEndWork   = false;
+        }
+
+        if ($isStartWork) $totalSeconds += $start->diffInSeconds($start->copy()->endOfDay());
+        if ($isEndWork)   $totalSeconds += $end->copy()->startOfDay()->diffInSeconds($end);
+
+        return (int) $totalSeconds;
     }
 
-    /**
-     * Calcula los festivos de Colombia para un año específico (Ley Emiliani).
-     */
-    public function getColombianHolidays(int $year): array
-    {
-        $holidays = [
-            $year . '-01-01', // Año Nuevo
-            $year . '-05-01', // Día del Trabajo
-            $year . '-07-20', // Independencia
-            $year . '-08-07', // Batalla de Boyacá
-            $year . '-12-08', // Inmaculada Concepción
-            $year . '-12-25', // Navidad
-        ];
-
-        // Festivos que se mueven al siguiente lunes (Ley Emiliani)
-        $emiliani = [
-            $year . '-01-06', // Reyes Magos
-            $year . '-03-19', // San José
-            $year . '-06-29', // San Pedro y San Pablo
-            $year . '-08-15', // Asunción de la Virgen
-            $year . '-10-12', // Día de la Raza
-            $year . '-11-01', // Todos los Santos
-            $year . '-11-11', // Independencia de Cartagena
-        ];
-
-        foreach ($emiliani as $date) {
-            $cDate = Carbon::parse($date);
-            if ($cDate->dayOfWeek !== Carbon::MONDAY) {
-                $cDate->next(Carbon::MONDAY);
-            }
-            $holidays[] = $cDate->format('Y-m-d');
-        }
-
-        // Basados en Pascua
-        $easter = Carbon::parse(date("Y-m-d", easter_date($year)));
-        
-        $holidays[] = $easter->copy()->subDays(3)->format('Y-m-d'); // Jueves Santo
-        $holidays[] = $easter->copy()->subDays(2)->format('Y-m-d'); // Viernes Santo
-        
-        // Fiestas móviles basadas en Pascua que se mueven al lunes
-        $movable = [
-            $easter->copy()->addDays(39), // Ascensión del Señor (40 días después)
-            $easter->copy()->addDays(60), // Corpus Christi (60 días después)
-            $easter->copy()->addDays(68), // Sagrado Corazón (68 días después)
-        ];
-
-        foreach ($movable as $mDate) {
-            if ($mDate->dayOfWeek !== Carbon::MONDAY) {
-                $mDate->next(Carbon::MONDAY);
-            }
-            $holidays[] = $mDate->format('Y-m-d');
-        }
-
-        return array_unique($holidays);
-    }
-
-    /**
-     * Formatea una cantidad de segundos en una cadena legible basada en 24h.
-     */
     public function formatInterval(int $totalSeconds): string
     {
-        $secondsPerDay = 86400; // 24 horas
-
-        $days = floor($totalSeconds / $secondsPerDay);
-        $remainingSeconds = $totalSeconds % $secondsPerDay;
-
-        $hours = floor($remainingSeconds / 3600);
-        $remainingSeconds %= 3600;
-
-        $minutes = floor($remainingSeconds / 60);
-        $seconds = $remainingSeconds % 60;
+        $days = floor($totalSeconds / 86400);
+        $rem  = $totalSeconds % 86400;
+        $hours   = floor($rem / 3600);
+        $rem    %= 3600;
+        $minutes = floor($rem / 60);
 
         $parts = [];
-        if ($days > 0) $parts[] = $days . ($days == 1 ? ' día' : ' días');
-        if ($hours > 0) $parts[] = $hours . ($hours == 1 ? ' hora' : ' horas');
-        if ($minutes > 0) $parts[] = $minutes . ($minutes == 1 ? ' minuto' : ' minutos');
-        if ($seconds > 0 || empty($parts)) $parts[] = $seconds . ($seconds == 1 ? ' segundo' : ' segundos');
+        if ($days > 0)    $parts[] = "$days "    . ($days == 1 ? 'día' : 'días');
+        if ($hours > 0)   $parts[] = "$hours "   . ($hours == 1 ? 'hora' : 'horas');
+        if ($minutes > 0) $parts[] = "$minutes " . ($minutes == 1 ? 'minuto' : 'minutos');
+        if (empty($parts)) return ($totalSeconds % 60) . " segundos";
 
         return implode(', ', $parts);
     }

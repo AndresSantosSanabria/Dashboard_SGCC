@@ -5,13 +5,25 @@ namespace App\Models;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CuentaCobro extends Model
 {
-    use Auditable, HasFactory;
+    /**
+     * MODELO CUENTA DE COBRO: El corazón reactivo del Workflow.
+     * 
+     * Este modelo actúa como una Máquina de Estados. Controla en qué punto del 
+     * proceso se encuentra cada trámite de pago y quién es el responsable hoy.
+     */
+    use Auditable, HasFactory, SoftDeletes;
 
     protected $table = 'cuentas_cobro';
 
+    /**
+     * Campos de seguimiento: 
+     * 'bloque_actual_id' y 'estado_actual_id' definen la posición en el Kanban.
+     * 'finalizada' es el flag que indica que el proceso contable terminó.
+     */
     protected $fillable = [
         'contrato_id',
         'numero_cuenta',
@@ -31,6 +43,10 @@ class CuentaCobro extends Model
         'observacion_hacienda',
     ];
 
+    /**
+     * Casts: Aseguramos que las fechas de radicación sean objetos Carbon 
+     * para cálculos precisos de tiempos de respuesta (SLAs).
+     */
     protected $casts = [
         'valor_cobro' => 'decimal:2',
         'fecha_radicacion' => 'datetime',
@@ -43,37 +59,30 @@ class CuentaCobro extends Model
         'updated_at' => 'datetime',
     ];
 
-    // Relaciones
+    // --- RELACIONES DE FLUJO ---
+
     public function contrato()
     {
         return $this->belongsTo(Contrato::class, 'contrato_id');
     }
-
     public function bloqueActual()
     {
         return $this->belongsTo(BloqueWorkflow::class, 'bloque_actual_id');
     }
-
     public function estadoActual()
     {
         return $this->belongsTo(EstadoWorkflow::class, 'estado_actual_id');
     }
-
     public function responsableActual()
     {
         return $this->belongsTo(Usuario::class, 'responsable_actual_id');
     }
 
-    public function planillasSeguridadSocial()
-    {
-        return $this->hasMany(PlanillaSeguridadSocial::class, 'cuenta_cobro_id');
-    }
-
-    public function estadosBloques()
-    {
-        return $this->hasMany(EstadoBloqueCuenta::class, 'cuenta_cobro_id');
-    }
-
+    /**
+     * Historial de Workflow: 
+     * Esencial para auditoría y para calcular cuánto tiempo 
+     * pasó la cuenta en cada etapa anteriormente.
+     */
     public function historialWorkflow()
     {
         return $this->hasMany(HistorialWorkflow::class, 'cuenta_cobro_id')
@@ -86,134 +95,82 @@ class CuentaCobro extends Model
         return $this->hasMany(Alerta::class, 'cuenta_cobro_id');
     }
 
-    // Relación con el estado del bloque actual
-    public function estadoBloqueActual()
-    {
-        return $this->hasOne(EstadoBloqueCuenta::class, 'cuenta_cobro_id')
-            ->where('bloque_id', $this->bloque_actual_id);
-    }
+    // --- ACCESSORS: INTELIGENCIA DE DATOS ---
 
-    // Scopes
-    public function scopeActivas($query)
-    {
-        return $query->where('finalizada', false);
-    }
-
-    public function scopeFinalizadas($query)
-    {
-        return $query->where('finalizada', true);
-    }
-
-    public function scopeEnBloque($query, $bloqueId)
-    {
-        return $query->where('bloque_actual_id', $bloqueId);
-    }
-
-    public function scopeEnEstado($query, $estadoId)
-    {
-        return $query->where('estado_actual_id', $estadoId);
-    }
-
-    public function scopeAsignadasA($query, $usuarioId)
-    {
-        return $query->where('responsable_actual_id', $usuarioId);
-    }
-
-    // Accessors for Dashboard
+    /**
+     * Meta de Radicación:
+     * Calcula cuántas facturas faltan para completar la meta del contrato.
+     */
     public function getDiferenciaCuentasAttribute()
     {
         $numeroCuenta = (int) ($this->numero_cuenta ?? 0);
-        if ($numeroCuenta <= 0) {
-            $numeroCuenta = 1;
-        }
+        if ($numeroCuenta <= 0) $numeroCuenta = 1;
 
         return (int) ($this->numero_pagos_totales ?? 0) - $numeroCuenta;
     }
 
-    public function getUltimaFacturaHaciendaAttribute($value)
-    {
-        return $value ?? 'N/A';
-    }
-
-    public function getObservacionHaciendaAttribute($value)
-    {
-        return $value ?? 'N/A';
-    }
-
     /**
-     * Accessor for dynamic percentage calculation.
-     * New formula: (Filed Invoices / Total Payments) * 100
+     * Avance Porcentual Dinámico:
+     * El porcentaje se calcula en tiempo real basado en (Facturas / Meta).
      */
     public function getPorcentajeCuentasAttribute($value)
     {
-        // If we have valid numbers, calculate dynamically
-        // New formula: (Filed Invoices / Total Payments) * 100
         if (($this->numero_pagos_totales ?? 0) > 0) {
             return round((($this->numero_facturas_radicadas ?? 0) / $this->numero_pagos_totales) * 100, 2);
         }
-
-        // Fallback to stored value or 0
         return $value ?? 0;
     }
 
     /**
-     * Calcula el tiempo total que lleva la cuenta en el workflow
-     * Se EXCLUYE el tiempo que la cuenta pase en el estado "Sin trámite".
+     * CÁLCULO DE TIEMPO NETO (SLA Engine):
+     * 
+     * Este es un algoritmo crítico. No solo resta fechas, sino que recorre 
+     * el historial para DESCONTAR el tiempo pasado en estados que no cuentan 
+     * tiempo (ej: cuando la cuenta fue devuelta al contratista).
      */
     public function getTiempoTotalEjecucionAttribute()
     {
-        $primera = $this->created_at;
-        if (! $primera) {
-            return '0s';
-        }
+        // Determinamos el marco temporal de la gestión activa
+        $inicio = $this->fecha_radicacion ?? $this->created_at;
+        if (! $inicio) return '0m';
 
-        $ultima = $this->finalizada
+        $fin = $this->finalizada
             ? ($this->historialWorkflow->max('fecha_transicion') ?? now())
             : now();
 
-        $ultima = \Carbon\Carbon::parse($ultima);
-        $primera = \Carbon\Carbon::parse($primera);
+        $inicio = \Carbon\Carbon::parse($inicio);
+        $fin = \Carbon\Carbon::parse($fin);
 
-        // 1. Calcular tiempo total bruto en minutos
-        $totalMinutos = $primera->diffInMinutes($ultima);
+        // Consultamos el rastro de estados para detectar periodos de "pausa"
+        $historial = $this->historialWorkflow()
+            ->where('fecha_transicion', '>=', $inicio->copy()->subSeconds(2))
+            ->orderBy('fecha_transicion', 'asc')
+            ->get();
 
-        // 2. Calcular "Tiempo Muerto" en estado "Sin trámite"
         $tiempoMuertoMinutos = 0;
-        
-        // USAR LA COLECCIÓN YA CARGADA (Evita N+1)
-        // Se ordena ascendentemente para procesar la línea de tiempo cronológicamente
-        $historial = $this->historialWorkflow->sortBy('fecha_transicion');
-
-        $fechaEntradaSinTramite = null;
+        $referenciaTemporal = $inicio;
 
         foreach ($historial as $h) {
-            $nombreEstado = strtolower($h->estadoDestino->nombre ?? '');
-            $esSinTramite = str_contains($nombreEstado, 'sin tramite') || str_contains($nombreEstado, 'sin trámite');
-            
-            // Si entra a Sin Trámite y no estábamos ya en ese estado
-            if ($esSinTramite && !$fechaEntradaSinTramite) {
-                $fechaEntradaSinTramite = \Carbon\Carbon::parse($h->fecha_transicion);
-            } 
-            // Si sale de Sin Trámite
-            elseif (!$esSinTramite && $fechaEntradaSinTramite) {
-                $tiempoMuertoMinutos += $fechaEntradaSinTramite->diffInMinutes(\Carbon\Carbon::parse($h->fecha_transicion));
-                $fechaEntradaSinTramite = null;
+            $fechaTransicion = \Carbon\Carbon::parse($h->fecha_transicion);
+
+            // Si el estado de origen no sumaba tiempo, este tramo se resta del total
+            if ($h->estadoOrigen && ! ($h->estadoOrigen->contabiliza_tiempo ?? true)) {
+                $tiempoMuertoMinutos += max(0, $referenciaTemporal->diffInMinutes($fechaTransicion));
             }
+            $referenciaTemporal = $fechaTransicion;
         }
 
-        // Si el estado ACTUAL es Sin Trámite, sumar tiempo hasta "ahora"
-        if ($fechaEntradaSinTramite) {
-            $tiempoMuertoMinutos += $fechaEntradaSinTramite->diffInMinutes($ultima);
+        // Caso final: Verificar el estado actual
+        if ($this->estadoActual && ! ($this->estadoActual->contabiliza_tiempo ?? true)) {
+            $tiempoMuertoMinutos += max(0, $referenciaTemporal->diffInMinutes($fin));
         }
 
-        // 3. Tiempo Neto
-        $minutosNetos = max(0, $totalMinutos - $tiempoMuertoMinutos);
+        $totalBrutoMinutos = $inicio->diffInMinutes($fin);
+        $minutosNetos = max(0, $totalBrutoMinutos - $tiempoMuertoMinutos);
 
-        // Si el resultado es 0 o el estado actual es sin trámite, mostrar 0s o N/A según prefiera el usuario
-        // pero aquí mostramos el tiempo neto "fluctuado"
         if ($minutosNetos <= 0) return '0m';
 
-        // Formatear salida
+        // Formateo legible (ej: 2d 5h 30m)
         $d = floor($minutosNetos / 1440);
         $h = floor(($minutosNetos % 1440) / 60);
         $m = $minutosNetos % 60;

@@ -1,27 +1,33 @@
-/* App CSS - Estilos globales (gov.co + Bootstrap) */
-/* Los estilos principales vienen de gov.co CDN/local (all.css) y Bootstrap */
+/* 
+ * ARQUITECTURA VISUAL - Dashboard SGCC
+ * 
+ * Este archivo implementa el sistema de diseño sobre Bootstrap 5. 
+ * Utilizamos una estrategia de "Atomic CSS" para los tokens de color 
+ * (gov.co) y clases personalizadas para la experiencia Premium.
+ */
 
+/* 1. NÚCLEO ESTÉTICO (Tokens y Reset) */
 body {
     background-color: var(--govcolor-white-smoke) !important;
     color: var(--govcolor-matterhorn);
+    font-size: 0.9375rem; /* 15px: Equilibrio ideal entre densidad y legibilidad */
+    letter-spacing: -0.01em;
 }
 
+/* 2. NAVEGACIÓN (Sidebar Architecture) */
+#sidebar {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
+    font-size: 0.9rem;
+}
 
-/* Sidebar Custom Styles */
 .bg-govco-navbar {
     background-color: var(--govcolor-cobalt) !important;
 }
 
-#sidebar {
-    transition: width 0.3s;
-    overflow-x: hidden;
-    font-size: 0.9rem;
-    /* Refined font size */
-}
-
 #sidebar .nav-link {
     padding: 0.6rem 0.8rem;
-    border-radius: 8px;
+    border-radius: 8px; /* Bordes suaves para un look moderno */
     margin: 2px 0;
     transition: all 0.2s ease;
 }
@@ -31,41 +37,24 @@ body {
     letter-spacing: 0.3px;
 }
 
-#sidebar .bi {
-    font-size: 1.1rem !important;
-}
-
-#sidebar.collapsed {
-    width: 4.5rem !important;
-}
-
-/* Global Font Refinement for "Professional" look */
-body {
-    font-size: 0.9375rem;
-    /* 15px equivalent if base is 16px */
-    letter-spacing: -0.01em;
-}
-
-h1,
-.h1 {
+/* 3. JERARQUÍA TIPOGRÁFICA (Visual Authority) */
+h1, .h1 {
     font-size: 1.8rem !important;
+    font-weight: 700 !important;
     letter-spacing: -0.02em;
 }
 
-h2,
-.h2 {
+h2, .h2 {
     font-size: 1.5rem !important;
-}
-
-h3,
-.h3 {
-    font-size: 1.25rem !important;
+    font-weight: 600 !important;
 }
 
 .card-title {
     font-size: 1rem;
     font-weight: 700;
+    color: var(--govcolor-cobalt);
 }
+
 
 #sidebar.collapsed .nav-link span,
 #sidebar.collapsed .sidebar-header-text,

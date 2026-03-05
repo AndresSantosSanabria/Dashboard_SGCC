@@ -14,44 +14,34 @@ use Spatie\SimpleExcel\SimpleExcelWriter;
 class SeguimientoController extends Controller
 {
     /**
-     * Obtiene los contratos filtrados y procesa sus estados.
+     * MOTOR DE SEGUIMIENTO CONTRACTUAL
+     * 
+     * Este controlador implementa un patrón "Flat-to-Relational Mapping". 
+     * Aunque los datos se guardan en tablas normalizadas (3NF) para 
+     * escalabilidad, el motor los "aplanan" dinámicamente para que la 
+     * interfaz de usuario sea fluida y fácil de usar.
      */
     private function getFilteredContratos(Request $request)
     {
+        // 1. CARGA BASE CON RELACIONES
         $query = Contrato::with(['contratista', 'supervisor', 'modalidad', 'planta', 'concepto']);
 
-        // Filtros dinámicos de búsqueda
+        // Filtros de búsqueda: Optimizamos usando subconsultas para contratistas
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('numero_contrato', 'LIKE', "%{$search}%")
-                    ->orWhere('numero_proceso', 'LIKE', "%{$search}%")
                     ->orWhereHas('contratista', function ($sq) use ($search) {
-                        $sq->where('razon_social', 'LIKE', "%{$search}%")
-                            ->orWhere('nit', 'LIKE', "%{$search}%");
+                        $sq->where('razon_social', 'LIKE', "%{$search}%");
                     });
             });
         }
 
-        if ($request->filled('numero_contrato')) {
-            $query->where('numero_contrato', 'LIKE', "%{$request->numero_contrato}%");
-        }
-
-        if ($request->filled('tipo_contratista')) {
-            $query->where('tipo_contratista', 'LIKE', "%{$request->tipo_contratista}%");
-        }
-
-        if ($request->filled('supervisor_id')) {
-            $query->where('supervisor_id', $request->supervisor_id);
-        }
-
-        if ($request->filled('modalidad_id')) {
-            $query->where('modalidad_id', $request->modalidad_id);
-        }
-
+        // 2. HIDRATACIÓN DINÁMICA (The Magic Layer)
+        // Obtenemos los contratos con sus seguimientos hijos.
         $allContratos = $query->with(['seguimientoMensual', 'seguimientoRequisitos'])->latest()->get();
 
-        // Lógica de Progreso basado en EJECUCIÓN MENSUAL y REQUISITOS
+        // Mapeamos los campos esperados por la vista (12 meses x 3 fuentes + checklist)
         $ctaFields = [];
         for ($i = 1; $i <= 12; $i++) {
             $ctaFields[] = "cta{$i}_rep_status";
@@ -60,54 +50,46 @@ class SeguimientoController extends Controller
         }
 
         $checklistFields = [
-            'planta_status', 'concepto_status', 'cdp_status',
-            'estudios_previos_status', 'soportes_status', 'idoneidad_status',
-            'acuerdo_confidencialidad_status', 'clausulado_status',
-            'acta_inicio_status', 'delegacion_status', 'arl_status', 'rpc_status',
+            'planta_status',
+            'concepto_status',
+            'cdp_status',
+            'estudios_previos_status',
+            'soportes_status',
+            'idoneidad_status',
+            'acuerdo_confidencialidad_status',
+            'clausulado_status',
+            'acta_inicio_status',
+            'delegacion_status',
+            'arl_status',
+            'rpc_status',
         ];
 
         $totalEvaluatedFields = count($ctaFields) + count($checklistFields);
 
         foreach ($allContratos as $c) {
+            // Transformamos filas de BD en atributos dinámicos del objeto
             foreach ($c->seguimientoMensual as $sm) {
-                $attr = "cta{$sm->mes}_".strtolower($sm->fuente).'_status';
+                $attr = "cta{$sm->mes}_" . strtolower($sm->fuente) . '_status';
                 $c->$attr = $sm->estado;
             }
             foreach ($c->seguimientoRequisitos as $sr) {
                 $c->{$sr->nombre} = $sr->estado;
             }
 
+            // 3. MOTOR DE CÁLCULO DE CUMPLIMIENTO (SLA/Compliance Engine)
+            // Evaluamos el "Peso" de cada estado para determinar si el contrato está en riesgo.
             $ok = 0;
             $na = 0;
             $pend = 0;
             $crit = 0;
 
-            // Evaluar mensualidad
-            foreach ($ctaFields as $field) {
+            $allStatusFields = array_merge($ctaFields, $checklistFields);
+            foreach ($allStatusFields as $field) {
                 $val = $c->$field;
-                if ($val === 'OK') {
-                    $ok++;
-                } elseif ($val === 'N/A') {
-                    $na++;
-                } elseif ($val === 'PENDIENTE') {
-                    $pend++;
-                } elseif (in_array($val, ['RECHAZADO', 'FALTA', 'CRÍTICO'])) {
-                    $crit++;
-                }
-            }
-
-            // Evaluar requisitos checklist
-            foreach ($checklistFields as $field) {
-                $val = $c->$field;
-                if ($val === 'OK') {
-                    $ok++;
-                } elseif ($val === 'N/A') {
-                    $na++;
-                } elseif ($val === 'PENDIENTE') {
-                    $pend++;
-                } elseif (in_array($val, ['RECHAZADO', 'FALTA', 'CRÍTICO'])) {
-                    $crit++;
-                }
+                if ($val === 'OK') $ok++;
+                elseif ($val === 'N/A') $na++;
+                elseif ($val === 'PENDIENTE') $pend++;
+                elseif (in_array($val, ['RECHAZADO', 'FALTA', 'CRÍTICO'])) $crit++;
             }
 
             $c->total_ok = $ok;
@@ -115,23 +97,19 @@ class SeguimientoController extends Controller
             $c->total_pend = $pend;
             $c->total_crit = $crit;
 
-            if ($crit > 0) {
-                $c->global_status = 'CRÍTICO';
-            } elseif ($pend > 0) {
-                $c->global_status = 'PENDIENTES';
-            } elseif (($ok + $na) === $totalEvaluatedFields) {
-                $c->global_status = 'COMPLETO';
-            } elseif (($ok + $na) > 0) {
-                $c->global_status = 'EN PROGRESO';
-            } else {
-                $c->global_status = 'VACÍO';
-            }
+            // Determinación del Semáforo Global
+            if ($crit > 0) $c->global_status = 'CRÍTICO';
+            elseif ($pend > 0) $c->global_status = 'PENDIENTES';
+            elseif (($ok + $na) === $totalEvaluatedFields) $c->global_status = 'COMPLETO';
+            elseif (($ok + $na) > 0) $c->global_status = 'EN PROGRESO';
+            else $c->global_status = 'VACÍO';
 
             $c->perc_cumplimiento = $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0;
         }
 
+        // 4. ORDENAMIENTO POR PRIORIDAD DE RIESGO
         $priority = ['CRÍTICO' => 4, 'PENDIENTES' => 3, 'EN PROGRESO' => 2, 'COMPLETO' => 1, 'VACÍO' => 0];
-        $contratos = $allContratos->sortByDesc(fn ($c) => $priority[$c->global_status] ?? 0);
+        $contratos = $allContratos->sortByDesc(fn($c) => $priority[$c->global_status] ?? 0);
 
         // Filtros de colección (Filtro Compuesto: Estado Interno Y/O Mes)
         if ($request->filled('estado_filtro') || $request->filled('mes_filtro')) {
@@ -145,7 +123,7 @@ class SeguimientoController extends Controller
                     $sec = $c->{"cta{$mesReq}_secop_status"} ?? '';
                     $sia = $c->{"cta{$mesReq}_sia_status"} ?? '';
                     $mFields = [$rep, $sec, $sia];
-                    $vals = array_filter($mFields, fn ($v) => ! empty($v));
+                    $vals = array_filter($mFields, fn($v) => ! empty($v));
 
                     if (empty($estadoReq)) {
                         return count($vals) > 0;
@@ -165,7 +143,7 @@ class SeguimientoController extends Controller
                     }
                     if ($estadoReq === 'EN PROGRESO') {
                         $hasSomething = count($vals) > 0;
-                        $allDone = collect($vals)->every(fn ($v) => in_array($v, ['OK', 'N/A']));
+                        $allDone = collect($vals)->every(fn($v) => in_array($v, ['OK', 'N/A']));
 
                         return $hasSomething && ! $allDone;
                     }
@@ -191,7 +169,7 @@ class SeguimientoController extends Controller
 
         if ($request->filled('secop_filtro')) {
             $secopReq = strtoupper($request->secop_filtro);
-            $contratos = $contratos->filter(fn ($c) => strtoupper($c->secop_estado_contrato ?? '') === $secopReq);
+            $contratos = $contratos->filter(fn($c) => strtoupper($c->secop_estado_contrato ?? '') === $secopReq);
         }
 
         return $contratos;
@@ -217,9 +195,9 @@ class SeguimientoController extends Controller
             'ok_contratos' => $fOk,
             'pend_contratos' => $fPend,
             'avg_cumplimiento' => $fAvg,
-            'sec_cerrado' => $contratos->filter(fn ($c) => in_array(strtoupper($c->secop_estado_contrato ?? ''), ['CERRADO', 'TERMINADO']))->count(),
-            'sec_ejecucion' => $contratos->filter(fn ($c) => strtoupper($c->secop_estado_contrato ?? '') === 'EN EJECUCION')->count(),
-            'sec_vacio' => $contratos->filter(fn ($c) => empty($c->secop_estado_contrato))->count(),
+            'sec_cerrado' => $contratos->filter(fn($c) => in_array(strtoupper($c->secop_estado_contrato ?? ''), ['CERRADO', 'TERMINADO']))->count(),
+            'sec_ejecucion' => $contratos->filter(fn($c) => strtoupper($c->secop_estado_contrato ?? '') === 'EN EJECUCION')->count(),
+            'sec_vacio' => $contratos->filter(fn($c) => empty($c->secop_estado_contrato))->count(),
             'total_con_seguimiento' => $contratos->where('global_status', '!=', 'VACÍO')->count(),
         ];
 
@@ -266,7 +244,7 @@ class SeguimientoController extends Controller
             }
 
             $contratos = $this->getFilteredContratos($request);
-            $tempFile = tempnam(sys_get_temp_dir(), 'export_').'.xlsx';
+            $tempFile = tempnam(sys_get_temp_dir(), 'export_') . '.xlsx';
             $writer = SimpleExcelWriter::create($tempFile);
 
             foreach ($contratos as $c) {
@@ -314,16 +292,20 @@ class SeguimientoController extends Controller
 
             $writer->close();
 
-            return response()->download($tempFile, 'seguimiento_'.date('Ymd').'.xlsx')->deleteFileAfterSend(true);
+            return response()->download($tempFile, 'seguimiento_' . date('Ymd') . '.xlsx')->deleteFileAfterSend(true);
         } catch (\Exception $e) {
             Contrato::logException($e, 'contratos', $request->all());
 
-            return redirect()->back()->with('error', 'Error al exportar: '.$e->getMessage());
+            return redirect()->back()->with('error', 'Error al exportar: ' . $e->getMessage());
         }
     }
 
     /**
-     * Actualiza el estado de un campo individual vía AJAX.
+     * MOTOR DE PERSISTENCIA (Intelligent Router)
+     * 
+     * Este método detecta qué tipo de campo se está actualizando (Mensual, 
+     * Requisito o Maestro) y lo enruta a la tabla correcta. 
+     * Es el corazón de la reactividad del Spreadsheet de seguimiento.
      */
     public function updateStatus(Request $request)
     {
@@ -337,16 +319,21 @@ class SeguimientoController extends Controller
             $field = $validated['field'];
             $status = $validated['status'];
 
+            // CASO A: Seguimiento Mensual (Cta1, Cta2...) - Regex para detectar patrón
             if (preg_match('/^cta(\d+)_(secop|sia|rep)_status$/', $field, $matches)) {
                 SeguimientoMensual::updateOrCreate(
                     ['contrato_id' => $validated['id'], 'mes' => $matches[1], 'fuente' => strtoupper($matches[2])],
                     ['estado' => $status]
                 );
-            } elseif (in_array($field, ['secop_estado_contrato', 'aprobado_y_pagado', 'modificaciones_y_cierre', 'link_secop', 'tipo_contratista'])) {
+            }
+            // CASO B: Atributos Maestros del Contrato
+            elseif (in_array($field, ['secop_estado_contrato', 'aprobado_y_pagado', 'modificaciones_y_cierre', 'link_secop', 'tipo_contratista'])) {
                 $contrato = Contrato::findOrFail($validated['id']);
                 $contrato->$field = $status;
                 $contrato->save();
-            } else {
+            }
+            // CASO C: Requisitos de Checklist (Normalizados)
+            else {
                 SeguimientoRequisito::updateOrCreate(
                     ['contrato_id' => $validated['id'], 'nombre' => $field],
                     ['estado' => $status]
@@ -356,10 +343,10 @@ class SeguimientoController extends Controller
             return response()->json(['success' => true]);
         } catch (\Exception $e) {
             Contrato::logException($e, 'contratos', $request->all());
-
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
 
     /**
      * Registra un nuevo contrato.
@@ -385,7 +372,7 @@ class SeguimientoController extends Controller
         try {
             $rules = [
                 'numero_proceso' => 'nullable|string',
-                'numero_contrato' => 'required|string|unique:contratos,numero_contrato'.($id ? ",$id" : ''),
+                'numero_contrato' => 'required|string',
                 'modalidad_id' => 'nullable|exists:modalidades,id',
                 'contratista_nombre' => 'required|string',
                 'supervisor_id' => 'nullable|exists:supervisores,id',
@@ -405,6 +392,14 @@ class SeguimientoController extends Controller
 
             $data = $request->all();
             $data['contratista_id'] = $contratista->id;
+
+            if (! $id) {
+                // Si ya existe por número de contrato, se convierte en actualización (Regla de negocio)
+                $contratoExistente = Contrato::where('numero_contrato', $validated['numero_contrato'])->first();
+                if ($contratoExistente) {
+                    $id = $contratoExistente->id;
+                }
+            }
 
             if ($id) {
                 Contrato::findOrFail($id)->update($data);

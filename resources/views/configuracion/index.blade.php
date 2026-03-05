@@ -8,7 +8,7 @@
             <h1 class="h3 mb-0 text-gray-800">
                 <i class="fas fa-users-cog me-2"></i>Gestión de Usuarios
             </h1>
-        <div class="d-flex gap-2">
+            <div class="d-flex gap-2">
                 <a href="{{ route('configuracion.alertas.index') }}" class="btn btn-warning">
                     <i class="bi bi-bell-fill me-2"></i>Alertas
                 </a>
@@ -17,6 +17,9 @@
                 </a>
                 <a href="{{ route('configuracion.roles.index') }}" class="btn btn-secondary">
                     <i class="fas fa-user-shield me-2"></i>Gestionar Roles
+                </a>
+                <a href="{{ route('configuracion.workflow.index') }}" class="btn btn-info text-white">
+                    <i class="bi bi-diagram-3-fill me-2"></i>Gestionar Workflow
                 </a>
                 <a href="{{ route('configuracion.create') }}" class="btn btn-primary">
                     <i class="fas fa-user-plus me-2"></i>Crear Usuario
