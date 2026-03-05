@@ -43,57 +43,48 @@ class RoleController extends Controller
      */
     public function store(Request $request)
     {
-        try {
-            /** @var \App\Models\Usuario $user */
-            $user = Auth::user();
-            if (! $user->isAdmin()) {
-                abort(403);
-            }
+        $validated = $request->validate([
+            'nombre' => 'required|string|max:50|unique:roles,nombre',
+            'descripcion' => 'nullable|string|max:255',
+            'permisos_matrix' => 'required|array',
+            'ver_solo_asignados' => 'nullable|boolean',
+            'bloques_permitidos' => 'nullable|array',
+        ]);
 
-            $validated = $request->validate([
-                'nombre' => 'required|string|max:50|unique:roles,nombre',
-                'descripcion' => 'nullable|string|max:255',
-                'permisos_matrix' => 'required|array',
-                'ver_solo_asignados' => 'nullable|boolean',
-                'bloques_permitidos' => 'nullable|array',
-            ]);
+        // Logic to Map Matrix -> System Permissions
+        $matrix = $request->input('permisos_matrix');
+        $systemPermissions = $this->mapMatrixToSystemPermissions($matrix);
 
-            // Logic to Map Matrix -> System Permissions
-            $matrix = $request->input('permisos_matrix');
-            $systemPermissions = $this->mapMatrixToSystemPermissions($matrix);
-
-            // Add additional restrictions
-            if ($request->boolean('ver_solo_asignados')) {
-                $systemPermissions['ver_solo_asignados'] = true;
-            }
-
-            // Handle Blocks
-            if ($request->has('bloques_all')) {
-                $systemPermissions['bloques_permitidos'] = true;
-            } else {
-                $systemPermissions['bloques_permitidos'] = $request->input('bloques_permitidos', []);
-            }
-
-            // Handle Responsibilities
-            if ($request->boolean('es_responsable_sap')) {
-                $systemPermissions['responsable_sap'] = true;
-            }
-            if ($request->boolean('es_responsable_facturacion')) {
-                $systemPermissions['responsable_facturacion'] = true;
-            }
-
-            Role::create([
-                'nombre' => $validated['nombre'],
-                'descripcion' => $validated['descripcion'],
-                'tipo' => 'PERSONALIZADO',
-                'es_activo' => true,
-                'permisos' => $systemPermissions,
-            ]);
-
-            return redirect()->route('configuracion.roles.index')->with('success', 'Rol personalizado creado exitosamente.');
-        } catch (\Exception $e) {
-            return back()->withInput()->withErrors(['error' => 'Error inesperado al crear el rol: '.$e->getMessage()]);
+        // Add additional restrictions
+        if ($request->boolean('ver_solo_asignados')) {
+            $systemPermissions['ver_solo_asignados'] = true;
         }
+
+        // Handle Blocks
+        if ($request->has('bloques_all')) {
+            $systemPermissions['bloques_permitidos'] = true;
+        } else {
+            $systemPermissions['bloques_permitidos'] = $request->input('bloques_permitidos', []);
+        }
+
+        // Handle Responsibilities
+        if ($request->boolean('es_responsable_sap')) {
+            $systemPermissions['responsable_sap'] = true;
+        }
+        if ($request->boolean('es_responsable_facturacion')) {
+            $systemPermissions['responsable_facturacion'] = true;
+        }
+
+        $role = Role::create([
+            'nombre' => $validated['nombre'],
+            'descripcion' => $validated['descripcion'],
+            'tipo' => 'PERSONALIZADO',
+            'es_activo' => true,
+        ]);
+
+        $this->syncRolePermissions($role, $systemPermissions);
+
+        return redirect()->route('configuracion.roles.index')->with('success', 'Rol personalizado creado exitosamente.');
     }
 
     /**
@@ -208,7 +199,7 @@ class RoleController extends Controller
             $role = Role::findOrFail($id);
 
             $validated = $request->validate([
-                'nombre' => 'required|string|max:50|unique:roles,nombre,'.$id,
+                'nombre' => 'required|string|max:50|unique:roles,nombre,' . $id,
                 'descripcion' => 'nullable|string|max:255',
                 'permisos_matrix' => 'required|array',
                 'ver_solo_asignados' => 'nullable|boolean',
@@ -243,12 +234,13 @@ class RoleController extends Controller
             $role->update([
                 'nombre' => $validated['nombre'],
                 'descripcion' => $validated['descripcion'],
-                'permisos' => $systemPermissions,
             ]);
+
+            $this->syncRolePermissions($role, $systemPermissions);
 
             return redirect()->route('configuracion.roles.index')->with('success', 'Rol actualizado exitosamente.');
         } catch (\Exception $e) {
-            return back()->withInput()->withErrors(['error' => 'Error inesperado al actualizar el rol: '.$e->getMessage()]);
+            return back()->withInput()->withErrors(['error' => 'Error inesperado al actualizar el rol: ' . $e->getMessage()]);
         }
     }
 
@@ -290,8 +282,38 @@ class RoleController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Error inesperado: '.$e->getMessage(),
+                'message' => 'Error inesperado: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    private function syncRolePermissions(Role $role, array $systemPermissions)
+    {
+        $permisoIds = [];
+
+        foreach ($systemPermissions as $slug => $value) {
+            if ($slug === 'bloques_permitidos') {
+                if ($value === true) {
+                    $slugName = 'acceso_bloque_all';
+                    $permiso = \App\Models\Permiso::firstOrCreate(['slug' => $slugName], ['nombre' => 'Acceso Todo Bloque', 'modulo' => 'Bloques']);
+                    $permisoIds[] = $permiso->id;
+                } elseif (is_array($value)) {
+                    foreach ($value as $bloqueCod) {
+                        $slugName = 'acceso_bloque_' . $bloqueCod;
+                        $permiso = \App\Models\Permiso::firstOrCreate(['slug' => $slugName], ['nombre' => 'Bloque ' . $bloqueCod, 'modulo' => 'Bloques']);
+                        $permisoIds[] = $permiso->id;
+                    }
+                }
+            } elseif ($value === true) {
+                // Auto create permission if missing for backward compatibility with the dynamic matrix
+                $permiso = \App\Models\Permiso::firstOrCreate(['slug' => $slug], [
+                    'nombre' => ucwords(str_replace('_', ' ', $slug)),
+                    'modulo' => 'General'
+                ]);
+                $permisoIds[] = $permiso->id;
+            }
+        }
+
+        $role->permisos()->sync($permisoIds);
     }
 }

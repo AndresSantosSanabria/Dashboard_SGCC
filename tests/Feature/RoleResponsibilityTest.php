@@ -24,10 +24,11 @@ class RoleResponsibilityTest extends TestCase
         // 1. Create Admin Role and User
         $adminRole = \App\Models\Role::create([
             'nombre' => 'Administrador Test',
-            'permisos' => ['es_admin' => true],
             'es_activo' => true,
             'tipo' => 'SISTEMA',
         ]);
+        $adminPerm = \App\Models\Permiso::firstOrCreate(['slug' => 'es_admin'], ['nombre' => 'Admin', 'modulo' => 'SISTEMA']);
+        $adminRole->permisos()->sync([$adminPerm->id]);
 
         $user = \App\Models\Usuario::factory()->create([
             'rol_id' => $adminRole->id,
@@ -39,7 +40,7 @@ class RoleResponsibilityTest extends TestCase
 
         // 2. Data to Submit
         $data = [
-            'nombre' => 'Rol Test Responsable '.rand(1000, 9999),
+            'nombre' => 'Rol Test Responsable ' . rand(1000, 9999),
             'descripcion' => 'Descripcion de prueba',
             'permisos_matrix' => [
                 'dashboard' => ['view' => 1],
@@ -48,9 +49,14 @@ class RoleResponsibilityTest extends TestCase
             'es_responsable_facturacion' => 1,
         ];
 
+        $this->withoutExceptionHandling();
+
         // 3. Post to store
         $response = $this->post(route('configuracion.roles.store'), $data);
 
+        if (session('errors')) {
+            dd(session('errors')->first('error'));
+        }
         // 4. Assert Redirect
         $response->assertRedirect(route('configuracion.roles.index'));
         $response->assertSessionHas('success');
@@ -70,10 +76,11 @@ class RoleResponsibilityTest extends TestCase
     {
         $adminRole = \App\Models\Role::create([
             'nombre' => 'Administrador Test 2',
-            'permisos' => ['es_admin' => true],
             'es_activo' => true,
             'tipo' => 'SISTEMA',
         ]);
+        $adminPerm = \App\Models\Permiso::firstOrCreate(['slug' => 'es_admin'], ['nombre' => 'Admin', 'modulo' => 'SISTEMA']);
+        $adminRole->permisos()->sync([$adminPerm->id]);
 
         $user = \App\Models\Usuario::factory()->create([
             'rol_id' => $adminRole->id,
@@ -85,12 +92,14 @@ class RoleResponsibilityTest extends TestCase
 
         // Create initial role
         $role = \App\Models\Role::create([
-            'nombre' => 'Rol Update Test '.rand(1000, 9999),
+            'nombre' => 'Rol Update Test ' . rand(1000, 9999),
             'descripcion' => 'Initial Description',
             'tipo' => 'PERSONALIZADO',
             'es_activo' => true,
-            'permisos' => ['responsable_sap' => true, 'responsable_facturacion' => true],
         ]);
+        $p1 = \App\Models\Permiso::firstOrCreate(['slug' => 'responsable_sap'], ['nombre' => 'SAP', 'modulo' => 'General']);
+        $p2 = \App\Models\Permiso::firstOrCreate(['slug' => 'responsable_facturacion'], ['nombre' => 'Facturacion', 'modulo' => 'General']);
+        $role->permisos()->sync([$p1->id, $p2->id]);
 
         // Update Data - Uncheck Facturacion
         $updateData = [

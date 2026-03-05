@@ -58,23 +58,10 @@ return new class extends Migration
 
             $table->unique(['estado_origen_id', 'estado_destino_id'], 'uk_transicion');
         });
-
-        // 4. Destinatarios de Alertas
-        Schema::create('alerta_destinatarios', function (Blueprint $table) {
-            $table->id();
-            $table->string('alerta_codigo', 100);
-            $table->string('tipo_destinatario', 20); // 'USUARIO', 'ROL'
-            $table->unsignedBigInteger('destinatario_id');
-            $table->timestamps();
-
-            $table->index('alerta_codigo');
-            $table->index(['alerta_codigo', 'tipo_destinatario', 'destinatario_id'], 'idx_alerta_dest');
-        });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('alerta_destinatarios');
         Schema::dropIfExists('transiciones_permitidas');
         Schema::dropIfExists('estados_workflow');
         Schema::dropIfExists('bloques_workflow');

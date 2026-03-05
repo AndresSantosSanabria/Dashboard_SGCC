@@ -61,7 +61,7 @@
                                     <div class="form-check mb-3">
                                         <input class="form-check-input" type="checkbox" name="ver_solo_asignados"
                                             id="ver_solo_asignados" value="1"
-                                            {{ old('ver_solo_asignados', $role->permisos['ver_solo_asignados'] ?? false) ? 'checked' : '' }}>
+                                            {{ old('ver_solo_asignados', $role->lista_permisos['ver_solo_asignados'] ?? false) ? 'checked' : '' }}>
                                         <label class="form-check-label fw-bold" for="ver_solo_asignados">
                                             Ver solo mis asignaciones
                                         </label>
@@ -73,7 +73,7 @@
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" name="es_responsable_sap"
                                             id="es_responsable_sap" value="1"
-                                            {{ old('es_responsable_sap', $role->permisos['responsable_sap'] ?? false) ? 'checked' : '' }}>
+                                            {{ old('es_responsable_sap', $role->lista_permisos['responsable_sap'] ?? false) ? 'checked' : '' }}>
                                         <label class="form-check-label fw-bold" for="es_responsable_sap">
                                             Es Responsable SAP
                                         </label>
@@ -82,7 +82,7 @@
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" name="es_responsable_facturacion"
                                             id="es_responsable_facturacion" value="1"
-                                            {{ old('es_responsable_facturacion', $role->permisos['responsable_facturacion'] ?? false) ? 'checked' : '' }}>
+                                            {{ old('es_responsable_facturacion', $role->lista_permisos['responsable_facturacion'] ?? false) ? 'checked' : '' }}>
                                         <label class="form-check-label fw-bold" for="es_responsable_facturacion">
                                             Es Responsable Facturación
                                         </label>
@@ -94,7 +94,7 @@
                                     <div class="form-check mb-2">
                                         <input class="form-check-input" type="checkbox" name="bloques_all" id="bloques_all"
                                             value="1"
-                                            {{ (is_array($role->permisos['bloques_permitidos'] ?? null) && count($role->permisos['bloques_permitidos']) == 0) || $role->permisos['bloques_permitidos'] === true ? 'checked' : '' }}
+                                            {{ (is_array($role->lista_permisos['bloques_permitidos'] ?? null) && count($role->lista_permisos['bloques_permitidos']) == 0) || $role->lista_permisos['bloques_permitidos'] === true ? 'checked' : '' }}
                                             onchange="toggleBloquesSelection()">
                                         <label class="form-check-label" for="bloques_all">Todos los bloques (Sin
                                             restricción)</label>
@@ -102,12 +102,12 @@
 
                                     <div id="bloques_selection" class="card card-body p-2"
                                         style="max-height: 150px; overflow-y: auto;"
-                                        {{ (is_array($role->permisos['bloques_permitidos'] ?? null) && count($role->permisos['bloques_permitidos']) == 0) || $role->permisos['bloques_permitidos'] === true ? 'style=display:none;' : '' }}>
+                                        {{ (is_array($role->lista_permisos['bloques_permitidos'] ?? null) && count($role->lista_permisos['bloques_permitidos']) == 0) || $role->lista_permisos['bloques_permitidos'] === true ? 'style=display:none;' : '' }}>
                                         @foreach ($bloques as $bloque)
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="bloques_permitidos[]"
                                                     value="{{ $bloque->codigo }}" id="bloque_{{ $bloque->codigo }}"
-                                                    {{ in_array($bloque->codigo, is_array($role->permisos['bloques_permitidos'] ?? null) ? $role->permisos['bloques_permitidos'] : []) ? 'checked' : '' }}>
+                                                    {{ in_array($bloque->codigo, is_array($role->lista_permisos['bloques_permitidos'] ?? null) ? $role->lista_permisos['bloques_permitidos'] : []) ? 'checked' : '' }}>
                                                 <label class="form-check-label small" for="bloque_{{ $bloque->codigo }}">
                                                     {{ $bloque->nombre }}
                                                 </label>
@@ -142,7 +142,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-view" type="checkbox"
                                                 name="permisos_matrix[dashboard][view]" value="1"
-                                                {{ $role->permisos['acceder_dashboard'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['acceder_dashboard'] ?? false ? 'checked' : '' }}>
                                         </div>
                                         <small class="d-block text-muted mt-1">Gestión</small>
                                     </td>
@@ -153,7 +153,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
                                                 name="permisos_matrix[dashboard][edit]" value="1"
-                                                {{ $role->permisos['editar_dashboard'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['editar_dashboard'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -169,7 +169,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input" type="checkbox"
                                                 name="permisos_matrix[dashboard][readonly]" value="1"
-                                                {{ $role->permisos['acceder_consolidado'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['acceder_consolidado'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td colspan="3" class="bg-light"></td>
@@ -185,28 +185,28 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-view" type="checkbox"
                                                 name="permisos_matrix[users][view]" value="1"
-                                                {{ $role->permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
                                                 name="permisos_matrix[users][create]" value="1"
-                                                {{ $role->permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
                                                 name="permisos_matrix[users][edit]" value="1"
-                                                {{ $role->permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
                                                 name="permisos_matrix[users][delete]" value="1"
-                                                {{ $role->permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                 </tr>
@@ -220,7 +220,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-view" type="checkbox"
                                                 name="permisos_matrix[workflow][view]" value="1"
-                                                {{ $role->permisos['acceder_workflow'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['acceder_workflow'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -230,7 +230,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
                                                 name="permisos_matrix[workflow][edit]" value="1"
-                                                {{ $role->permisos['editar_workflow'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['editar_workflow'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -247,7 +247,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-view" type="checkbox"
                                                 name="permisos_matrix[contracts][view]" value="1"
-                                                {{ $role->permisos['contratos_ver'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['contratos_ver'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -257,7 +257,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
                                                 name="permisos_matrix[contracts][edit]" value="1"
-                                                {{ $role->permisos['contratos_editar'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['contratos_editar'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -274,7 +274,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-view" type="checkbox"
                                                 name="permisos_matrix[accounts][view]" value="1"
-                                                {{ $role->permisos['cuentas_ver'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['cuentas_ver'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -284,7 +284,7 @@
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
                                                 name="permisos_matrix[accounts][edit]" value="1"
-                                                {{ $role->permisos['cuentas_editar'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['cuentas_editar'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -309,7 +309,7 @@
                                             <input class="form-check-input" type="checkbox"
                                                 name="permisos_matrix[reports][export]" value="1"
                                                 id="export_reports"
-                                                {{ $role->permisos['reportes_exportar'] ?? false ? 'checked' : '' }}>
+                                                {{ $role->lista_permisos['reportes_exportar'] ?? false ? 'checked' : '' }}>
                                             <label class="form-check-label" for="export_reports">Puede Exportar
                                                 Excel</label>
                                         </div>

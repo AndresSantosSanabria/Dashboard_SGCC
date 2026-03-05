@@ -38,7 +38,7 @@
                 <div class="d-flex gap-2 flex-wrap align-items-center">
                     <div class="hero-indicator-mini animate-in">
                         <div class="mini-label">Valor total RP</div>
-                        <div class="mini-value">${{ number_format($indicadorTotalUnico, 0, ',', '.') }}</div>
+                        <div class="mini-value">${{ number_format($montoTotal, 0, ',', '.') }}</div>
                     </div>
                     <button id="btnExportPDF" class="btn btn-glass h-100">
                         <i class="bi bi-file-earmark-pdf me-1"></i>PDF

@@ -55,4 +55,23 @@ class Role extends Model
     {
         return $this->tienePermiso('responsable_facturacion');
     }
+
+    public function getListaPermisosAttribute()
+    {
+        $lista = [];
+        $bloques = [];
+        foreach ($this->permisos()->pluck('slug') as $slug) {
+            if ($slug === 'acceso_bloque_all') {
+                $lista['bloques_permitidos'] = true;
+            } elseif (str_starts_with($slug, 'acceso_bloque_')) {
+                $bloques[] = str_replace('acceso_bloque_', '', $slug);
+            } else {
+                $lista[$slug] = true;
+            }
+        }
+        if (!isset($lista['bloques_permitidos']) && !empty($bloques)) {
+            $lista['bloques_permitidos'] = $bloques;
+        }
+        return $lista;
+    }
 }

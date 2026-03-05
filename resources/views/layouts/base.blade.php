@@ -7,13 +7,12 @@
     <title>@yield('title', config('app.name'))</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    /**
+    {{--
     * LAYOUT BASE - SGCC
     *
     * Este es el contenedor principal de la aplicación.
     * Sigue los estándares de la Guía de Diseño Digital GOV.CO v5 para
     * garantizar la accesibilidad y la identidad institucional.
-    */
     --}}
 
     {{-- GOV.CO v5 depende de Bootstrap 5 para el sistema de rejilla y utilidades --}}
@@ -58,7 +57,7 @@
 
             // Filtro de "Mensajes Amigables": Evitamos que el usuario vea excepciones de BD directamente
             if (message.includes("SQLSTATE") || message.includes("Integrity constraint") || message.includes(
-                "column")) {
+                    "column")) {
                 cleanMessage = "Error técnico en la base de datos. Por favor contacte al administrador.";
             } else if (message.includes("CSRF") || message.includes("mismatch")) {
                 cleanMessage = "Sesión expirada o error de seguridad. Por favor recargue la página.";
