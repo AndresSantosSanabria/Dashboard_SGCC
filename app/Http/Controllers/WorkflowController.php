@@ -35,7 +35,7 @@ class WorkflowController extends Controller
         // Cargamos todas las relaciones necesarias en una sola query 
         // para evitar el problema de N+1, ya que cada tarjeta del Kanban requiere mucha info.
         $query = \App\Models\CuentaCobro::with([
-            'contratista',
+            'contrato.contratista',
             'bloqueActual',
             'estadoActual',
             'estadosBloques',
@@ -476,8 +476,8 @@ class WorkflowController extends Controller
             $maxInvoice = \App\Models\CuentaCobro::where('contrato_id', $cuenta->contrato_id)
                 ->whereNotNull('ultima_factura_hacienda')
                 ->where('ultima_factura_hacienda', '!=', 'N/A')
-                ->selectRaw('MAX(CAST(ultima_factura_hacienda AS UNSIGNED)) as max_num')
-                ->value('max_num');
+                ->whereRaw("ultima_factura_hacienda ~ '^[0-9]+$'")
+                ->max(\Illuminate\Support\Facades\DB::raw('CAST(ultima_factura_hacienda AS integer)'));
 
             $cuenta->update(['ultima_factura_hacienda' => ($maxInvoice ?? 0) + 1]);
         }

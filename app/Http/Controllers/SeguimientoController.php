@@ -9,6 +9,8 @@ use App\Models\SeguimientoMensual;
 use App\Models\SeguimientoRequisito;
 use App\Models\Supervisor;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Spatie\SimpleExcel\SimpleExcelWriter;
 
 class SeguimientoController extends Controller
@@ -393,16 +395,15 @@ class SeguimientoController extends Controller
             $data = $request->all();
             $data['contratista_id'] = $contratista->id;
 
-            if (! $id) {
-                // Si ya existe por número de contrato, se convierte en actualización (Regla de negocio)
-                $contratoExistente = Contrato::where('numero_contrato', $validated['numero_contrato'])->first();
-                if ($contratoExistente) {
-                    $id = $contratoExistente->id;
-                }
-            }
+            // Normalizar número de contrato para evitar duplicados por espacios o mayúsculas
+            $numContrato = strtoupper(trim($validated['numero_contrato']));
+            $data['numero_contrato'] = $numContrato;
 
-            if ($id) {
-                Contrato::findOrFail($id)->update($data);
+            // Buscar si ya existe por número de contrato (Regla de negocio principal)
+            $contratoExistente = Contrato::where(DB::raw('UPPER(TRIM(numero_contrato))'), $numContrato)->first();
+
+            if ($contratoExistente) {
+                $contratoExistente->update($data);
                 $msg = 'Contrato actualizado correctamente.';
             } else {
                 Contrato::create($data);

@@ -107,4 +107,62 @@ class BusinessTimeService
 
         return implode(', ', $parts);
     }
+
+    /**
+     * Obtiene los festivos de Colombia para un año específico (Ley Emiliani).
+     */
+    public function getColombianHolidays(int $year): array
+    {
+        $holidays = [];
+
+        // 1. Festivos Fijos
+        $fixed = [
+            "$year-01-01", // Año Nuevo
+            "$year-05-01", // Día del Trabajo
+            "$year-07-20", // Grito de Independencia
+            "$year-08-07", // Batalla de Boyacá
+            "$year-12-08", // Inmaculada Concepción
+            "$year-12-25", // Navidad
+        ];
+        foreach ($fixed as $f) $holidays[] = $f;
+
+        // 2. Festivos Ley Emiliani (Se mueven al siguiente lunes si no caen lunes)
+        $emiliani = [
+            "$year-01-06", // Reyes Magos
+            "$year-03-19", // San José
+            "$year-06-29", // San Pedro y San Pablo
+            "$year-08-15", // Asunción de la Virgen
+            "$year-10-12", // Día de la Raza
+            "$year-11-01", // Todos los Santos
+            "$year-11-11", // Independencia de Cartagena
+        ];
+        foreach ($emiliani as $f) {
+            $holidays[] = $this->moveToNextMonday($f);
+        }
+
+        // 3. Festivos basados en Pascua
+        $daysToEaster = easter_days($year);
+        $easter = Carbon::create($year, 3, 21)->addDays($daysToEaster);
+
+        // Jueves y Viernes Santo
+        $holidays[] = $easter->copy()->subDays(3)->format('Y-m-d');
+        $holidays[] = $easter->copy()->subDays(2)->format('Y-m-d');
+
+        // Movibles Emiliani (Basados en Pascua + X días, movidos a Lunes)
+        $holidays[] = $this->moveToNextMonday($easter->copy()->addDays(39)->format('Y-m-d')); // Ascensión
+        $holidays[] = $this->moveToNextMonday($easter->copy()->addDays(60)->format('Y-m-d')); // Corpus Christi
+        $holidays[] = $this->moveToNextMonday($easter->copy()->addDays(67)->format('Y-m-d')); // Sagrado Corazón
+
+        sort($holidays);
+        return array_unique($holidays);
+    }
+
+    private function moveToNextMonday(string $dateStr): string
+    {
+        $date = Carbon::parse($dateStr);
+        if ($date->dayOfWeek !== Carbon::MONDAY) {
+            return $date->next(Carbon::MONDAY)->format('Y-m-d');
+        }
+        return $dateStr;
+    }
 }

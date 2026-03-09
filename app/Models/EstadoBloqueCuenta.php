@@ -76,6 +76,11 @@ class EstadoBloqueCuenta extends Model
     // Accessor para tiempo en bloque (en horas)
     public function getTiempoEnBloqueHorasAttribute()
     {
+        // Protegemos contra fecha_ingreso_bloque nula (registros incompletos)
+        if (! $this->fecha_ingreso_bloque) {
+            return 0;
+        }
+
         $fechaFin = $this->fecha_completado_bloque ?? now();
 
         return $this->fecha_ingreso_bloque->diffInHours($fechaFin);

@@ -11,8 +11,8 @@ class UpdateWorkflowStatesSeeder extends Seeder
     {
         echo "🔄 Iniciando actualización de estados del workflow...\n\n";
 
-        // Disable foreign key checks
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Disable foreign key checks (PostgreSQL syntax)
+        DB::statement('SET session_replication_role = replica;');
 
         DB::beginTransaction();
 
@@ -110,8 +110,8 @@ class UpdateWorkflowStatesSeeder extends Seeder
 
             DB::commit();
 
-            // Re-enable foreign key checks
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            // Re-enable foreign key checks (PostgreSQL syntax)
+            DB::statement('SET session_replication_role = DEFAULT;');
 
             echo "✅ ¡Actualización completada exitosamente!\n\n";
             $this->showSummary();
@@ -128,17 +128,10 @@ class UpdateWorkflowStatesSeeder extends Seeder
 
             $reparadas = 0;
             foreach ($cuentas as $cuenta) {
-                // Si el ID antiguo ya no existe, usamos el mapping guardado al inicio del script
-                // Pero necesitamos asegurarnos de que la cuenta tenga el estado correcto.
-                // $estadosAntiguos lo vamos a guardar ANTES de limpiar los datos (ver próximo paso).
-
-                // Por defecto, si algo sale mal o si no hay estado antiguo mapeable o es un contrato
-                // nuevo (estado_actual_id null pero bloque_actual_id 1), asignamos el inicial:
                 $nuevoId = null;
 
                 if (isset($estadosAntiguos[$cuenta->estado_actual_id])) {
                     $codigoAntiguo = $estadosAntiguos[$cuenta->estado_actual_id];
-                    // Si el estado antiguo era REV1_REV (el viejo inicial), lo pasamos al nuevo REV1_SIN
                     if ($codigoAntiguo === 'REV1_REV') {
                         $codigoAntiguo = 'REV1_SIN';
                     }
@@ -168,7 +161,8 @@ class UpdateWorkflowStatesSeeder extends Seeder
             // ──────────────────────────────────────────────────────────────────
         } catch (\Exception $e) {
             DB::rollBack();
-            DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+            // Re-enable foreign key checks (PostgreSQL syntax)
+            DB::statement('SET session_replication_role = DEFAULT;');
             echo '❌ ERROR: ' . $e->getMessage() . "\n";
             throw $e;
         }
@@ -196,8 +190,6 @@ class UpdateWorkflowStatesSeeder extends Seeder
             $mismoBloque = $estadosByBloque->get($origen->bloque_id);
             foreach ($mismoBloque as $destino) {
                 if ($origen->id != $destino->id) {
-                    // En el Bloque 1 (REV1) sí se permite transicionar al estado 'devuelta' interno
-                    // porque no hay bloque anterior al que devolver
                     $esDevueltaInterna = $destino->tipo === 'DEVUELTO';
                     $esBloque1 = $origen->bloque_id == 1;
 
@@ -221,7 +213,6 @@ class UpdateWorkflowStatesSeeder extends Seeder
             }
 
             // 3. Transiciones de RETORNO (Cualquier estado -> Devuelta Bloque Anterior)
-            // Esto crea el botón "devuelta" de forma controlada hacia el bloque previo
             if ($origen->bloque_id > 1) {
                 $devueltaAnterior = DB::table('estados_workflow')
                     ->where('bloque_id', $origen->bloque_id - 1)
@@ -249,7 +240,6 @@ class UpdateWorkflowStatesSeeder extends Seeder
 
     private function insertTransition($origen, $destino, $accion)
     {
-        // Evitar duplicados por si acaso
         $exists = DB::table('transiciones_permitidas')
             ->where('estado_origen_id', $origen->id)
             ->where('estado_destino_id', $destino->id)

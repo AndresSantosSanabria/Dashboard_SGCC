@@ -65,6 +65,23 @@ class CuentaCobro extends Model
     {
         return $this->belongsTo(Contrato::class, 'contrato_id');
     }
+
+    /**
+     * Atajo de Relación: Acceso directo al contratista.
+     * Aunque la cuenta pertenece al contrato, para analítica y workflow 
+     * frecuentemente necesitamos al contratista de primer nivel.
+     */
+    public function contratista()
+    {
+        return $this->hasOneThrough(
+            Contratista::class,
+            Contrato::class,
+            'id',             // FK en contratos
+            'id',             // FK en contratistas
+            'contrato_id',    // Local key en cuenta_cobro
+            'contratista_id'  // Local key en contrato
+        );
+    }
     public function bloqueActual()
     {
         return $this->belongsTo(BloqueWorkflow::class, 'bloque_actual_id');
@@ -93,6 +110,26 @@ class CuentaCobro extends Model
     public function alertas()
     {
         return $this->hasMany(Alerta::class, 'cuenta_cobro_id');
+    }
+
+    /**
+     * Estados por bloque (historial del workflow por fase).
+     * Esta relación es clave para la tabla del dashboard, donde mostramos
+     * el estado de cada etapa (Revisión, SAP, Facturación, Firma, Hacienda).
+     */
+    public function estadosBloques()
+    {
+        return $this->hasMany(EstadoBloqueCuenta::class, 'cuenta_cobro_id');
+    }
+
+    /**
+     * Planillas de Seguridad Social asociadas a esta cuenta de cobro.
+     * Una cuenta puede tener varias planillas, pero la última es la vigente.
+     */
+    public function planillasSeguridadSocial()
+    {
+        return $this->hasMany(PlanillaSeguridadSocial::class, 'cuenta_cobro_id')
+            ->orderByDesc('created_at');
     }
 
     // --- ACCESSORS: INTELIGENCIA DE DATOS ---

@@ -75,7 +75,7 @@ class AnaliticaController extends Controller
 
         if ($request->filled('porcentaje_min') || $request->filled('porcentaje_max')) {
             $filterQuery->where(function ($q) use ($request) {
-                $sql = 'CASE WHEN numero_pagos_totales > 0 THEN (numero_facturas_radicadas / numero_pagos_totales) * 100 ELSE 0 END';
+                $sql = 'CASE WHEN numero_pagos_totales > 0 THEN (numero_facturas_radicadas::numeric / numero_pagos_totales) * 100 ELSE 0 END';
                 if ($request->filled('porcentaje_min')) {
                     $q->where(DB::raw($sql), '>=', (float) $request->porcentaje_min);
                 }
@@ -87,7 +87,7 @@ class AnaliticaController extends Controller
 
         // 2. EXTRACCIÓN DE KPIs — partimos de un clone limpio de $filterQuery (sin selects)
         // y aplicamos SOLO el selectRaw de agregados. Así MySQL no ve columnas
-        // individuales mezcladas con COUNT/SUM sin GROUP BY (error SQLSTATE 42000:1140).
+        // individuales mezcladas con COUNT/SUM sin GROUP BY.
         $kpis = (clone $filterQuery)
             ->whereHas('estadoActual', function ($q) {
                 $q->where('afecta_indicadores', true);
@@ -95,9 +95,9 @@ class AnaliticaController extends Controller
             ->selectRaw('
                 COUNT(*) as total_cuentas,
                 COUNT(DISTINCT contrato_id) as total_contratos,
-                SUM(CASE WHEN finalizada = 1 THEN 1 ELSE 0 END) as finalizadas,
-                SUM(numero_facturas_radicadas) as radicadas_total,
-                SUM(numero_pagos_totales) as pagos_totales
+                SUM(CASE WHEN finalizada = true THEN 1 ELSE 0 END) as finalizadas,
+                SUM(COALESCE(numero_facturas_radicadas, 0)) as radicadas_total,
+                SUM(COALESCE(numero_pagos_totales, 0)) as pagos_totales
             ')
             ->first();
 
@@ -115,7 +115,7 @@ class AnaliticaController extends Controller
         $cuentas = (clone $filterQuery)
             ->select('cuentas_cobro.*')
             ->selectRaw('numero_facturas_radicadas as radicadas_bi')
-            ->selectRaw('CASE WHEN numero_pagos_totales > 0 THEN (numero_facturas_radicadas / numero_pagos_totales) * 100 ELSE 0 END as avance_bi')
+            ->selectRaw('CASE WHEN numero_pagos_totales > 0 THEN (numero_facturas_radicadas::numeric / numero_pagos_totales) * 100 ELSE 0 END as avance_bi')
             ->with([
                 'contrato.contratista',
                 'responsableActual',
@@ -194,9 +194,9 @@ class AnaliticaController extends Controller
     private function getHeatmapDataSql($query)
     {
         return (clone $query)->leftJoin('usuarios', 'cuentas_cobro.responsable_actual_id', '=', 'usuarios.id')
-            ->selectRaw("CONCAT(COALESCE(primer_nombre, ''), ' ', COALESCE(primer_apellido, '')) as name")
-            ->selectRaw("SUM(CASE WHEN finalizada = 0 THEN 1 ELSE 0 END) as tramite")
-            ->selectRaw("SUM(CASE WHEN finalizada = 1 THEN 1 ELSE 0 END) as finalizadas")
+            ->selectRaw("COALESCE(primer_nombre, '') || ' ' || COALESCE(primer_apellido, '') as name")
+            ->selectRaw("SUM(CASE WHEN finalizada = false THEN 1 ELSE 0 END) as tramite")
+            ->selectRaw("SUM(CASE WHEN finalizada = true THEN 1 ELSE 0 END) as finalizadas")
             ->groupBy('usuarios.id', 'primer_nombre', 'primer_apellido')
             ->limit(10)
             ->get();

@@ -584,7 +584,7 @@ window.deleteContrato = function (id, numero) {
         return;
     }
 
-    fetch(`/seguimiento/${id}`, {
+    fetch(`/dashboard/contrato/${id}`, {
         method: 'DELETE',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,

@@ -49,14 +49,15 @@ trait Auditable
      */
     public static function logManualAudit($model, $accion, $mensaje = null, $tablaManual = null, $datosIntento = null)
     {
-        $tabla = $tablaManual ?? ($model ? $model->getTable() : 'SISTEMA');
+        $tabla = $tablaManual ?? (($model instanceof \Illuminate\Database\Eloquent\Model) ? $model->getTable() : 'SISTEMA');
         $nuevo = is_array($mensaje) ? $mensaje : ['detalle' => $mensaje];
 
         if ($datosIntento) {
             $nuevo['intentado'] = $datosIntento;
         }
 
-        self::logAudit($model, $accion, $model ? $model->getOriginal() : null, $nuevo, $tabla);
+        $anterior = ($model instanceof \Illuminate\Database\Eloquent\Model) ? $model->getOriginal() : null;
+        self::logAudit($model, $accion, $anterior, $nuevo, $tabla);
     }
 
     /**

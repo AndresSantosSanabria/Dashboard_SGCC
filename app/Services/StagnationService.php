@@ -64,7 +64,7 @@ class StagnationService
             ->leftJoin('alertas', function ($join) {
                 $join->on('alertas.cuenta_cobro_id', '=', 'cuentas_cobro.id')
                     ->where('alertas.tipo_alerta', '=', 'ESTANCAMIENTO')
-                    ->where('alertas.leida', '=', 0);
+                    ->where('alertas.leida', '=', false);
             })
             ->where('cuentas_cobro.finalizada', false)
             ->where('cuentas_cobro.updated_at', '<=', $bufferDate)

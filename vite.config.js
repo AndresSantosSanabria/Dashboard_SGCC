@@ -29,9 +29,18 @@ export default defineConfig({
             ]
         }),
     ],
+    build: {
+        outDir: 'public/build',
+        emptyOutDir: true,
+        manifest: true,
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],
+        },
+        hmr: {
+            host: 'localhost',
+            port: 5173,
         },
     },
 });

@@ -1,6 +1,5 @@
 <div class="table-responsive" style="max-height: 75vh;">
-    <table class="table mb-0" id="cuentasTable"
-        style="min-width: 3000px; font-size: 0.85rem;">
+    <table class="table mb-0" id="cuentasTable" style="min-width: 3000px; font-size: 0.85rem;">
         <thead class="table-dark sticky-top">
             <tr>
                 @php
@@ -44,11 +43,12 @@
                         ['label' => 'TRÁMITE SIGUIENTE CUENTA', 'class' => ''],
                     ];
                 @endphp
-                @foreach($headers as $h)
+                @foreach ($headers as $h)
                     <th class="{{ $h['class'] }}">
                         <div class="d-flex align-items-center justify-content-between gap-2">
                             <span>{{ $h['label'] }}</span>
-                            <button type="button" class="btn btn-sm btn-link text-white p-0 toggle-col-btn" title="Minimizar">
+                            <button type="button" class="btn btn-sm btn-link text-white p-0 toggle-col-btn"
+                                title="Minimizar">
                                 <i class="bi bi-dash-lg"></i>
                             </button>
                         </div>
@@ -58,7 +58,8 @@
                     <th>
                         <div class="d-flex align-items-center justify-content-between gap-2">
                             <span>ACCIÓN</span>
-                            <button type="button" class="btn btn-sm btn-link text-white p-0 toggle-col-btn" title="Minimizar">
+                            <button type="button" class="btn btn-sm btn-link text-white p-0 toggle-col-btn"
+                                title="Minimizar">
                                 <i class="bi bi-dash-lg"></i>
                             </button>
                         </div>
@@ -71,8 +72,12 @@
                 @php
                     $contrato = $cuenta->contrato;
                     $contratista = $contrato?->contratista;
-                    $rp = $contrato?->registrosPresupuestales->first();
-                    $ultimaSS = $cuenta->planillasSeguridadSocial->first();
+                    // CORRECCIÓN: Usamos la colección cargada con eager loading (?-> en toda la cadena)
+                    $rp = $contrato?->registrosPresupuestales?->first();
+                    // CORRECCIÓN: planillasSeguridadSocial puede estar vacía si no se cargó con with()
+                    $ultimaSS = $cuenta->relationLoaded('planillasSeguridadSocial')
+                        ? $cuenta->planillasSeguridadSocial->first()
+                        : null;
                     $ssVigente = $contratista?->seguridadSocialVigente;
 
                     // Lógica para bloques específicos usando IDs para mayor confiabilidad
@@ -83,10 +88,10 @@
                     $bloqueHacienda = $cuenta->estadosBloques->where('bloque_id', 5)->first();
                 @endphp
                 <tr style="--row-index: {{ $index }};">
-                    <td class="sticky-col sticky-col-1"><strong>{{ $contrato->numero_contrato ?? 'N/A' }}</strong></td>
+                    <td class="sticky-col sticky-col-1"><strong>{{ $contrato?->numero_contrato ?? 'N/A' }}</strong></td>
                     <td class="sticky-col sticky-col-2">
-                        {{ $contratista->razon_social ?? ($contratista->representante_legal ?? 'N/A') }}</td>
-                    <td class="sticky-col sticky-col-3">{{ $contratista->nit ?? 'N/A' }}</td>
+                        {{ $contratista?->razon_social ?? ($contratista?->representante_legal ?? 'N/A') }}</td>
+                    <td class="sticky-col sticky-col-3">{{ $contratista?->nit ?? 'N/A' }}</td>
                     @php
                         $estadoNombre = $cuenta->estadoActual?->nombre ?? 'N/A';
                         $esDevuelta =
@@ -99,15 +104,15 @@
                     <td>{{ $rp->numero_rp ?? 'N/A' }}</td>
                     <td>{{ $rp && $rp->fecha_rp ? $rp->fecha_rp->format('d/m/Y') : 'N/A' }}</td>
                     <td>${{ number_format($rp->valor_rp ?? 0, 0, ',', '.') }}</td>
-                    <td>{{ $contrato && $contrato->fecha_inicio ? $contrato->fecha_inicio->format('d/m/Y') : 'N/A' }}
+                    <td>{{ $contrato && $contrato?->fecha_inicio ? $contrato?->fecha_inicio->format('d/m/Y') : 'N/A' }}
                     </td>
-                    <td>{{ $contrato && $contrato->fecha_fin ? $contrato->fecha_fin->format('d/m/Y') : 'N/A' }}
+                    <td>{{ $contrato && $contrato?->fecha_fin ? $contrato?->fecha_fin->format('d/m/Y') : 'N/A' }}
                     </td>
-                    <td>{{ $contrato?->supervisor->nombre_completo ?? 'N/A' }}</td>
-                    <td>{{ $cuenta->numero_cuenta }}</td>
-                    <td>{{ $cuenta->numero_pagos_totales }}</td>
-                    <td>{{ $cuenta->numero_facturas_radicadas }}</td>
-                    <td>{{ number_format($cuenta->porcentaje_cuentas, 2) }}%</td>
+                    <td>{{ $contrato?->supervisor?->nombre_completo ?? 'N/A' }}</td>
+                    <td>{{ $cuenta->numero_cuenta ?? '0' }}</td>
+                    <td>{{ $cuenta->numero_pagos_totales ?? '0' }}</td>
+                    <td>{{ $cuenta->numero_facturas_radicadas ?? '0' }}</td>
+                    <td>{{ number_format($cuenta->porcentaje_cuentas ?? 0, 2) }}%</td>
 
                     {{-- Información de Seguridad Social --}}
                     <td>{{ $ssVigente?->entidadSalud?->nombre ?? 'N/A' }}</td>
@@ -242,9 +247,10 @@
                                     style="border-radius: 20px; font-size: 0.75rem; padding: 4px 12px;">
                                     <i class="bi bi-play-fill me-1"></i> Siguiente #{{ $cuenta->numero_cuenta + 1 }}
                                 </button>
-@else
-    <span class="badge bg-success" style="padding: 8px 12px !important;"><i class="bi bi-check-all me-1"></i> Completado</span>
-@endif
+                            @else
+                                <span class="badge bg-success" style="padding: 8px 12px !important;"><i
+                                        class="bi bi-check-all me-1"></i> Completado</span>
+                            @endif
                         @else
                             <span class="text-muted">En proceso de flujo</span>
                         @endif
@@ -253,20 +259,22 @@
                         <td class="text-center">
                             <div class="d-flex justify-content-center gap-2">
                                 <button type="button" class="btn-action-premium"
-                                    onclick="showHistory({{ $cuenta->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')"
+                                    onclick="showHistory({{ $cuenta->id }}, '{{ $contrato?->numero_contrato ?? 'N/A' }}')"
                                     title="Ver Historial">
                                     <span class="govco-svg govco-clock"></span>
                                 </button>
                                 <button type="button" class="btn-action-premium"
-                                    onclick="editAccount({{ $cuenta->id }})"
-                                    title="Editar Cuenta">
+                                    onclick="editAccount({{ $cuenta->id }})" title="Editar Cuenta">
                                     <span class="govco-svg govco-edit"></span>
                                 </button>
-                                <button type="button" class="btn-action-premium"
-                                    onclick="deleteContrato({{ $contrato->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')"
-                                    title="Eliminar Contrato GLOBALMENTE" style="color: #dc2626; background: rgba(220, 38, 38, 0.05);">
-                                    <i class="bi bi-trash fs-6"></i>
-                                </button>
+                                @if ($contrato)
+                                    <button type="button" class="btn-action-premium"
+                                        onclick="deleteContrato({{ $contrato->id }}, '{{ $contrato->numero_contrato ?? 'N/A' }}')"
+                                        title="Eliminar Contrato GLOBALMENTE"
+                                        style="color: #dc2626; background: rgba(220, 38, 38, 0.05);">
+                                        <i class="bi bi-trash fs-6"></i>
+                                    </button>
+                                @endif
                             </div>
                         </td>
                     @endif

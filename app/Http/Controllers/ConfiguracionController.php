@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class ConfiguracionController extends Controller
@@ -116,18 +117,45 @@ class ConfiguracionController extends Controller
         $isPersonalizado = $role && str_contains(strtolower($role->nombre), 'personalizado');
 
         try {
+            DB::beginTransaction();
+
             $usuario = new Usuario;
             $usuario->fill($validated);
-            // Only assign permisos if it's a personalized role AND there are true values
-            $usuario->permisos = ($isPersonalizado && ! empty($permisos)) ? $permisos : null;
             $usuario->save();
+
+            // Sync permissions only if personalized
+            if ($isPersonalizado && !empty($permisos)) {
+                $permisoIds = \App\Models\Permiso::whereIn('slug', array_keys($permisos))->pluck('id')->toArray();
+
+                // Handle special case for blocks
+                if (isset($permisos['bloques_permitidos'])) {
+                    if ($permisos['bloques_permitidos'] === true) {
+                        $allBlockPerm = \App\Models\Permiso::where('slug', 'acceso_bloque_all')->first();
+                        if ($allBlockPerm) $permisoIds[] = $allBlockPerm->id;
+                    } else {
+                        foreach ($permisos['bloques_permitidos'] as $codigo) {
+                            $p = \App\Models\Permiso::firstOrCreate([
+                                'slug' => "acceso_bloque_$codigo",
+                                'nombre' => "Acceso a Bloque $codigo",
+                                'modulo' => 'Bloques'
+                            ]);
+                            $permisoIds[] = $p->id;
+                        }
+                    }
+                }
+
+                $usuario->individualPermissions()->sync($permisoIds);
+            }
+
+            DB::commit();
 
             return redirect()->route('configuracion.index')
                 ->with('success', 'Usuario creado exitosamente');
         } catch (\Exception $e) {
+            DB::rollBack();
             Contrato::logException($e, 'usuarios', $request->all());
 
-            return redirect()->back()->withInput()->with('error', 'Error al crear usuario: '.$e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Error al crear usuario: ' . $e->getMessage());
         }
     }
 
@@ -167,7 +195,7 @@ class ConfiguracionController extends Controller
             'segundo_nombre' => 'nullable|string|max:50',
             'primer_apellido' => 'required|string|max:50',
             'segundo_apellido' => 'nullable|string|max:50',
-            'user' => 'required|string|max:150|unique:usuarios,user,'.$id,
+            'user' => 'required|string|max:150|unique:usuarios,user,' . $id,
             'password' => 'nullable|string|min:6|confirmed',
             'rol_id' => 'required|exists:roles,id',
         ]);
@@ -224,17 +252,47 @@ class ConfiguracionController extends Controller
         $isPersonalizado = $role && str_contains(strtolower($role->nombre), 'personalizado');
 
         try {
+            DB::beginTransaction();
+
             $usuario->fill($validated);
-            // Only assign permisos if it's a personalized role AND there are true values
-            $usuario->permisos = ($isPersonalizado && ! empty($permisos)) ? $permisos : null;
             $usuario->save();
+
+            // Update permissions only if personalized
+            if ($isPersonalizado && !empty($permisos)) {
+                $permisoIds = \App\Models\Permiso::whereIn('slug', array_keys($permisos))->pluck('id')->toArray();
+
+                // Handle special case for blocks
+                if (isset($permisos['bloques_permitidos'])) {
+                    if ($permisos['bloques_permitidos'] === true) {
+                        $allBlockPerm = \App\Models\Permiso::where('slug', 'acceso_bloque_all')->first();
+                        if ($allBlockPerm) $permisoIds[] = $allBlockPerm->id;
+                    } else {
+                        foreach ($permisos['bloques_permitidos'] as $codigo) {
+                            $p = \App\Models\Permiso::firstOrCreate([
+                                'slug' => "acceso_bloque_$codigo",
+                                'nombre' => "Acceso a Bloque $codigo",
+                                'modulo' => 'Bloques'
+                            ]);
+                            $permisoIds[] = $p->id;
+                        }
+                    }
+                }
+
+                $usuario->individualPermissions()->sync($permisoIds);
+            } else {
+                // If not personalized, clear individual permissions
+                $usuario->individualPermissions()->detach();
+            }
+
+            DB::commit();
 
             return redirect()->route('configuracion.index')
                 ->with('success', 'Usuario actualizado exitosamente');
         } catch (\Exception $e) {
+            DB::rollBack();
             Contrato::logException($e, 'usuarios', $request->all());
 
-            return redirect()->back()->withInput()->with('error', 'Error al actualizar usuario: '.$e->getMessage());
+            return redirect()->back()->withInput()->with('error', 'Error al actualizar usuario: ' . $e->getMessage());
         }
     }
 
