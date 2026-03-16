@@ -35,40 +35,28 @@ document.addEventListener("DOMContentLoaded", function () {
             btnImport.disabled = true;
             importSpinner.style.display = "block";
 
-            fetch(
+            window.apiFetch(
                 importForm.dataset.url || "{{ route('dashboard.importar') }}",
                 {
                     method: "POST",
                     body: formData,
-                    headers: {
-                        "X-Requested-With": "XMLHttpRequest",
-                        "X-CSRF-TOKEN": document.querySelector(
-                            'input[name="_token"]',
-                        ).value,
-                        Accept: "application/json",
-                    },
                 },
             )
-                .then((response) =>
-                    response.json().catch(() => ({
-                        success: false,
-                        message: "Respuesta no válida del servidor",
-                    })),
-                )
-                .then((data) => {
+                .then(async (response) => {
+                    const data = await response.json().catch(() => ({ success: false, message: "Error al interpretar respuesta" }));
                     importSpinner.style.display = "none";
                     if (data.success) {
                         showSnackbar("✅ " + data.message, "success");
                         setTimeout(() => location.reload(), 2000);
                     } else {
-                        showSnackbar("⚠️ " + data.message, "error");
+                        showSnackbar("⚠️ " + (data.message || "Error desconocido"), "error");
                         btnImport.disabled = false;
                     }
                 })
                 .catch((error) => {
                     importSpinner.style.display = "none";
-                    showSnackbar("❌ Error: " + error.message, "error");
                     btnImport.disabled = false;
+                    console.error('Import Error:', error);
                 });
         });
     }
@@ -93,16 +81,9 @@ document.addEventListener("DOMContentLoaded", function () {
             btnSaveManual.innerHTML =
                 '<span class="spinner-border spinner-border-sm" role="status"></span> Procesando...';
 
-            fetch(url, {
+            window.apiFetch(url, {
                 method: "POST", // Siempre POST para enviar FormData con archivos/datos, Laravel lee _method
                 body: formData,
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest",
-                    "X-CSRF-TOKEN": document.querySelector(
-                        'input[name="_token"]',
-                    ).value,
-                    Accept: "application/json",
-                },
             })
                 .then((response) =>
                     response.json().catch(() => ({
@@ -184,10 +165,7 @@ const fetchFilteredData = () => {
     tableContainer.style.opacity = "0.5";
     tableContainer.style.pointerEvents = "none";
 
-    fetch(url, {
-        headers: {
-            "X-Requested-With": "XMLHttpRequest",
-        },
+    window.apiFetch(url, {
         signal: abortController.signal,
     })
         .then((response) => {
@@ -240,11 +218,7 @@ function bindPagination() {
             if (tableSpinner) tableSpinner.style.display = "inline-block";
             tableContainer.style.opacity = "0.5";
 
-            fetch(url, {
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest",
-                },
-            })
+            window.apiFetch(url)
                 .then((response) => response.text())
                 .then((html) => {
                     tableContainer.innerHTML = html;
@@ -340,7 +314,7 @@ window.showHistory = function (cuentaId, contratoNum) {
 
     modal.show();
 
-    fetch(`/workflow/historial/${cuentaId}`)
+    window.apiFetch(`/workflow/historial/${cuentaId}`)
         .then((response) => response.json())
         .then((data) => {
             spinner.style.display = "none";
@@ -470,7 +444,7 @@ window.editAccount = function (id) {
     });
 
     // Cargar datos
-    fetch(`/dashboard/editar/${id}`)
+    window.apiFetch(`/dashboard/editar/${id}`)
         .then((res) => res.json())
         .then((response) => {
             if (response.success) {
@@ -554,13 +528,8 @@ window.editAccount = function (id) {
 
 window.startNextAccount = function (id, contrato, siguienteCuenta) {
     if (confirm(`¿Desea iniciar formalmente el trámite para la cuenta #${siguienteCuenta} del contrato ${contrato}?`)) {
-        fetch(`/workflow/iniciar-siguiente-cuenta/${id}`, {
-            method: "POST",
-            headers: {
-                "X-Requested-With": "XMLHttpRequest",
-                "X-CSRF-TOKEN": document.querySelector('input[name="_token"]').value,
-                "Accept": "application/json"
-            }
+        window.apiFetch(`/workflow/iniciar-siguiente-cuenta/${id}`, {
+            method: "POST"
         })
             .then(res => res.json())
             .then(data => {
@@ -584,12 +553,8 @@ window.deleteContrato = function (id, numero) {
         return;
     }
 
-    fetch(`/dashboard/contrato/${id}`, {
-        method: 'DELETE',
-        headers: {
-            'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value,
-            'Accept': 'application/json'
-        }
+    window.apiFetch(`/dashboard/contrato/${id}`, {
+        method: 'DELETE'
     })
         .then(res => res.json())
         .then(data => {

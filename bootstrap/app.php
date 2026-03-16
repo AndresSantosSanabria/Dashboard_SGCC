@@ -13,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->trustProxies(at: '*');
+        $middleware->validateCsrfTokens(except: [
+            '/consultar-estado',
+            '/consultar-historial/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Capturar errores de base de datos (QueryException) en la auditoría

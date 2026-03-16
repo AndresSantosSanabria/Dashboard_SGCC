@@ -9,6 +9,7 @@ use App\Models\Usuario;
 use App\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use App\Services\BusinessTimeService;
 
 class AlertaAdminController extends Controller
@@ -16,6 +17,12 @@ class AlertaAdminController extends Controller
     // ── Panel principal ──────────────────────────────────────────────
     public function index()
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            abort(403);
+        }
+
         $claves = [
             'ALERTA_ESTANCAMIENTO_MINUTOS',
             'ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS',
@@ -76,6 +83,12 @@ class AlertaAdminController extends Controller
 
     public function saveConfig(Request $request)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
+        }
+
         $request->validate([
             'limit_hours' => 'required|integer|min:0',
             'limit_mins' => 'required|integer|min:0|max:59',
@@ -111,6 +124,12 @@ class AlertaAdminController extends Controller
     // ── Festivos ─────────────────────────────────────────────────────
     public function storeFestivo(Request $request)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
+        }
+
         $request->validate([
             'fecha' => 'required|date|unique:festivos,fecha',
             'descripcion' => 'nullable|string|max:200',
@@ -122,12 +141,24 @@ class AlertaAdminController extends Controller
 
     public function destroyFestivo($id)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
+        }
+
         Festivo::findOrFail($id)->delete();
         return response()->json(['success' => true, 'message' => 'Festivo eliminado.']);
     }
 
     public function syncFestivos(BusinessTimeService $service)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
+        }
+
         $year = date('Y');
         $festivos = $service->getColombianHolidays($year);
         $festivosNext = $service->getColombianHolidays($year + 1);
@@ -154,6 +185,12 @@ class AlertaAdminController extends Controller
     // ── Destinatarios ────────────────────────────────────────────────
     public function storeDestinatario(Request $request)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
+        }
+
         $request->validate([
             'tipo_destinatario' => 'required|in:USUARIO,ROL',
             'destinatario_id' => 'required|integer',
@@ -182,6 +219,12 @@ class AlertaAdminController extends Controller
 
     public function destroyDestinatario($id)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
+        }
+
         DB::table('alerta_destinatarios')->where('id', $id)->delete();
         return response()->json(['success' => true, 'message' => 'Destinatario eliminado.']);
     }

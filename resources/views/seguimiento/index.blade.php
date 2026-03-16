@@ -421,12 +421,8 @@
             parentDiv.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
 
             try {
-                const res = await fetch('{{ route('seguimiento.update-status') }}', {
+                const res = await window.apiFetch('{{ route('seguimiento.update-status') }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
                     body: JSON.stringify({
                         id,
                         field,
@@ -506,11 +502,7 @@
             }
 
             try {
-                const res = await fetch(fetchUrl, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
+                const res = await window.apiFetch(fetchUrl);
                 const data = await res.json();
 
                 // Actualizar Tabla
@@ -596,13 +588,9 @@
             btn.disabled = true;
 
             try {
-                const res = await fetch(form.action, {
+                const res = await window.apiFetch(form.action, {
                     method: 'POST',
                     body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
                 });
 
                 if (res.ok) {
@@ -681,12 +669,8 @@
             const link = document.getElementById('linkInput').value;
 
             try {
-                const res = await fetch('{{ route('seguimiento.update-status') }}', {
+                const res = await window.apiFetch('{{ route('seguimiento.update-status') }}', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
                     body: JSON.stringify({
                         id,
                         field: 'link_secop',
@@ -727,12 +711,8 @@
             if (!result.isConfirmed) return;
 
             try {
-                const res = await fetch(`{{ url('/seguimiento') }}/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json'
-                    }
+                const res = await window.apiFetch(`{{ url('/seguimiento') }}/${id}`, {
+                    method: 'DELETE'
                 });
 
                 const data = await res.json();

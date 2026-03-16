@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BloqueWorkflow;
 use App\Models\EstadoWorkflow;
 use App\Models\Contrato;
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -13,7 +14,7 @@ class WorkflowAdminController extends Controller
 {
     public function index()
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (!$user->isAdmin()) {
             abort(403);
@@ -28,7 +29,7 @@ class WorkflowAdminController extends Controller
 
     public function store(Request $request)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (!$user->isAdmin()) {
             return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
@@ -82,7 +83,7 @@ class WorkflowAdminController extends Controller
 
     public function update(Request $request, $id)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (!$user->isAdmin()) {
             return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
@@ -122,7 +123,7 @@ class WorkflowAdminController extends Controller
 
     public function destroy($id)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (!$user->isAdmin()) {
             return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
@@ -154,6 +155,11 @@ class WorkflowAdminController extends Controller
 
     public function toggleStatus($id)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
+        }
         $estado = EstadoWorkflow::withTrashed()->findOrFail($id);
         $estado->es_activo = !$estado->es_activo;
         $estado->save();

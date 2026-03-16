@@ -2,7 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BloqueWorkflow;
 use App\Models\Contrato;
+use App\Models\CuentaCobro;
+use App\Models\EstadoBloqueCuenta;
+use App\Models\EstadoWorkflow;
+use App\Models\HistorialWorkflow;
+use App\Models\Supervisor;
+use App\Models\TransicionPermitida;
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +30,7 @@ class WorkflowController extends Controller
         // AUDITORÍA: Trazabilidad de accesos al tablero de operaciones.
         Contrato::logManualAudit(null, 'READ', 'El usuario consultó el tablero de workflow', 'workflow');
 
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
 
         // 1. CONTROL DE ACCESO 
@@ -34,7 +42,7 @@ class WorkflowController extends Controller
         // 2. CONSTRUCCIÓN DEL DATASET OPERATIVO 
         // Cargamos todas las relaciones necesarias en una sola query 
         // para evitar el problema de N+1, ya que cada tarjeta del Kanban requiere mucha info.
-        $query = \App\Models\CuentaCobro::with([
+        $query = CuentaCobro::with([
             'contrato.contratista',
             'bloqueActual',
             'estadoActual',
@@ -83,7 +91,7 @@ class WorkflowController extends Controller
         // 5. CONSTRUCCIÓN DE LA MATRIZ DEL WORKFLOW
         // El workflow es dinámico. Consultamos los bloques configurados en BD 
         // y organizamos las cuentas por "Bloque -> Estado".
-        $bloquesQuery = \App\Models\BloqueWorkflow::with(['estados' => function ($q) {
+        $bloquesQuery = BloqueWorkflow::with(['estados' => function ($q) {
             $q->where('es_activo', true)->orderBy('id', 'asc');
         }])->orderBy('orden', 'asc');
 
@@ -126,8 +134,8 @@ class WorkflowController extends Controller
             return view('workflow.componentes.board', compact('workflow', 'canEdit'));
         }
 
-        $supervisores = \App\Models\Supervisor::orderBy('nombres')->get();
-        $estados = \App\Models\EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->get();
+        $supervisores = Supervisor::orderBy('nombres')->get();
+        $estados = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->get();
 
         return view('workflow.workflow', compact('workflow', 'supervisores', 'estados', 'canEdit'));
     }
@@ -175,10 +183,10 @@ class WorkflowController extends Controller
      */
     public function getEstadosDisponibles($cuentaId)
     {
-        $cuenta = \App\Models\CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
+        $cuenta = CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
 
         // Get allowed transitions from current state
-        $transiciones = \App\Models\TransicionPermitida::with('estadoDestino.bloque')
+        $transiciones = TransicionPermitida::with('estadoDestino.bloque')
             ->where('estado_origen_id', $cuenta->estado_actual_id)
             ->where('es_activa', true)
             ->get();
@@ -223,11 +231,11 @@ class WorkflowController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        $cuenta = \App\Models\CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
+        $cuenta = CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
 
         // 1. VALIDACIÓN DE TRANSICIÓN: 
         // No permitimos saltos "al azar"; solo los definidos en la tabla 'transiciones_permitidas'.
-        $transicion = \App\Models\TransicionPermitida::where('estado_origen_id', $cuenta->estado_actual_id)
+        $transicion = TransicionPermitida::where('estado_origen_id', $cuenta->estado_actual_id)
             ->where('estado_destino_id', $request->estado_destino_id)
             ->where('es_activa', true)
             ->first();
@@ -236,7 +244,7 @@ class WorkflowController extends Controller
             return response()->json(['success' => false, 'message' => 'Transición no permitida'], 403);
         }
 
-        $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($request->estado_destino_id);
+        $estadoDestino = EstadoWorkflow::findOrFail($request->estado_destino_id);
 
         // 2. PUNTO DE DECISIÓN (Handoff):
         // Si el estado implica un cambio de área (ej: de Revisión a SAP), 
@@ -285,12 +293,12 @@ class WorkflowController extends Controller
             'comentario' => 'nullable|string|max:500',
         ]);
 
-        $cuenta = \App\Models\CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
+        $cuenta = CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
         $estadoOrigenId = $cuenta->estado_actual_id;
         $estadoDestinoId = $request->estado_destino_id;
 
         // Verify transition is allowed
-        $transicion = \App\Models\TransicionPermitida::where('estado_origen_id', $estadoOrigenId)
+        $transicion = TransicionPermitida::where('estado_origen_id', $estadoOrigenId)
             ->where('estado_destino_id', $estadoDestinoId)
             ->where('es_activa', true)
             ->first();
@@ -303,7 +311,7 @@ class WorkflowController extends Controller
         }
 
         // Get destination state
-        $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($estadoDestinoId);
+        $estadoDestino = EstadoWorkflow::findOrFail($estadoDestinoId);
 
         // Start transaction
         DB::beginTransaction();
@@ -312,20 +320,20 @@ class WorkflowController extends Controller
             $this->ejecutarTransicion($cuenta, $estadoDestinoId, $request->comentario);
 
             // Determine which block to update based on the destination state
-            $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($estadoDestinoId);
+            $estadoDestino = EstadoWorkflow::findOrFail($estadoDestinoId);
             $bloqueTarget = null;
 
             if ($estadoDestino->codigo === 'REV1_PASA') {
                 // For REV1_PASA, assign to SAP block
-                $bloqueTarget = \App\Models\BloqueWorkflow::where('codigo', 'SAP')->first();
+                $bloqueTarget = BloqueWorkflow::where('codigo', 'SAP')->first();
             } elseif ($estadoDestino->codigo === 'SAP_OK') {
                 // For SAP_OK (con ingreso mercancia), assign to Facturación block
-                $bloqueTarget = \App\Models\BloqueWorkflow::where('codigo', 'FAC')->first();
+                $bloqueTarget = BloqueWorkflow::where('codigo', 'FAC')->first();
             }
 
             if ($bloqueTarget) {
                 // Update or create the block record with the assigned responsible
-                \App\Models\EstadoBloqueCuenta::updateOrCreate(
+                EstadoBloqueCuenta::updateOrCreate(
                     ['cuenta_cobro_id' => $cuentaId, 'bloque_id' => $bloqueTarget->id],
                     ['responsable_id' => $request->responsable_id]
                 );
@@ -369,10 +377,10 @@ class WorkflowController extends Controller
     private function ejecutarTransicion($cuenta, $estadoDestinoId, $comentario = null)
     {
         $estadoOrigenId = $cuenta->estado_actual_id;
-        $estadoDestino = \App\Models\EstadoWorkflow::findOrFail($estadoDestinoId);
+        $estadoDestino = EstadoWorkflow::findOrFail($estadoDestinoId);
 
         // A. CRONÓMETRO DE ESTADO: Calculamos cuánto tiempo vivió en el estado anterior.
-        $ultimoHistorial = \App\Models\HistorialWorkflow::where('cuenta_cobro_id', $cuenta->id)
+        $ultimoHistorial = HistorialWorkflow::where('cuenta_cobro_id', $cuenta->id)
             ->orderBy('fecha_transicion', 'desc')->first();
 
         $tiempoPrevio = 0;
@@ -383,7 +391,7 @@ class WorkflowController extends Controller
         }
 
         // B. REGISTRO DE HISTORIA (Audit Trail): Punto innegociable para auditorías externas.
-        \App\Models\HistorialWorkflow::create([
+        HistorialWorkflow::create([
             'cuenta_cobro_id' => $cuenta->id,
             'bloque_id' => $cuenta->bloque_actual_id,
             'estado_origen_id' => $estadoOrigenId,
@@ -408,7 +416,7 @@ class WorkflowController extends Controller
 
         // D. CIERRE DE BLOQUE: Si avanzamos de fase, sellamos el progreso del bloque anterior.
         if ($bloqueAnteriorId != $estadoDestino->bloque_id && ! $esDevolucion) {
-            \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)
+            EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)
                 ->where('bloque_id', $bloqueAnteriorId)
                 ->update(['bloque_completado' => true, 'fecha_completado_bloque' => now()]);
         }
@@ -428,7 +436,7 @@ class WorkflowController extends Controller
         }
 
         // Gestión de tiempos por bloque para analítica avanzada
-        $existeRegistro = \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)
+        $existeRegistro = EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)
             ->where('bloque_id', $estadoDestino->bloque_id)->first();
 
         $updateData = [
@@ -444,7 +452,7 @@ class WorkflowController extends Controller
             $cuenta->bloque_actual_id = $estadoDestino->bloque_id;
         }
 
-        \App\Models\EstadoBloqueCuenta::updateOrCreate(
+        EstadoBloqueCuenta::updateOrCreate(
             ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $estadoDestino->bloque_id],
             $updateData
         );
@@ -459,7 +467,7 @@ class WorkflowController extends Controller
 
         // G. AUTO-CHAINING (Propagación):
         // Algunos estados son "puentes" que deben pasar automáticamente al siguiente paso.
-        $auto = \App\Models\TransicionPermitida::where('estado_origen_id', $estadoDestinoId)
+        $auto = TransicionPermitida::where('estado_origen_id', $estadoDestinoId)
             ->where('accion', 'PASAR_BLOQUE')->where('es_activa', true)->first();
 
         if ($auto) {
@@ -473,11 +481,11 @@ class WorkflowController extends Controller
     private function asignarNumeroFactura($cuenta)
     {
         if (empty($cuenta->ultima_factura_hacienda) || $cuenta->ultima_factura_hacienda === 'N/A') {
-            $maxInvoice = \App\Models\CuentaCobro::where('contrato_id', $cuenta->contrato_id)
+            $maxInvoice = CuentaCobro::where('contrato_id', $cuenta->contrato_id)
                 ->whereNotNull('ultima_factura_hacienda')
                 ->where('ultima_factura_hacienda', '!=', 'N/A')
                 ->whereRaw("ultima_factura_hacienda ~ '^[0-9]+$'")
-                ->max(\Illuminate\Support\Facades\DB::raw('CAST(ultima_factura_hacienda AS integer)'));
+                ->max(DB::raw('CAST(ultima_factura_hacienda AS integer)'));
 
             $cuenta->update(['ultima_factura_hacienda' => ($maxInvoice ?? 0) + 1]);
         }
@@ -493,8 +501,8 @@ class WorkflowController extends Controller
             return false; // Mismo bloque, no es devolución
         }
 
-        $bloqueOrigen = \App\Models\BloqueWorkflow::find($bloqueOrigenId);
-        $bloqueDestino = \App\Models\BloqueWorkflow::find($bloqueDestinoId);
+        $bloqueOrigen = BloqueWorkflow::find($bloqueOrigenId);
+        $bloqueDestino = BloqueWorkflow::find($bloqueDestinoId);
 
         if (! $bloqueOrigen || ! $bloqueDestino) {
             return false;
@@ -509,7 +517,7 @@ class WorkflowController extends Controller
      */
     private function obtenerResponsablePrevio($cuentaId, $bloqueId)
     {
-        $estadoBloqueAnterior = \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuentaId)
+        $estadoBloqueAnterior = EstadoBloqueCuenta::where('cuenta_cobro_id', $cuentaId)
             ->where('bloque_id', $bloqueId)
             ->whereNotNull('responsable_id')
             ->orderBy('fecha_ultima_actualizacion', 'desc')
@@ -517,7 +525,7 @@ class WorkflowController extends Controller
 
         if ($estadoBloqueAnterior && $estadoBloqueAnterior->responsable_id) {
             // Verificar que el usuario todavía existe y está activo
-            $usuario = \App\Models\Usuario::where('id', $estadoBloqueAnterior->responsable_id)
+            $usuario = Usuario::where('id', $estadoBloqueAnterior->responsable_id)
                 ->where('es_activo', true)
                 ->first();
 
@@ -535,14 +543,14 @@ class WorkflowController extends Controller
     private function marcarBloqueComoDevuelto($cuentaId, $bloqueAnteriorId, $comentario = null)
     {
         // Buscar un estado de tipo "DEVUELTO" para el bloque anterior
-        $estadoDevuelto = \App\Models\EstadoWorkflow::where('bloque_id', $bloqueAnteriorId)
+        $estadoDevuelto = EstadoWorkflow::where('bloque_id', $bloqueAnteriorId)
             ->where('tipo', 'DEVUELTO')
             ->where('es_activo', true)
             ->first();
 
         if ($estadoDevuelto) {
             // Actualizar el registro del bloque anterior para marcarlo como devuelto
-            \App\Models\EstadoBloqueCuenta::updateOrCreate(
+            EstadoBloqueCuenta::updateOrCreate(
                 ['cuenta_cobro_id' => $cuentaId, 'bloque_id' => $bloqueAnteriorId],
                 [
                     'estado_actual_id' => $estadoDevuelto->id,
@@ -578,8 +586,8 @@ class WorkflowController extends Controller
      */
     public function getHistorial($cuentaId)
     {
-        $cuenta = \App\Models\CuentaCobro::findOrFail($cuentaId);
-        $historial = \App\Models\HistorialWorkflow::with([
+        $cuenta = CuentaCobro::findOrFail($cuentaId);
+        $historial = HistorialWorkflow::with([
             'bloque',
             'estadoOrigen',
             'estadoDestino',
@@ -610,7 +618,7 @@ class WorkflowController extends Controller
         if ($estadoCodigo === 'REV1_PASA') {
             // For REV1_PASA, get users who can be responsible for SAP
             $responsableType = 'sap';
-            $usuarios = \App\Models\Usuario::responsablesSap()
+            $usuarios = Usuario::responsablesSap()
                 ->orderBy('primer_nombre')
                 ->get()
                 ->map(function ($user) {
@@ -623,7 +631,7 @@ class WorkflowController extends Controller
         } elseif ($estadoCodigo === 'SAP_OK') {
             // For SAP_OK, get users who can be responsible for Facturación
             $responsableType = 'facturacion';
-            $usuarios = \App\Models\Usuario::responsablesFac()
+            $usuarios = Usuario::responsablesFac()
                 ->orderBy('primer_nombre')
                 ->get()
                 ->map(function ($user) {
@@ -647,7 +655,7 @@ class WorkflowController extends Controller
      */
     public function iniciarSiguienteCuenta(Request $request, $cuentaId)
     {
-        $cuenta = \App\Models\CuentaCobro::findOrFail($cuentaId);
+        $cuenta = CuentaCobro::findOrFail($cuentaId);
 
         // Validar que esté finalizada y tenga pagos pendientes
         if (! $cuenta->finalizada) {
@@ -670,14 +678,14 @@ class WorkflowController extends Controller
             $cuenta->save();
 
             // 3. Buscar el estado inicial del Bloque 1
-            $estadoInicialBloque1 = \App\Models\EstadoWorkflow::where('codigo', 'REV1_REV')->first();
+            $estadoInicialBloque1 = EstadoWorkflow::where('codigo', 'REV1_REV')->first();
 
             if (! $estadoInicialBloque1) {
                 throw new \Exception('No se encontró el estado inicial del Bloque 1 (REV1_REV).');
             }
 
             // 4. LIMPIEZA: Eliminar registros de progreso de los bloques anteriores para el nuevo ciclo
-            \App\Models\EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)->delete();
+            EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)->delete();
 
             // 5. Transicionar al inicio
             $this->ejecutarTransicion($cuenta, $estadoInicialBloque1->id, "Inicio manual del ciclo - Cuenta #{$cuenta->numero_cuenta}.");

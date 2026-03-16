@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Alerta;
 use App\Models\BloqueWorkflow;
 use App\Models\Concepto;
 use App\Models\Contratista;
@@ -11,11 +12,13 @@ use App\Models\CuentaCobro;
 use App\Models\EntidadSeguridadSocial;
 use App\Models\EstadoBloqueCuenta;
 use App\Models\EstadoWorkflow;
+use App\Models\HistorialWorkflow;
 use App\Models\Modalidad;
 use App\Models\PlanillaSeguridadSocial;
 use App\Models\Planta;
 use App\Models\RegistroPresupuestal;
 use App\Models\Supervisor;
+use App\Models\Usuario;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -46,7 +49,7 @@ class CuentaCobroController extends Controller
         return $this->blocksCache[$code] = BloqueWorkflow::where('codigo', $code)->value('id');
     }
 
-    private function getStateIdByCode(string $code): int
+    private function getStateIdByCode(string $code): ?int
     {
         if (isset($this->statesCache[$code])) return $this->statesCache[$code];
         return $this->statesCache[$code] = EstadoWorkflow::where('codigo', $code)->value('id');
@@ -112,7 +115,7 @@ class CuentaCobroController extends Controller
      */
     public function destroyContrato($id)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->tienePermiso('editar_dashboard')) {
             return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
@@ -126,12 +129,12 @@ class CuentaCobroController extends Controller
                 // Eliminar registros relacionados en orden para respetar FK
                 $cuentaIds = $contrato->cuentasCobro()->pluck('id');
 
-                \App\Models\EstadoBloqueCuenta::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
-                \App\Models\HistorialWorkflow::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
-                \App\Models\PlanillaSeguridadSocial::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
-                \App\Models\Alerta::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
+                EstadoBloqueCuenta::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
+                HistorialWorkflow::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
+                PlanillaSeguridadSocial::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
+                Alerta::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
                 $contrato->cuentasCobro()->delete();
-                \App\Models\RegistroPresupuestal::where('contrato_id', $contrato->id)->delete();
+                RegistroPresupuestal::where('contrato_id', $contrato->id)->delete();
                 $contrato->delete();
             });
 
@@ -170,7 +173,7 @@ class CuentaCobroController extends Controller
         // AUDITORÍA: Punto de control para accesos a datos sensibles.
         Contrato::logManualAudit(null, 'READ', 'El usuario consultó el consolidado de cuentas', 'cuentas_cobro');
 
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
 
         // 1. GATEKEEPING: Verificamos permisos específicos (Dashboard vs Consolidado)
@@ -248,7 +251,7 @@ class CuentaCobroController extends Controller
      */
     public function importExcel(Request $request)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->tienePermiso('editar_dashboard')) {
             return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
@@ -281,12 +284,17 @@ class CuentaCobroController extends Controller
                 $filaActual = $index + 1;
                 try {
                     // 1. NORMALIZACIÓN DE LLAVES
-                    // Los archivos Excel varían en encabezados; normalizamos a mayúsculas para consistencia.
-                    $data = array_change_key_case($row, CASE_UPPER);
+                    // Los archivos Excel varían en encabezados y pueden contener saltos de línea (\n).
+                    // Normalizamos a mayúsculas, quitamos espacios y caracteres de control.
+                    $data = [];
+                    foreach ($row as $k => $v) {
+                        $cleanKey = strtoupper(trim(str_replace(["\n", "\r", "\t"], ' ', (string)$k)));
+                        $data[$cleanKey] = $v;
+                    }
 
-                    // Log de columnas encontradas
-                    if ($filaActual === 1) {
-                        Log::info('Columnas detectadas: ' . json_encode(array_keys($data)));
+                    // Log de columnas encontradas (solo para la primera fila útil)
+                    if ($filaActual === 1 || $filaActual === 2) {
+                        Log::info("Fila $filaActual - Columnas detectadas: " . json_encode(array_keys($data)));
                     }
 
                     $numContrato = strtoupper(trim($this->getColumnValue($data, ['NUMERO DE CONTRATO', 'N° CONTRATO', 'CONTRATO'])));
@@ -382,17 +390,75 @@ class CuentaCobroController extends Controller
                             ->where('numero_cuenta', $numeroCuenta)
                             ->first();
 
-                        // Solo actualizamos el estado si la cuenta es nueva o si la importación dice que está finalizada
-                        // (Evitamos degradar un estado avanzado manualmente a 'Sin trámite')
-                        $bloqueId = $estaFinalizada ? $this->getBlockIdByCode('FIN') : ($cuentaExistente ? $cuentaExistente->bloque_actual_id : $this->getBlockIdByCode('REV1'));
-                        $estadoId = $estaFinalizada ? $this->getStateIdByCode('FIN_OK') : ($cuentaExistente ? $cuentaExistente->estado_actual_id : $this->getStateIdByCode('REV1_SIN'));
+                        // DETERMINACIÓN DE LA ETAPA ACTUAL DEL FLUJO
+                        // Prioridad: 1. Finalizada | 2. Por hitos (rev1 -> sap -> fac -> fir -> hac)
+                        
+                        $bloqueActual = null;
+                        $estadoActual = null;
+
+                        if ($estaFinalizada) {
+                            $bloqueActual = BloqueWorkflow::where('codigo', 'FIN')->first();
+                            $estadoActual = $bloqueActual?->estadoInicial;
+                        } else {
+                            // Definición de hitos en orden cronológico inverso (el más avanzado gana)
+                            $mapeoHitos = [
+                                'HAC' => ['col' => 'RADICADA EN HACIENDA', 'default' => 'HAC_ESP'],
+                                'FIR' => ['col' => 'FIRMA SECRETARIO', 'default' => 'FIR_ESP'],
+                                'FAC' => ['col' => 'EN FACTURACIÓN', 'default' => 'FAC_ESP'],
+                                'SAP' => ['col' => 'ENVIADA A INGRESO MERCANCIA SAP', 'default' => 'SAP_ESP'],
+                                'REV1' => ['col' => 'ESTADO TRAS PRIMERA REVISIÓN', 'default' => 'REV1_SIN']
+                            ];
+
+                            foreach ($mapeoHitos as $codigoBloque => $config) {
+                                $valorCelda = trim($this->getColumnValue($data, $config['col'], ''));
+                                
+                                if (!empty($valorCelda) && strtoupper($valorCelda) !== 'N/A' && $valorCelda !== '0') {
+                                    $bloqueActual = BloqueWorkflow::where('codigo', $codigoBloque)->first();
+                                    
+                                    if ($bloqueActual) {
+                                        // Intentamos buscar el estado exacto por nombre en ese bloque
+                                        $estadoActual = EstadoWorkflow::where('bloque_id', $bloqueActual->id)
+                                            ->where('nombre', 'ilike', "%$valorCelda%")
+                                            ->first();
+                                        
+                                        // Si no encontramos match por nombre, usamos el inicial del bloque o el default por código
+                                        if (!$estadoActual) {
+                                            $estadoActual = $this->getStateIdByCode($config['default']) 
+                                                ? EstadoWorkflow::find($this->getStateIdByCode($config['default']))
+                                                : $bloqueActual->estadoInicial;
+                                        }
+                                        break; 
+                                    }
+                                }
+                            }
+
+                            // Fallback total: Si nada coincide y la cuenta es nueva, va a Revisión Inicial
+                            if (!$bloqueActual) {
+                                $bloqueActual = BloqueWorkflow::where('codigo', 'REV1')->first();
+                                $estadoActual = $bloqueActual?->estadoInicial;
+                            }
+
+                            // Preservar estado si la cuenta ya existía y el archivo no trae avances nuevos
+                            if ($cuentaExistente && $bloqueActual?->codigo === 'REV1' && $estadoActual?->codigo === 'REV1_SIN') {
+                                $bloqueActualId = $cuentaExistente->bloque_actual_id;
+                                $estadoActualId = $cuentaExistente->estado_actual_id;
+                            } else {
+                                $bloqueActualId = $bloqueActual?->id;
+                                $estadoActualId = $estadoActual?->id;
+                            }
+                        }
+
+                        // Validación final antes de persistir
+                        if (!$bloqueActualId || !$estadoActualId) {
+                            throw new \Exception("No se pudo determinar un estado válido para el contrato $numContrato");
+                        }
 
                         $cuenta = CuentaCobro::updateOrCreate(
                             ['contrato_id' => $contrato->id, 'numero_cuenta' => (string)$numeroCuenta],
                             [
                                 'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorTotalContrato / $pagosTotales) : $valorTotalContrato,
-                                'bloque_actual_id' => $bloqueId,
-                                'estado_actual_id' => $estadoId,
+                                'bloque_actual_id' => $bloqueActualId,
+                                'estado_actual_id' => $estadoActualId,
                                 'finalizada' => $estaFinalizada || ($cuentaExistente->finalizada ?? false),
                                 'numero_pagos_totales' => $pagosTotales,
                                 'numero_facturas_radicadas' => $this->parseAmount($this->getColumnValue($data, 'N° DE FACTURAS RADICADA HACIENDA', 0)),
@@ -444,7 +510,7 @@ class CuentaCobroController extends Controller
 
     public function storeManual(Request $request)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->tienePermiso('editar_dashboard')) {
             return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar cargas manuales.'], 403);
@@ -629,9 +695,9 @@ class CuentaCobroController extends Controller
                 'estadosBloques.estadoActual',
             ])->findOrFail($id);
 
-            /** @var \App\Models\RegistroPresupuestal $rp */
+            /** @var RegistroPresupuestal $rp */
             $rp = $cuenta->contrato->registrosPresupuestales->first();
-            /** @var \App\Models\Contrato $contrato */
+            /** @var Contrato $contrato */
             $contrato = $cuenta->contrato;
 
             // Preparar datos para el formulario
@@ -1189,20 +1255,22 @@ class CuentaCobroController extends Controller
         // Si es un array, probar cada clave
         if (is_array($keys)) {
             foreach ($keys as $key) {
-                if (isset($data[$key])) {
-                    return $data[$key];
+                $searchKey = strtoupper(trim($key));
+                if (isset($data[$searchKey])) {
+                    return $data[$searchKey];
                 }
             }
         } elseif (is_string($keys)) {
-            if (isset($data[$keys])) {
-                return $data[$keys];
+            $searchKey = strtoupper(trim($keys));
+            if (isset($data[$searchKey])) {
+                return $data[$searchKey];
             }
 
-            // Si no existe exactamente, buscar por coincidencia parcial
+            // Si no existe exactamente, buscar por coincidencia parcial o limpieza de paréntesis
             foreach ($data as $k => $v) {
-                // Remover paréntesis y su contenido
-                $kClean = preg_replace('/\s*\([^)]*\)/', '', $k);
-                $keysClean = preg_replace('/\s*\([^)]*\)/', '', $keys);
+                // Remover paréntesis y su contenido (incluyendo paréntesis no cerrados al final)
+                $kClean = trim(preg_replace('/\s*\([^)]*\)?/', '', $k));
+                $keysClean = trim(preg_replace('/\s*\([^)]*\)?/', '', $searchKey));
 
                 if (strtoupper($kClean) === strtoupper($keysClean)) {
                     return $v;

@@ -122,11 +122,7 @@
                     window.history.replaceState(null, '', url);
 
                     // Recargar el kanban vía AJAX
-                    fetch(url, {
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            }
-                        })
+                    window.apiFetch(url)
                         .then(r => r.text())
                         .then(html => {
                             // Limpiar backdrops huérfanos antes de inyectar nuevo HTML

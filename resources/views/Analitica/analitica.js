@@ -275,9 +275,7 @@ document.addEventListener('DOMContentLoaded', function () {
         captureArea.classList.add('loading');
 
         try {
-            const response = await fetch(form.action + '?' + params.toString(), {
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
+            const response = await window.apiFetch(form.action + '?' + params.toString());
             const data = await response.json();
 
             // ACTUALIZACIÓN DE ESTADO: 

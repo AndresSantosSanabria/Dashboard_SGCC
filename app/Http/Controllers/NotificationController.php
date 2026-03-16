@@ -11,7 +11,7 @@ class NotificationController extends Controller
 {
     protected $stagnationService;
 
-    public function __construct(\App\Services\StagnationService $stagnationService)
+    public function __construct(StagnationService $stagnationService)
     {
         $this->stagnationService = $stagnationService;
     }

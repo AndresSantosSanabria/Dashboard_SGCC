@@ -55,7 +55,7 @@ document.addEventListener('show.bs.modal', function (event) {
 
     if (!statusButtons || statusButtons.dataset.loaded === 'true') return;
 
-    fetch(`/workflow/estados-disponibles/${cuentaId}`)
+    window.apiFetch(`/workflow/estados-disponibles/${cuentaId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -98,11 +98,8 @@ async function cambiarEstado(cuentaId, estadoDestinoId, requiereComentario, esta
         comentario = text;
     }
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-    fetch(`/workflow/cambiar-estado/${cuentaId}`, {
+    window.apiFetch(`/workflow/cambiar-estado/${cuentaId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
         body: JSON.stringify({ estado_destino_id: estadoDestinoId, comentario: comentario })
     })
     .then(response => response.json())
@@ -124,7 +121,7 @@ function abrirModalResponsable(data, cuentaId) {
     document.getElementById('cuentaIdResponsable').value = data.cuenta_id;
     document.getElementById('estadoDestinoIdResponsable').value = data.estado_destino_id;
 
-    fetch(`/workflow/usuarios-responsables/${data.estado_codigo}`)
+    window.apiFetch(`/workflow/usuarios-responsables/${data.estado_codigo}`)
         .then(res => res.json())
         .then(userData => {
             if (userData.success) {
@@ -179,14 +176,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-            fetch(`/workflow/asignar-responsable/${cuentaId}`, {
+            window.apiFetch(`/workflow/asignar-responsable/${cuentaId}`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
                 body: JSON.stringify({
                     estado_destino_id: estadoDestinoId,
                     responsable_id: responsableId

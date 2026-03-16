@@ -5,11 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\Auditoria;
 use App\Models\Contrato;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class AuditoriaController extends Controller
 {
     public function index(Request $request)
     {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            abort(403);
+        }
         // Registrar lectura de historial (Auditoría)
         Contrato::logManualAudit(null, 'READ', 'El usuario consultó el historial de auditoría', 'auditorias');
 
@@ -47,6 +53,11 @@ class AuditoriaController extends Controller
 
     public function show($id)
     {
+        /** @var \App\Models\Usuario $user */
+        $user = Auth::user();
+        if (!$user->isAdmin()) {
+            return response()->json(['message' => 'No autorizado'], 403);
+        }
         $auditoria = Auditoria::with('usuario')->findOrFail($id);
 
         return response()->json($auditoria);

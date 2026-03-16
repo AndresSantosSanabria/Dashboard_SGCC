@@ -322,13 +322,8 @@
                     data[key] = document.getElementById(`form_${key}`).checked ? 1 : 0;
                 });
 
-                fetch(url, {
+                window.apiFetch(url, {
                         method: method,
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': csrfToken,
-                            'Accept': 'application/json'
-                        },
                         body: JSON.stringify(data)
                     })
                     .then(async res => {
@@ -370,11 +365,8 @@
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        fetch(`/configuracion/workflow-estados/eliminar/${id}`, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRF-TOKEN': csrfToken
-                                }
+                        window.apiFetch(`/configuracion/workflow-estados/eliminar/${id}`, {
+                                method: 'DELETE'
                             })
                             .then(res => res.json())
                             .then(res => {
@@ -391,11 +383,8 @@
             };
 
             window.toggleEstadoStatus = function(id) {
-                fetch(`/configuracion/workflow-estados/toggle-status/${id}`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': csrfToken
-                        }
+                window.apiFetch(`/configuracion/workflow-estados/toggle-status/${id}`, {
+                        method: 'POST'
                     })
                     .then(res => res.json())
                     .then(res => {

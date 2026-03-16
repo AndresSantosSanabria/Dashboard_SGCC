@@ -165,11 +165,7 @@
                 notifEmpty.classList.add('d-none');
             }
 
-            fetch('/notificaciones/latest', {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
+            window.apiFetch('/notificaciones/latest')
                 .then(r => r.json())
                 .then(data => {
                     notifLoading.classList.add('d-none');
@@ -270,16 +266,8 @@
 
         // Marcar una como leída
         window.marcarLeida = function(id) {
-            const currentCsrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
-                'content');
-
-            fetch(`/notificaciones/leer/${id}`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': currentCsrfToken,
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+            window.apiFetch(`/notificaciones/leer/${id}`, {
+                    method: 'POST'
                 })
                 .then(r => {
                     if (!r.ok) throw new Error('Error en el servidor');
@@ -326,16 +314,8 @@
                 btnMarcarTodas.innerHTML =
                     '<span class="spinner-border spinner-border-sm me-1"></span>Procesando...';
 
-                const currentCsrfToken = document.querySelector('meta[name="csrf-token"]')
-                    ?.getAttribute('content');
-
-                fetch('/notificaciones/leer-todas', {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': currentCsrfToken,
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
+                window.apiFetch('/notificaciones/leer-todas', {
+                        method: 'POST'
                     })
                     .then(r => {
                         if (!r.ok) throw new Error('Error en el servidor');

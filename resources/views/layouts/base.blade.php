@@ -71,6 +71,54 @@
                 snackbar.className = snackbar.className.replace("show", "");
             }, duration);
         };
+
+        /**
+         * MOTOR DE PETICIONES GLOBAL (Standardized SGCC Fetch)
+         * Centraliza la seguridad (CSRF), autenticación (401/419) y 
+         * el manejo de errores técnicos.
+         */
+        window.apiFetch = async function(url, options = {}) {
+            const defaults = {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                }
+            };
+
+            if (options.body && !(options.body instanceof FormData)) {
+                defaults.headers['Content-Type'] = 'application/json';
+            }
+
+            const headers = { ...defaults.headers, ...options.headers };
+            const config = { ...defaults, ...options, headers };
+
+            try {
+                const response = await fetch(url, config);
+                
+                // 1. Manejo de Sesión Expirada o No Autorizada
+                if (response.status === 419 || response.status === 401) {
+                    window.showSnackbar('⚠️ Su sesión ha expirado. Recargando...', 'error');
+                    setTimeout(() => location.reload(), 1500);
+                    return response;
+                }
+
+                // 2. Manejo de Errores de Servidor (500+)
+                if (response.status >= 500) {
+                    window.showSnackbar('❌ Error interno del servidor. Contacte a soporte.', 'error');
+                    throw new Error('Server Error');
+                }
+
+                return response;
+            } catch (error) {
+                if (error.name !== 'AbortError') {
+                    console.error('[Fetch Exception]', error);
+                }
+                throw error;
+            }
+        };
     </script>
 
     {{-- Estrategia de Carga de Scripts:

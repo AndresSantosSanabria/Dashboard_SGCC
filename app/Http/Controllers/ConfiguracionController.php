@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BloqueWorkflow;
 use App\Models\Contrato;
+use App\Models\Permiso;
 use App\Models\Role;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
@@ -20,7 +22,7 @@ class ConfiguracionController extends Controller
         // Registrar lectura de configuración (Auditoría)
         Contrato::logManualAudit(null, 'READ', 'El usuario consultó la configuración de usuarios', 'usuarios');
 
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         // Check if user is admin
         if (! $user->isAdmin()) {
@@ -37,14 +39,14 @@ class ConfiguracionController extends Controller
      */
     public function create()
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para acceder a esta sección');
         }
 
         $roles = Role::where('es_activo', true)->get();
-        $bloques = \App\Models\BloqueWorkflow::all();
+        $bloques = BloqueWorkflow::all();
 
         return view('configuracion.form', compact('roles', 'bloques'));
     }
@@ -54,7 +56,7 @@ class ConfiguracionController extends Controller
      */
     public function store(Request $request)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para realizar esta acción');
@@ -125,16 +127,16 @@ class ConfiguracionController extends Controller
 
             // Sync permissions only if personalized
             if ($isPersonalizado && !empty($permisos)) {
-                $permisoIds = \App\Models\Permiso::whereIn('slug', array_keys($permisos))->pluck('id')->toArray();
+                $permisoIds = Permiso::whereIn('slug', array_keys($permisos))->pluck('id')->toArray();
 
                 // Handle special case for blocks
                 if (isset($permisos['bloques_permitidos'])) {
                     if ($permisos['bloques_permitidos'] === true) {
-                        $allBlockPerm = \App\Models\Permiso::where('slug', 'acceso_bloque_all')->first();
+                        $allBlockPerm = Permiso::where('slug', 'acceso_bloque_all')->first();
                         if ($allBlockPerm) $permisoIds[] = $allBlockPerm->id;
                     } else {
                         foreach ($permisos['bloques_permitidos'] as $codigo) {
-                            $p = \App\Models\Permiso::firstOrCreate([
+                            $p = Permiso::firstOrCreate([
                                 'slug' => "acceso_bloque_$codigo",
                                 'nombre' => "Acceso a Bloque $codigo",
                                 'modulo' => 'Bloques'
@@ -164,7 +166,7 @@ class ConfiguracionController extends Controller
      */
     public function edit($id)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para acceder a esta sección');
@@ -172,7 +174,7 @@ class ConfiguracionController extends Controller
 
         $usuario = Usuario::with('rol')->findOrFail($id);
         $roles = Role::where('es_activo', true)->get();
-        $bloques = \App\Models\BloqueWorkflow::all();
+        $bloques = BloqueWorkflow::all();
 
         return view('configuracion.form', compact('usuario', 'roles', 'bloques'));
     }
@@ -182,7 +184,7 @@ class ConfiguracionController extends Controller
      */
     public function update(Request $request, $id)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->isAdmin()) {
             abort(403, 'No tienes permisos para realizar esta acción');
@@ -259,16 +261,16 @@ class ConfiguracionController extends Controller
 
             // Update permissions only if personalized
             if ($isPersonalizado && !empty($permisos)) {
-                $permisoIds = \App\Models\Permiso::whereIn('slug', array_keys($permisos))->pluck('id')->toArray();
+                $permisoIds = Permiso::whereIn('slug', array_keys($permisos))->pluck('id')->toArray();
 
                 // Handle special case for blocks
                 if (isset($permisos['bloques_permitidos'])) {
                     if ($permisos['bloques_permitidos'] === true) {
-                        $allBlockPerm = \App\Models\Permiso::where('slug', 'acceso_bloque_all')->first();
+                        $allBlockPerm = Permiso::where('slug', 'acceso_bloque_all')->first();
                         if ($allBlockPerm) $permisoIds[] = $allBlockPerm->id;
                     } else {
                         foreach ($permisos['bloques_permitidos'] as $codigo) {
-                            $p = \App\Models\Permiso::firstOrCreate([
+                            $p = Permiso::firstOrCreate([
                                 'slug' => "acceso_bloque_$codigo",
                                 'nombre' => "Acceso a Bloque $codigo",
                                 'modulo' => 'Bloques'
@@ -301,7 +303,7 @@ class ConfiguracionController extends Controller
      */
     public function toggleStatus($id)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->isAdmin()) {
             return response()->json(['success' => false, 'message' => 'No autorizado'], 403);

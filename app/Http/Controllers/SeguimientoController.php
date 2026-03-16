@@ -11,6 +11,8 @@ use App\Models\Supervisor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Spatie\SimpleExcel\SimpleExcelWriter;
 
 class SeguimientoController extends Controller
@@ -205,13 +207,13 @@ class SeguimientoController extends Controller
 
         // Paginar resultados
         $perPage = 20;
-        $page = \Illuminate\Pagination\Paginator::resolveCurrentPage() ?: 1;
-        $paginated = new \Illuminate\Pagination\LengthAwarePaginator(
+        $page = Paginator::resolveCurrentPage() ?: 1;
+        $paginated = new LengthAwarePaginator(
             $contratos->forPage($page, $perPage),
             $contratos->count(),
             $perPage,
             $page,
-            ['path' => \Illuminate\Pagination\Paginator::resolveCurrentPath(), 'query' => $request->query()]
+            ['path' => Paginator::resolveCurrentPath(), 'query' => $request->query()]
         );
 
         $supervisores = Supervisor::all();

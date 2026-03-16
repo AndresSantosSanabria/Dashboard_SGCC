@@ -255,7 +255,7 @@
     @push('scripts')
     <script>
         function verDetalles(id) {
-            fetch(`{{ url('configuracion/auditoria') }}/${id}`)
+            window.apiFetch(`{{ url('configuracion/auditoria') }}/${id}`)
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('det_ip').textContent = data.ip_origen || 'N/A';

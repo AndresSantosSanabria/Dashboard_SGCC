@@ -111,43 +111,31 @@
             btnSpinner.classList.remove('d-none');
             resultsArea.classList.add('d-none');
 
-            fetch("{{ route('public.consultation') }}", {
+            window.apiFetch("{{ route('public.consultation') }}", {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                    },
                     body: JSON.stringify({
                         nit: nit
                     })
                 })
-                .then(response => response.json())
-                .then(data => {
+                .then(async response => {
+                    const data = await response.json();
                     btnText.textContent = 'Consultar Estado';
                     btnSpinner.classList.add('d-none');
 
-                    if (data.error) {
-                        resultsArea.innerHTML = `<div class="text-warning small">${data.error}</div>`;
+                    if (!response.ok || data.error) {
+                        resultsArea.innerHTML = `<div class="text-warning small">${data.error || 'No se encontró la información'}</div>`;
                     } else {
                         resultsArea.innerHTML = `
                         <div class="result-item">
                             <span class="result-label">Contratista</span>
                             <span class="result-value">${data.contratista}</span>
                         </div>
-                        <div class="result-item">
-                            <span class="result-label">Contrato #</span>
-                            <span class="result-value">${data.numero_contrato}</span>
-                        </div>
                         <div class="result-item" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px;">
-                            <span class="result-label" style="color: #fbfbfbff; opacity: 1;">Cuenta de Cobro #</span>
-                            <span class="result-value" style="color: #ffffffff; font-size: 1.4rem; font-weight: 800; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">${data.numero_cuenta}</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Estado Actual</span>
+                            <span class="result-label" style="color: #fbfbfbff; opacity: 1;">Estado Actual</span>
                             <span class="status-badge" style="background: #2563eb;">${data.estado}</span>
                         </div>
                         <div class="result-item">
-                            <span class="result-label">Bloque</span>
+                            <span class="result-label">Bloque Actual</span>
                             <span class="result-value">${data.bloque}</span>
                         </div>
                         <div class="result-item">
@@ -155,8 +143,8 @@
                             <span class="result-value" style="font-size: 0.8rem; opacity: 0.7;">${data.ultima_actualizacion}</span>
                         </div>
                         <div class="result-item mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button type="button" class="btn-search-prem w-100" onclick="showHistory(${data.id}, '${data.numero_contrato}')" style="font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); position: relative; z-index: 5;">
-                                <i class="fas fa-history me-2"></i> Ver Historial de Cuenta
+                            <button type="button" class="btn-search-prem w-100" onclick="showHistory(${data.id}, 'Tramite Actual')" style="font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); position: relative; z-index: 5;">
+                                <i class="fas fa-history me-2"></i> Ver Historial Detallado
                             </button>
                         </div>
                     `;
@@ -166,26 +154,26 @@
                 .catch(error => {
                     btnText.textContent = 'Consultar Estado';
                     btnSpinner.classList.add('d-none');
-                    resultsArea.innerHTML =
-                        `<div class="text-danger small">Error al conectar con el servidor.</div>`;
+                    resultsArea.innerHTML = `<div class="text-danger small">Error de conexión con el servidor.</div>`;
                     resultsArea.classList.remove('d-none');
                 });
         });
 
         let historyModalInstance = null;
 
-        // Initialize after everything is loaded (Bootstrap must be ready)
+        // Initialize after everything is loaded (Professional Bootstrap handling)
         window.addEventListener('load', function() {
             const modalElement = document.getElementById("historyModal");
             if (modalElement) {
-                historyModalInstance = new bootstrap.Modal(modalElement, {
+                // Ensure singleton instance
+                const bootstrapObj = window.bootstrap || bootstrap;
+                historyModalInstance = new bootstrapObj.Modal(modalElement, {
                     backdrop: true,
                     keyboard: true
                 });
 
-                // Cleanup when modal is hidden to prevent locking background
-                modalElement.addEventListener('hidden.bs.modal', function () {
-                    // Force remove any leftover backdrops
+                // Cleanup when modal is hidden to prevent locking background (Crucial for UX)
+                modalElement.addEventListener('hidden.bs.modal', function() {
                     document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
                     document.body.classList.remove('modal-open');
                     document.body.style.overflow = '';
@@ -214,15 +202,13 @@
             content.style.display = "none";
             empty.style.display = "none";
             content.innerHTML = "";
-
-            const timeBadge = document.getElementById("historyTotalTimeBadge");
             if (timeBadge) timeBadge.style.display = "none";
 
             historyModalInstance.show();
 
-            fetch(`/consultar-historial/${cuentaId}`)
-                .then((response) => response.json())
-                .then((data) => {
+            window.apiFetch(`/consultar-historial/${cuentaId}`)
+                .then(response => response.json())
+                .then(data => {
                     spinner.style.display = "none";
                     const timeBadge = document.getElementById("historyTotalTimeBadge");
                     const timeSpan = document.getElementById("historyTotalTime");

@@ -94,12 +94,8 @@
                     const isActive = this.classList.contains('btn-outline-danger'); // danger = active, so clicking it deactivates
 
                     if (confirm(`¿Estás seguro de que quieres ${isActive ? 'desactivar' : 'activar'} este rol?`)) {
-                        fetch(url, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || ''
-                            }
+                        window.apiFetch(url, {
+                            method: 'POST'
                         })
                         .then(response => response.json())
                         .then(data => {

@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BloqueWorkflow;
+use App\Models\Permiso;
 use App\Models\Role;
+use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -13,7 +16,7 @@ class RoleController extends Controller
      */
     public function index()
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->isAdmin()) {
             abort(403);
@@ -28,12 +31,12 @@ class RoleController extends Controller
      */
     public function create()
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->isAdmin()) {
             abort(403);
         }
-        $bloques = \App\Models\BloqueWorkflow::where('es_activo', true)->orderBy('orden')->get();
+        $bloques = BloqueWorkflow::where('es_activo', true)->orderBy('orden')->get();
 
         return view('configuracion.roles.create', compact('bloques'));
     }
@@ -172,14 +175,14 @@ class RoleController extends Controller
      */
     public function edit($id)
     {
-        /** @var \App\Models\Usuario $user */
+        /** @var Usuario $user */
         $user = Auth::user();
         if (! $user->isAdmin()) {
             abort(403);
         }
 
         $role = Role::findOrFail($id);
-        $bloques = \App\Models\BloqueWorkflow::where('es_activo', true)->orderBy('orden')->get();
+        $bloques = BloqueWorkflow::where('es_activo', true)->orderBy('orden')->get();
 
         return view('configuracion.roles.edit', compact('role', 'bloques'));
     }
@@ -190,7 +193,7 @@ class RoleController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            /** @var \App\Models\Usuario $user */
+            /** @var Usuario $user */
             $user = Auth::user();
             if (! $user->isAdmin()) {
                 abort(403);
@@ -250,7 +253,7 @@ class RoleController extends Controller
     public function toggleStatus($id)
     {
         try {
-            /** @var \App\Models\Usuario $user */
+            /** @var Usuario $user */
             $user = Auth::user();
             if (! $user->isAdmin()) {
                 return response()->json(['success' => false, 'message' => 'No autorizado'], 403);
@@ -295,18 +298,18 @@ class RoleController extends Controller
             if ($slug === 'bloques_permitidos') {
                 if ($value === true) {
                     $slugName = 'acceso_bloque_all';
-                    $permiso = \App\Models\Permiso::firstOrCreate(['slug' => $slugName], ['nombre' => 'Acceso Todo Bloque', 'modulo' => 'Bloques']);
+                    $permiso = Permiso::firstOrCreate(['slug' => $slugName], ['nombre' => 'Acceso Todo Bloque', 'modulo' => 'Bloques']);
                     $permisoIds[] = $permiso->id;
                 } elseif (is_array($value)) {
                     foreach ($value as $bloqueCod) {
                         $slugName = 'acceso_bloque_' . $bloqueCod;
-                        $permiso = \App\Models\Permiso::firstOrCreate(['slug' => $slugName], ['nombre' => 'Bloque ' . $bloqueCod, 'modulo' => 'Bloques']);
+                        $permiso = Permiso::firstOrCreate(['slug' => $slugName], ['nombre' => 'Bloque ' . $bloqueCod, 'modulo' => 'Bloques']);
                         $permisoIds[] = $permiso->id;
                     }
                 }
             } elseif ($value === true) {
                 // Auto create permission if missing for backward compatibility with the dynamic matrix
-                $permiso = \App\Models\Permiso::firstOrCreate(['slug' => $slug], [
+                $permiso = Permiso::firstOrCreate(['slug' => $slug], [
                     'nombre' => ucwords(str_replace('_', ' ', $slug)),
                     'modulo' => 'General'
                 ]);

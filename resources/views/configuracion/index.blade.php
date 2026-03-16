@@ -97,14 +97,8 @@
 
     <script>
         function toggleStatus(userId) {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
-            fetch(`/configuracion/toggle-status/${userId}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    }
+            window.apiFetch(`/configuracion/toggle-status/${userId}`, {
+                    method: 'POST'
                 })
                 .then(response => response.json())
                 .then(data => {

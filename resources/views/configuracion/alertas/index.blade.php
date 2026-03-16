@@ -270,10 +270,9 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 document.getElementById('formConfig').addEventListener('submit', function(e) {
     e.preventDefault();
     const fd = new FormData(this);
-    fetch('{{ route("configuracion.alertas.config") }}', {
+    window.apiFetch('{{ route("configuracion.alertas.config") }}', {
         method: 'POST',
-        body: fd,
-        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+        body: fd
     })
     .then(r => r.json())
     .then(data => {
@@ -289,9 +288,8 @@ document.getElementById('btnSyncFestivos').addEventListener('click', function() 
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
     btn.disabled = true;
 
-    fetch('{{ route("configuracion.alertas.festivos.sync") }}', {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+    window.apiFetch('{{ route("configuracion.alertas.festivos.sync") }}', {
+        method: 'POST'
     })
     .then(r => r.json())
     .then(data => {
@@ -315,10 +313,9 @@ document.getElementById('btnSyncFestivos').addEventListener('click', function() 
 document.getElementById('formFestivo').addEventListener('submit', function(e) {
     e.preventDefault();
     const fd = new FormData(this);
-    fetch('{{ route("configuracion.alertas.festivos.store") }}', {
+    window.apiFetch('{{ route("configuracion.alertas.festivos.store") }}', {
         method: 'POST',
-        body: fd,
-        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+        body: fd
     })
     .then(r => r.json())
     .then(data => {
@@ -334,9 +331,8 @@ document.getElementById('formFestivo').addEventListener('submit', function(e) {
 
 window.eliminarFestivo = function(id) {
     if (!confirm('¿Eliminar este festivo?')) return;
-    fetch(`/configuracion/alertas/festivos/${id}`, {
-        method: 'DELETE',
-        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+    window.apiFetch(`/configuracion/alertas/festivos/${id}`, {
+        method: 'DELETE'
     })
     .then(r => r.json())
     .then(data => {
@@ -365,10 +361,9 @@ document.getElementById('formDestinatario').addEventListener('submit', function(
     fd.append('tipo_destinatario', tipo);
     fd.append('destinatario_id', id);
 
-    fetch('{{ route("configuracion.alertas.destinatarios.store") }}', {
+    window.apiFetch('{{ route("configuracion.alertas.destinatarios.store") }}', {
         method: 'POST',
-        body: fd,
-        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+        body: fd
     })
     .then(r => r.json())
     .then(data => {
@@ -384,9 +379,8 @@ document.getElementById('formDestinatario').addEventListener('submit', function(
 
 window.eliminarDestinatario = function(id) {
     if (!confirm('¿Eliminar este destinatario?')) return;
-    fetch(`/configuracion/alertas/destinatarios/${id}`, {
-        method: 'DELETE',
-        headers: { 'X-CSRF-TOKEN': csrfToken, 'Accept': 'application/json' }
+    window.apiFetch(`/configuracion/alertas/destinatarios/${id}`, {
+        method: 'DELETE'
     })
     .then(r => r.json())
     .then(data => {

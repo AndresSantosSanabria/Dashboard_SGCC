@@ -12,6 +12,7 @@ use App\Models\Usuario;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class AnaliticaController extends Controller
 {
@@ -25,6 +26,12 @@ class AnaliticaController extends Controller
      */
     public function index(Request $request)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->puedeAccederAnalitica()) {
+            abort(403, 'No tienes permiso para acceder al módulo de Analítica');
+        }
+
         // AUDITORÍA PASIVA: Registramos cada acceso al BI para trazabilidad interna.
         Contrato::logManualAudit(null, 'READ', 'El usuario consultó el panel de analítica y estadísticas', 'analitica');
 
