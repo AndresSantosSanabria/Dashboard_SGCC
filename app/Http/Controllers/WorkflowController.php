@@ -255,6 +255,7 @@ class WorkflowController extends Controller
                 'requires_responsible' => true,
                 'cuenta_id' => $cuentaId,
                 'estado_destino_id' => $request->estado_destino_id,
+                'estado_codigo' => $estadoDestino->codigo, // Added this line
                 'message' => 'Se requiere asignar un responsable para la siguiente fase.',
             ]);
         }
