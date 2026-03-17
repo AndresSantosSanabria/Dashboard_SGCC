@@ -139,10 +139,10 @@
                             <span class="result-value">${data.bloque}</span>
                         </div>
                         ${data.responsable ? `
-                        <div class="result-item">
-                            <span class="result-label">Responsable Asignado</span>
-                            <span class="result-value" style="display:flex;align-items:center;gap:6px;">
-                                <i class="fas fa-user-circle" style="color:#60a5fa;"></i>
+                        <div class="result-item" style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 10px; margin-top: 6px; background: rgba(96,165,250,0.12); border-radius: 8px; padding: 10px 14px;">
+                            <span class="result-label" style="color:#93c5fd; font-size:0.72rem; letter-spacing:0.08em;">FUE ASIGNADO A</span>
+                            <span class="result-value" style="display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:700;color:#fff;">
+                                <i class="fas fa-user-check" style="color:#60a5fa; font-size:1.1rem;"></i>
                                 ${data.responsable}
                             </span>
                         </div>
@@ -245,6 +245,36 @@
                             if (estadoDestino.tipo === "DEVUELTO") badgeClass = "bg-danger";
                             if (estadoDestino.tipo === "APROBADO" || estadoDestino.tipo === "FINAL") badgeClass = "bg-success";
 
+                            // Detectar si es una transición automática o una asignación
+                            const esAutomatismo = h.comentarios && h.comentarios.startsWith("Automatismo:");
+                            const esAsignacion = h.comentarios && (h.comentarios.startsWith("Asignado a:") || h.comentarios.startsWith("Fue asignado a:") || h.comentarios.startsWith("Devuelto a:"));
+
+                            // Nombre completo del usuario que realizó la acción
+                            let nombreUsuario = "";
+                            if (h.usuario_accion) {
+                                const pNombre = h.usuario_accion.primer_nombre ?? "";
+                                const pApellido = h.usuario_accion.primer_apellido ?? "";
+                                nombreUsuario = (pNombre + " " + pApellido).trim() || "Sin nombre";
+                            }
+
+                            const usuarioHTML = `
+                                <span><i class="fas fa-user-circle me-1 text-primary"></i> ${nombreUsuario || "Sin registro"}</span>
+                                ${esAutomatismo ? `<span style="color:#6b7280;font-style:italic;font-size:0.75rem;margin-left:8px;"><i class="fas fa-robot me-1"></i>(Auto)</span>` : ""}
+                            `;
+
+                            // Comentario con estilo especial si es asignación o devolución
+                            let comentarioHTML = "";
+                            if (esAsignacion) {
+                                const esDevolucion = h.comentarios.startsWith("Devuelto a:");
+                                comentarioHTML = `
+                                    <div class="item-comment" style="background:${esDevolucion ? '#fef2f2' : '#eff6ff'}; border-left:3px solid ${esDevolucion ? '#ef4444' : '#2563eb'}; border-radius:6px; padding:8px 12px; margin-top:8px;">
+                                        <i class="fas ${esDevolucion ? 'fa-undo' : 'fa-user-check'} me-2" style="color:${esDevolucion ? '#ef4444' : '#2563eb'};"></i>
+                                        <strong style="color:${esDevolucion ? '#991b1b' : '#1d4ed8'};">${h.comentarios}</strong>
+                                    </div>`;
+                            } else if (h.comentarios && !esAutomatismo) {
+                                comentarioHTML = `<div class="item-comment"><i class="fas fa-quote-left me-2 opacity-25"></i>${h.comentarios}</div>`;
+                            }
+
                             const item = document.createElement("div");
                             item.className = "timeline-item-premium";
                             item.innerHTML = `
@@ -253,32 +283,32 @@
                                     <div class="item-time">${timeStr}</div>
                                 </div>
                                 <div class="item-center">
-                                    <div class="item-dot"></div>
+                                    <div class="item-dot" style="${esAsignacion ? 'background:#2563eb;border-color:#bfdbfe;' : ''}"></div>
                                     <div class="item-line"></div>
                                 </div>
-                                <div class="item-right">
+                                <div class="item-right" style="${esAsignacion ? 'background:#f0f7ff;border:1px solid #bfdbfe;' : ''}">
                                     <div class="item-header">
-                                        <div class="item-title">${h.bloque?.nombre ?? "Bloque"}</div>
-                                        <span class="badge ${badgeClass}" style="font-size: 0.7rem; border-radius: 6px;">
-                                            ${estadoDestino.nombre ?? "N/A"}
-                                        </span>
+                                        <div class="item-title">${esAsignacion ? (h.comentarios.startsWith("Devuelto a:") ? '↩️ Devolución' : '👤 Asignación') : (h.bloque?.nombre ?? "Bloque")}</div>
+                                        ${!esAsignacion ? `<span class="badge ${badgeClass}" style="font-size: 0.7rem; border-radius: 6px;">${estadoDestino.nombre ?? "N/A"}</span>` : ''}
                                     </div>
+                                    ${!esAsignacion ? `
                                     <div class="item-transition">
                                         <span class="text-muted small">Origen:</span> 
                                         <span class="fw-bold">${h.estado_origen?.nombre ?? "Inicio"}</span> 
                                         <i class="fas fa-long-arrow-alt-right mx-2 text-primary opacity-50"></i> 
                                         <span class="text-muted small">Destino:</span> 
                                         <span class="fw-bold">${estadoDestino.nombre ?? "N/A"}</span>
-                                    </div>
+                                    </div>` : ''}
                                     <div class="item-meta">
-                                        <span><i class="fas fa-user-circle me-1 text-primary"></i> ${h.usuario_accion?.primer_nombre ?? "Sistema"}</span>
-                                        ${h.accion ? `<span><i class="fas fa-tag me-1 text-primary"></i> ${h.accion}</span>` : ""}
+                                        ${usuarioHTML}
+                                        ${h.accion && !esAutomatismo && !esAsignacion ? `<span><i class="fas fa-tag me-1 text-primary"></i> ${h.accion}</span>` : ""}
                                     </div>
-                                    ${h.comentarios ? `<div class="item-comment"><i class="fas fa-quote-left me-2 opacity-25"></i>${h.comentarios}</div>` : ""}
+                                    ${comentarioHTML}
                                 </div>
                             `;
                             content.appendChild(item);
                         });
+
                     } else {
                         empty.style.display = "block";
                     }

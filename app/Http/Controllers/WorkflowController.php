@@ -333,6 +333,14 @@ class WorkflowController extends Controller
             }
 
             if ($bloqueTarget) {
+                // Load the responsable user to get their full name
+                $responsableUsuario = Usuario::findOrFail($request->responsable_id);
+                $nombreResponsable = trim(
+                    ($responsableUsuario->primer_nombre ?? '') . ' ' .
+                    ($responsableUsuario->primer_apellido ?? '')
+                );
+                $comentarioAsignacion = "Fue asignado a: {$nombreResponsable} (Bloque: {$bloqueTarget->nombre})";
+
                 // Update or create the block record with the assigned responsible
                 EstadoBloqueCuenta::updateOrCreate(
                     ['cuenta_cobro_id' => $cuentaId, 'bloque_id' => $bloqueTarget->id],
@@ -341,6 +349,18 @@ class WorkflowController extends Controller
 
                 // SYNC: Update the main account's current responsible
                 $cuenta->update(['responsable_actual_id' => $request->responsable_id]);
+
+                // Registrar en el historial quién fue asignado al siguiente bloque
+                HistorialWorkflow::create([
+                    'cuenta_cobro_id' => $cuentaId,
+                    'bloque_id'       => $bloqueTarget->id,
+                    'estado_origen_id'  => $cuenta->estado_actual_id,
+                    'estado_destino_id' => $cuenta->estado_actual_id,
+                    'usuario_accion_id' => Auth::id() ?? 1,
+                    'fecha_transicion'  => now(),
+                    'tiempo_en_estado_anterior_minutos' => 0,
+                    'comentarios' => $comentarioAsignacion,
+                ]);
 
                 Log::info("Responsible assigned for cuenta {$cuentaId}: User ID = {$request->responsable_id}, Block = {$bloqueTarget->codigo} (ID: {$bloqueTarget->id})");
             }
@@ -391,6 +411,25 @@ class WorkflowController extends Controller
             $tiempoPrevio = (int) abs(now()->diffInMinutes($cuenta->created_at));
         }
 
+        // C. DETECCIÓN DE DEVOLUCIONES:
+        // Si el bloque nuevo es "anterior" al actual, restauramos automáticamente 
+        // al responsable que lo trabajó antes. UX centrada en la eficiencia.
+        $bloqueAnteriorId = $cuenta->bloque_actual_id;
+        $esDevolucion = $this->esDevolucionDeBloque($bloqueAnteriorId, $estadoDestino->bloque_id);
+        $responsableId = Auth::id() ?? 1;
+
+        if ($esDevolucion) {
+            $responsableId = $this->obtenerResponsablePrevio($cuenta->id, $estadoDestino->bloque_id) ?? $responsableId;
+            $this->marcarBloqueComoDevuelto($cuenta->id, $bloqueAnteriorId, $comentario);
+
+            // Enriquecer el comentario si es una devolución
+            $respUser = Usuario::find($responsableId);
+            if ($respUser) {
+                $nombreResp = trim(($respUser->primer_nombre ?? '') . ' ' . ($respUser->primer_apellido ?? ''));
+                $comentario = "Devuelto a: {$nombreResp}" . ($comentario ? " | {$comentario}" : "");
+            }
+        }
+
         // B. REGISTRO DE HISTORIA (Audit Trail): Punto innegociable para auditorías externas.
         HistorialWorkflow::create([
             'cuenta_cobro_id' => $cuenta->id,
@@ -402,18 +441,6 @@ class WorkflowController extends Controller
             'tiempo_en_estado_anterior_minutos' => $tiempoPrevio,
             'comentarios' => $comentario,
         ]);
-
-        // C. DETECCIÓN DE DEVOLUCIONES:
-        // Si el bloque nuevo es "anterior" al actual, restauramos automáticamente 
-        // al responsable que lo trabajó antes. UX centrada en la eficiencia.
-        $bloqueAnteriorId = $cuenta->bloque_actual_id;
-        $esDevolucion = $this->esDevolucionDeBloque($bloqueAnteriorId, $estadoDestino->bloque_id);
-        $responsableId = Auth::id() ?? 1;
-
-        if ($esDevolucion) {
-            $responsableId = $this->obtenerResponsablePrevio($cuenta->id, $estadoDestino->bloque_id) ?? $responsableId;
-            $this->marcarBloqueComoDevuelto($cuenta->id, $bloqueAnteriorId, $comentario);
-        }
 
         // D. CIERRE DE BLOQUE: Si avanzamos de fase, sellamos el progreso del bloque anterior.
         if ($bloqueAnteriorId != $estadoDestino->bloque_id && ! $esDevolucion) {

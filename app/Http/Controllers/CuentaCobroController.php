@@ -67,25 +67,44 @@ class CuentaCobroController extends Controller
         $nit = $request->input('nit');
         if (! $nit) return response()->json(['error' => 'NIT requerido'], 400);
 
-        // Estrategia: Buscamos la cuenta más reciente (Latest) para este contratista.
+        // Buscamos la cuenta más reciente para este contratista.
         $cuenta = CuentaCobro::whereHas('contrato.contratista', fn($q) => $q->where('nit', $nit))
-            ->with(['estadoActual', 'bloqueActual', 'contrato.contratista', 'responsableActual'])
+            ->with([
+                'estadoActual',
+                'bloqueActual',
+                'contrato.contratista',
+                'responsableActual',
+                'estadosBloques.responsable', // responsable por bloque
+            ])
             ->latest('updated_at')->first();
 
         if (! $cuenta) return response()->json(['error' => 'No se encontraron trámites activos'], 404);
 
+        // Buscar responsable: primero en el campo principal, luego en el bloque actual
         $responsable = $cuenta->responsableActual;
-        $nombreResponsable = $responsable
-            ? trim(($responsable->primer_nombre ?? '') . ' ' . ($responsable->primer_apellido ?? ''))
-            : null;
+
+        if (! $responsable && $cuenta->bloque_actual_id) {
+            $bloqueActual = $cuenta->estadosBloques
+                ->where('bloque_id', $cuenta->bloque_actual_id)
+                ->first();
+            $responsable = $bloqueActual?->responsable;
+        }
+
+        $nombreResponsable = null;
+        if ($responsable) {
+            $nombreResponsable = trim(
+                ($responsable->primer_nombre ?? '') . ' ' .
+                ($responsable->primer_apellido ?? '')
+            ) ?: null;
+        }
 
         return response()->json([
-            'id' => $cuenta->id,
-            'contratista' => $cuenta->contrato?->contratista?->razon_social ?? 'Sin datos',
-            'estado' => $cuenta->estadoActual?->nombre ?? 'En trámite',
-            'bloque' => $cuenta->bloqueActual?->nombre ?? 'N/A',
-            'responsable' => $nombreResponsable,
-            'ultima_actualizacion' => $cuenta->updated_at->format('d/m/Y H:i A'),
+            'id'                  => $cuenta->id,
+            'contratista'         => $cuenta->contrato?->contratista?->razon_social ?? 'Sin datos',
+            'estado'              => $cuenta->estadoActual?->nombre ?? 'En trámite',
+            'bloque'              => $cuenta->bloqueActual?->nombre ?? 'N/A',
+            'responsable'         => $nombreResponsable,
+            'ultima_actualizacion'=> $cuenta->updated_at->format('d/m/Y H:i A'),
         ]);
     }
 
@@ -102,6 +121,7 @@ class CuentaCobroController extends Controller
             'historialWorkflow.estadoOrigen',
             'historialWorkflow.estadoDestino',
             'historialWorkflow.bloque',
+            'historialWorkflow.usuarioAccion',
         ])->findOrFail($cuentaId);
 
         return response()->json([
@@ -110,7 +130,7 @@ class CuentaCobroController extends Controller
             'numero_contrato' => $cuenta->contrato?->numero_contrato ?? 'N/A',
             'estado_actual' => $cuenta->estadoActual?->nombre ?? 'En trámite',
             'bloque_actual' => $cuenta->bloqueActual?->nombre ?? 'N/A',
-            'historial' => $cuenta->historialWorkflow,
+            'historial' => $cuenta->historialWorkflow->sortByDesc('fecha_transicion')->values(),
             'tiempo_total' => $cuenta->tiempo_total_ejecucion,
         ]);
     }
