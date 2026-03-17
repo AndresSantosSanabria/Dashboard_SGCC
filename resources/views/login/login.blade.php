@@ -138,6 +138,15 @@
                             <span class="result-label">Bloque Actual</span>
                             <span class="result-value">${data.bloque}</span>
                         </div>
+                        ${data.responsable ? `
+                        <div class="result-item">
+                            <span class="result-label">Responsable Asignado</span>
+                            <span class="result-value" style="display:flex;align-items:center;gap:6px;">
+                                <i class="fas fa-user-circle" style="color:#60a5fa;"></i>
+                                ${data.responsable}
+                            </span>
+                        </div>
+                        ` : ''}
                         <div class="result-item">
                             <span class="result-label">Última Actualización</span>
                             <span class="result-value" style="font-size: 0.8rem; opacity: 0.7;">${data.ultima_actualizacion}</span>
@@ -202,6 +211,7 @@
             content.style.display = "none";
             empty.style.display = "none";
             content.innerHTML = "";
+            const timeBadge = document.getElementById("historyTotalTimeBadge");
             if (timeBadge) timeBadge.style.display = "none";
 
             historyModalInstance.show();
@@ -210,7 +220,6 @@
                 .then(response => response.json())
                 .then(data => {
                     spinner.style.display = "none";
-                    const timeBadge = document.getElementById("historyTotalTimeBadge");
                     const timeSpan = document.getElementById("historyTotalTime");
                     if (data.tiempo_total && timeBadge && timeSpan) {
                         timeSpan.textContent = data.tiempo_total;
