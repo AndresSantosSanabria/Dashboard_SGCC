@@ -67,8 +67,14 @@
         </div>
 
         <div class="d-grid gap-2 mt-4">
-            <button type="submit" class="btn btn-primary" data-bs-dismiss="offcanvas">Aplicar Filtros</button>
-            <a href="{{ route('dashboard') }}" class="btn btn-secondary">Limpiar filtros</a>
+            <button type="button" class="btn btn-primary"
+                onclick="bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAdvancedFilters'))?.hide(); fetchFilteredData();">
+                Aplicar Filtros
+            </button>
+            <button type="button" class="btn btn-secondary"
+                onclick="document.getElementById('filtersForm').reset(); bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAdvancedFilters'))?.hide(); fetchFilteredData();">
+                Limpiar filtros
+            </button>
         </div>
     </div>
 </div>

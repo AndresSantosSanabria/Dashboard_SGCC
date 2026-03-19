@@ -86,6 +86,16 @@ class WorkflowController extends Controller
             });
         }
 
+        if ($request->filled('estado_nombre')) {
+            $query->whereHas('estadoActual', function ($q) use ($request) {
+                $q->where('nombre', $request->estado_nombre);
+            });
+        }
+
+        if ($request->filled('numero_cuenta')) {
+            $query->where('numero_cuenta', (int) $request->numero_cuenta);
+        }
+
         $cuentas = $query->get();
 
         // 5. CONSTRUCCIÓN DE LA MATRIZ DEL WORKFLOW

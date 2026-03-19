@@ -135,8 +135,11 @@ class AnaliticaController extends Controller
 
         // 4. Datos para gráficos ApexCharts
         $chartData = [
-            'gap_chart' => $this->getGapDataSql(clone $filterQuery),
-            'heatmap'   => $this->getHeatmapDataSql(clone $filterQuery),
+            'gap_chart'      => $this->getGapDataSql(clone $filterQuery),
+            'heatmap'        => $this->getHeatmapDataSql(clone $filterQuery),
+            'estado_anillos' => $this->getEstadoAnillos(clone $filterQuery),
+            'demora_bloques' => $this->getDemoraPromedioBloques(clone $filterQuery),
+            'timeline'       => $this->getTimelineActivity(clone $filterQuery),
         ];
 
         // 5. RESPUESTA (Dual: Síncrona o AJAX)
@@ -207,5 +210,98 @@ class AnaliticaController extends Controller
             ->groupBy('usuarios.id', 'primer_nombre', 'primer_apellido')
             ->limit(10)
             ->get();
+    }
+
+    /**
+     * Donut de Estado: En Proceso vs. En Devolución.
+     * Compara cuentas activas sin devolución contra las que están
+     * actualmente en un estado tipo DEVUELTO (rechazadas por algún bloque).
+     */
+    private function getEstadoAnillos($query)
+    {
+        $enDevolucion = (clone $query)
+            ->whereHas('estadoActual', fn($q) => $q->where('tipo', 'DEVUELTO'))
+            ->count();
+
+        $enProceso = (clone $query)
+            ->where('finalizada', false)
+            ->whereHas('estadoActual', fn($q) => $q->where('tipo', '!=', 'DEVUELTO'))
+            ->count();
+
+        return [
+            'labels' => ['En Proceso', 'En Devolución'],
+            'series' => [$enProceso, $enDevolucion],
+        ];
+    }
+
+    /**
+     * Demora Promedio por Bloque: Parte de TODOS los bloques del workflow y hace
+     * LEFT JOIN con el historial para que siempre aparezcan todas las etapas,
+     * aunque su promedio sea 0 por falta de datos históricos.
+     */
+    private function getDemoraPromedioBloques($query)
+    {
+        $cuentaIds = (clone $query)->pluck('cuentas_cobro.id');
+
+        // Traemos todos los bloques ordenados, aunque no tengan historial
+        $bloques = DB::table('bloques_workflow')
+            ->orderBy('orden')
+            ->pluck('nombre', 'id');
+
+        if ($cuentaIds->isEmpty()) {
+            return $bloques->map(fn($nombre) => [
+                'bloque'         => $nombre,
+                'promedio_horas' => 0,
+            ])->values()->toArray();
+        }
+
+        // LEFT JOIN: si un bloque no tiene historial, AVG devuelve NULL → lo convertimos a 0
+        $promedios = DB::table('bloques_workflow as bw')
+            ->leftJoin('historial_workflow as hw', function ($join) use ($cuentaIds) {
+                $join->on('bw.id', '=', 'hw.bloque_id')
+                     ->whereIn('hw.cuenta_cobro_id', $cuentaIds)
+                     ->where('hw.tiempo_en_estado_anterior_minutos', '>', 0);
+            })
+            ->selectRaw('bw.id, bw.nombre as bloque, bw.orden, COALESCE(AVG(hw.tiempo_en_estado_anterior_minutos), 0) as promedio_minutos')
+            ->groupBy('bw.id', 'bw.nombre', 'bw.orden')
+            ->orderBy('bw.orden')
+            ->get();
+
+        return $promedios->map(fn($row) => [
+            'bloque'         => $row->bloque,
+            'promedio_horas' => round($row->promedio_minutos / 60, 2),
+        ])->values()->toArray();
+    }
+
+    /**
+     * Timeline de Actividad: Cuenta transiciones diarias en los últimos 30 días.
+     */
+    private function getTimelineActivity($query)
+    {
+        $cuentaIds = (clone $query)->pluck('cuentas_cobro.id');
+
+        if ($cuentaIds->isEmpty()) {
+            return ['labels' => [], 'series' => []];
+        }
+
+        $data = DB::table('historial_workflow')
+            ->whereIn('cuenta_cobro_id', $cuentaIds)
+            ->where('fecha_transicion', '>=', now()->subDays(30))
+            ->selectRaw("DATE(fecha_transicion) as dia, COUNT(*) as total")
+            ->groupBy('dia')
+            ->orderBy('dia')
+            ->pluck('total', 'dia');
+
+        // Rellenar días vacíos con 0 para una línea continua
+        $result = [];
+        for ($i = 29; $i >= 0; $i--) {
+            $dia = now()->subDays($i)->format('Y-m-d');
+            $result[$dia] = $data->get($dia, 0);
+        }
+
+        return [
+            'labels' => array_keys($result),
+            'series' => array_values($result),
+        ];
     }
 }

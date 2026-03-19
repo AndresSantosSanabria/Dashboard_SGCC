@@ -123,7 +123,8 @@
                     btnSpinner.classList.add('d-none');
 
                     if (!response.ok || data.error) {
-                        resultsArea.innerHTML = `<div class="text-warning small">${data.error || 'No se encontró la información'}</div>`;
+                        resultsArea.innerHTML =
+                            `<div class="text-warning small">${data.error || 'No se encontró la información'}</div>`;
                     } else {
                         resultsArea.innerHTML = `
                         <div class="result-item">
@@ -163,7 +164,8 @@
                 .catch(error => {
                     btnText.textContent = 'Consultar Estado';
                     btnSpinner.classList.add('d-none');
-                    resultsArea.innerHTML = `<div class="text-danger small">Error de conexión con el servidor.</div>`;
+                    resultsArea.innerHTML =
+                        `<div class="text-danger small">Error de conexión con el servidor.</div>`;
                     resultsArea.classList.remove('d-none');
                 });
         });
@@ -243,7 +245,8 @@
                             let badgeClass = "bg-info";
                             const estadoDestino = h.estado_destino || {};
                             if (estadoDestino.tipo === "DEVUELTO") badgeClass = "bg-danger";
-                            if (estadoDestino.tipo === "APROBADO" || estadoDestino.tipo === "FINAL") badgeClass = "bg-success";
+                            if (estadoDestino.tipo === "APROBADO" || estadoDestino.tipo === "FINAL")
+                                badgeClass = "bg-success";
 
                             // Detectar si es una transición automática o una asignación
                             const esAutomatismo = h.comentarios && h.comentarios.startsWith("Automatismo:");

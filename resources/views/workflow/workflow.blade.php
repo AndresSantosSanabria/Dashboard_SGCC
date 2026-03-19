@@ -95,49 +95,73 @@
         @vite(['resources/views/workflow/workflow.js'])
         <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // ── Live search: Filtrar por número de contrato mientras se escribe ──
-                const inputContrato = document.getElementById('filtro_numero_contrato');
+                const filterForm = document.querySelector('.filter-bar');
                 let debounceTimer = null;
 
-                if (inputContrato) {
-                    inputContrato.addEventListener('input', function() {
-                        clearTimeout(debounceTimer);
-                        debounceTimer = setTimeout(() => {
-                            recargarKanban();
-                        }, 400); // 400ms de espera tras dejar de escribir
-                    });
-                }
-
                 window.recargarKanban = function() {
-                    const form = inputContrato.closest('form');
-                    const formData = new FormData(form);
+                    const formData = new FormData(filterForm);
                     const params = new URLSearchParams(formData).toString();
                     const url = `{{ route('workflow') }}?${params}`;
 
-                    // Preservar Scroll
+                    window.history.replaceState(null, '', url);
+
+                    const kanbanContainer = document.getElementById('kanban-container');
+                    kanbanContainer.style.opacity = '0.5';
+                    kanbanContainer.style.pointerEvents = 'none';
+
                     const scrollY = window.scrollY;
                     const scrollX = window.scrollX;
 
-                    // Actualizar la URL del navegador sin recargar la página
-                    window.history.replaceState(null, '', url);
-
-                    // Recargar el kanban vía AJAX
                     window.apiFetch(url)
                         .then(r => r.text())
                         .then(html => {
-                            // Limpiar backdrops huérfanos antes de inyectar nuevo HTML
                             document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
                             document.body.classList.remove('modal-open');
                             document.body.style.paddingRight = '';
                             document.body.style.overflow = '';
 
-                            document.getElementById('kanban-container').innerHTML = html;
-                            // Restaurar Scroll
+                            kanbanContainer.innerHTML = html;
+                            kanbanContainer.style.opacity = '1';
+                            kanbanContainer.style.pointerEvents = 'auto';
                             window.scrollTo(scrollX, scrollY);
                         })
-                        .catch(err => console.error('Error al filtrar:', err));
+                        .catch(err => {
+                            console.error('Error al filtrar:', err);
+                            kanbanContainer.style.opacity = '1';
+                            kanbanContainer.style.pointerEvents = 'auto';
+                        });
+                };
+
+                function debouncedReload() {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => recargarKanban(), 400);
                 }
 
+                // Selects → recarga inmediata
+                filterForm.querySelectorAll('select').forEach(select => {
+                    select.addEventListener('change', () => recargarKanban());
+                });
+
+                // Inputs de texto/número → debounce 400ms
+                filterForm.querySelectorAll('input[type="text"], input[type="number"]').forEach(input => {
+                    input.addEventListener('input', debouncedReload);
+                });
+
+                // Submit del formulario → interceptar y usar AJAX
+                filterForm.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    recargarKanban();
+                });
+
+                // Botón Limpiar → resetear form y recargar
+                const btnLimpiar = filterForm.querySelector('a.btn-outline-secondary');
+                if (btnLimpiar) {
+                    btnLimpiar.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        filterForm.reset();
+                        recargarKanban();
+                    });
+                }
             });
         </script>
     @endpush

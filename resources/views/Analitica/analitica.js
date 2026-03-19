@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 series: data.estado_anillos.series,
                 chart: { type: 'donut', height: 320, ...baseFont },
                 labels: data.estado_anillos.labels,
-                colors: [P.amber, P.redLt],
+                colors: [P.blue, P.red],
                 legend: {
                     position: 'bottom',
                     fontSize: '12px',

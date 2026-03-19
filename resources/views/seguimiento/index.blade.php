@@ -711,22 +711,22 @@
             if (!result.isConfirmed) return;
 
             try {
-                const res = await window.apiFetch(`{{ url('/seguimiento') }}/${id}`, {
+                // Usamos ruta relativa por consistencia con el dashboard que sí funciona
+                const res = await window.apiFetch(`/seguimiento/${id}`, {
                     method: 'DELETE'
                 });
 
-                const data = await res.json();
-                if (res.ok) {
-                    if (window.showSnackbar) {
-                        window.showSnackbar(data.message, 'success');
-                    }
+                const data = await res.json().catch(() => ({ success: false, message: 'Respuesta inválida del servidor' }));
+
+                if (res.ok && (data.success || data.message?.includes('correctamente'))) {
+                    window.showSnackbar(data.message || 'Contrato eliminado', 'success');
                     applyAdvancedFilters();
                 } else {
                     Swal.fire('Error', data.message || 'No se pudo eliminar el contrato', 'error');
                 }
             } catch (e) {
-                console.error(e);
-                window.showSnackbar('Error de conexión al intentar eliminar', 'error');
+                console.error('Delete Error:', e);
+                window.showSnackbar('Error al intentar eliminar. Intente recargar la página.', 'error');
             }
         }
     </script>

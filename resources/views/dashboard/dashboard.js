@@ -195,12 +195,37 @@ const fetchFilteredData = () => {
         });
 };
 
-// El refresco automático ha sido eliminado a petición del usuario.
-// Ahora se requiere pulsar el botón "Filtrar" o presionar Enter.
 if (filtersForm) {
+    const debouncedFetch = debounce(fetchFilteredData, 400);
+
+    // Submit interceptado → AJAX
     filtersForm.addEventListener("submit", function (e) {
         e.preventDefault();
         fetchFilteredData();
+    });
+
+    // Inputs de texto/número → debounce 400ms (barra principal + offcanvas)
+    filtersForm.querySelectorAll("input[type='text'], input[type='number']").forEach((input) => {
+        input.addEventListener("input", debouncedFetch);
+    });
+
+    // Selects → recarga inmediata al cambiar
+    filtersForm.querySelectorAll("select").forEach((select) => {
+        select.addEventListener("change", fetchFilteredData);
+    });
+
+    // Checkboxes (filtros avanzados) → recarga inmediata al cambiar
+    filtersForm.querySelectorAll("input[type='checkbox']").forEach((checkbox) => {
+        checkbox.addEventListener("change", fetchFilteredData);
+    });
+
+    // Botón "Limpiar filtros" del offcanvas → resetear form y recargar async
+    filtersForm.querySelectorAll("a.btn-secondary, a.btn-danger").forEach((link) => {
+        link.addEventListener("click", function (e) {
+            e.preventDefault();
+            filtersForm.reset();
+            fetchFilteredData();
+        });
     });
 }
 
@@ -545,7 +570,22 @@ window.editAccount = function (id) {
 };
 
 window.startNextAccount = function (id, contrato, siguienteCuenta) {
-    if (confirm(`¿Desea iniciar formalmente el trámite para la cuenta #${siguienteCuenta} del contrato ${contrato}?`)) {
+    Swal.fire({
+        title: '¿Iniciar siguiente cuenta?',
+        text: `¿Desea iniciar formalmente el trámite para la cuenta #${siguienteCuenta} del contrato ${contrato}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#004884',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, iniciar',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        customClass: {
+            popup: 'premium-swal-popup',
+            title: 'premium-swal-title'
+        }
+    }).then(result => {
+        if (!result.isConfirmed) return;
         window.apiFetch(`/workflow/iniciar-siguiente-cuenta/${id}`, {
             method: "POST"
         })
@@ -553,7 +593,7 @@ window.startNextAccount = function (id, contrato, siguienteCuenta) {
             .then(data => {
                 if (data.success) {
                     showSnackbar("✅ " + data.message, "success");
-                    fetchFilteredData(); // Recargar tabla/dashboard
+                    fetchFilteredData();
                 } else {
                     showSnackbar("⚠️ " + data.message, "error");
                 }
@@ -562,33 +602,47 @@ window.startNextAccount = function (id, contrato, siguienteCuenta) {
                 console.error(err);
                 showSnackbar("❌ Error al iniciar el siguiente ciclo", "error");
             });
-    }
+    });
 };
 
 
 window.deleteContrato = function (id, numero) {
-    if (!confirm(`¿Está seguro de eliminar de forma GLOBAL el contrato #${numero}? Esta acción eliminará también sus cuentas de cobro, historial y documentos. No se puede deshacer.`)) {
-        return;
-    }
+    Swal.fire({
+        title: '¿Confirmar eliminación?',
+        text: `¿Está seguro de eliminar de forma GLOBAL el contrato #${numero}? Esta acción eliminará también sus cuentas de cobro, historial y documentos. No se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar todo',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        customClass: {
+            popup: 'premium-swal-popup',
+            title: 'premium-swal-title'
+        }
+    }).then(result => {
+        if (!result.isConfirmed) return;
 
-    window.apiFetch(`/dashboard/contrato/${id}`, {
-        method: 'DELETE'
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success || (data.message && data.message.toLowerCase().includes('éxito'))) {
-                showSnackbar("✅ " + (data.message || "Contrato eliminado"), "success");
-                if (typeof fetchFilteredData === 'function') {
-                    fetchFilteredData();
-                } else {
-                    location.reload();
-                }
-            } else {
-                showSnackbar("⚠️ " + (data.message || 'No se pudo eliminar el contrato'), "error");
-            }
+        window.apiFetch(`/dashboard/contrato/${id}`, {
+            method: 'DELETE'
         })
-        .catch(err => {
-            console.error(err);
-            showSnackbar("❌ Error de conexión al intentar eliminar", "error");
-        });
+            .then(res => res.json())
+            .then(data => {
+                if (data.success || (data.message && data.message.toLowerCase().includes('éxito'))) {
+                    showSnackbar("✅ " + (data.message || "Contrato eliminado"), "success");
+                    if (typeof fetchFilteredData === 'function') {
+                        fetchFilteredData();
+                    } else {
+                        location.reload();
+                    }
+                } else {
+                    showSnackbar("⚠️ " + (data.message || 'No se pudo eliminar el contrato'), "error");
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showSnackbar("❌ Error de conexión al intentar eliminar", "error");
+            });
+    });
 };

@@ -254,6 +254,14 @@ class CuentaCobroController extends Controller
             $query->whereHas('contrato.contratista', fn($q) => $q->where('nit', 'like', '%' . $request->searchCedula . '%'));
         }
 
+        if ($request->filled('searchEstado')) {
+            $query->whereHas('estadoActual', fn($q) => $q->where('nombre', $request->searchEstado));
+        }
+
+        if ($request->filled('searchNumeroCuenta')) {
+            $query->where('numero_cuenta', (int) $request->searchNumeroCuenta);
+        }
+
         $cuentas = $query->latest()->paginate(20)->appends($request->all());
 
         // Respuesta AJAX para refresco de tabla sin recargar toda la página.
@@ -264,8 +272,9 @@ class CuentaCobroController extends Controller
         $supervisores = Supervisor::orderBy('nombres')->get();
         $estadosRevision = EstadoWorkflow::whereHas('bloque', fn($q) => $q->where('codigo', 'REV1'))->get();
         $todosLosEstados = EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
+        $estadosFiltro  = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->orderBy('nombre')->get();
 
-        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados', 'canManage', 'canEditDashboard'));
+        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados', 'estadosFiltro', 'canManage', 'canEditDashboard'));
     }
 
     /**

@@ -8,7 +8,16 @@ use App\Models\Modalidad;
 use App\Models\SeguimientoMensual;
 use App\Models\SeguimientoRequisito;
 use App\Models\Supervisor;
+use App\Models\Usuario;
+use App\Models\CuentaCobro;
+use App\Models\EstadoBloqueCuenta;
+use App\Models\HistorialWorkflow;
+use App\Models\PlanillaSeguridadSocial;
+use App\Models\Alerta;
+use App\Models\RegistroPresupuestal;
+use App\Models\Documento;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -432,24 +441,44 @@ class SeguimientoController extends Controller
      */
     public function destroy($id)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->tienePermiso('editar_dashboard')) {
+            return response()->json(['success' => false, 'message' => 'No autorizado para eliminar registros.'], 403);
+        }
+
         try {
             $contrato = Contrato::findOrFail($id);
             $numContrato = $contrato->numero_contrato;
 
-            // La eliminación se maneja por cascada en la base de datos para:
-            // - cuentas_cobro (y su historial_workflow, estado_bloque_cuenta, planillas)
-            // - seguimiento_mensual
-            // - seguimiento_requisitos
-            // - registros_presupuestales
-            // - documentos
-            $contrato->delete();
+            // Transacción robusta: El mismo patrón que CuentaCobroController
+            DB::transaction(function () use ($contrato, $id) {
+                // Limpieza de relaciones dependientes de cuentas
+                $cuentaIds = $contrato->cuentasCobro()->pluck('id');
+                
+                if ($cuentaIds->isNotEmpty()) {
+                    EstadoBloqueCuenta::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
+                    HistorialWorkflow::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
+                    PlanillaSeguridadSocial::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
+                    Alerta::whereIn('cuenta_cobro_id', $cuentaIds)->delete();
+                    $contrato->cuentasCobro()->delete();
+                }
 
-            Contrato::logManualAudit($id, 'DELETE', "Se eliminó de forma global el contrato #{$numContrato}", 'contratos');
+                // Limpieza de relaciones directas del contrato
+                RegistroPresupuestal::where('contrato_id', $id)->delete();
+                Documento::where('contrato_id', $id)->delete();
+                
+                // Eliminación física del contrato (dispara cascada en BD para seguimiento_mensual y seguimiento_requisitos)
+                $contrato->delete();
+            });
 
-            return response()->json(['success' => true, 'message' => "Contrato #{$numContrato} eliminado correctamente."]);
+            // Auditoría post-borrado
+            Contrato::logManualAudit(null, 'DELETE', "Contrato #$numContrato eliminado globalmente desde seguimiento", 'contratos');
+
+            return response()->json(['success' => true, 'message' => "Contrato #$numContrato eliminado correctamente."]);
         } catch (\Exception $e) {
-            Contrato::logException($e, 'contratos');
-            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+            Contrato::logException($e, 'contratos', ['operacion' => 'destroy', 'id' => $id]);
+            return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
 }

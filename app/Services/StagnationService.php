@@ -34,7 +34,9 @@ class StagnationService
             'ALERTA_ESTANCAMIENTO_MSG_WARNING'
         ])->pluck('valor', 'clave');
 
-        if (($configs->get('ALERTA_ESTANCAMIENTO_ACTIVA') ?? '0') !== '1') return 0;
+        $activa = $configs->get('ALERTA_ESTANCAMIENTO_ACTIVA') ?? '0';
+        if (!in_array($activa, ['1', 'true', true], true)) return 0;
+
 
         $limitMins = (int)($configs->get('ALERTA_ESTANCAMIENTO_MINUTOS') ?? 2880);
         $preLimitMins = (int)($configs->get('ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS') ?? 120);
@@ -48,6 +50,17 @@ class StagnationService
                 if ($d->tipo_destinatario === 'USUARIO') return [$d->destinatario_id];
                 return DB::table('usuarios')->where('rol_id', $d->destinatario_id)->pluck('id')->toArray();
             })->unique()->filter()->toArray();
+
+        // Fallback: si no hay destinatarios configurados, notificar a todos los admins activos
+        if (empty($baseUserIds)) {
+            $baseUserIds = DB::table('usuarios')
+                ->join('roles', 'usuarios.rol_id', '=', 'roles.id')
+                ->where('usuarios.es_activo', true)
+                ->where('roles.nombre', 'like', '%admin%')
+                ->pluck('usuarios.id')
+                ->toArray();
+        }
+
 
         // 3. CONSULTA MAESTRA (Excluir lo que ya está alertado - Filtrado Drástico)
         $ahora = Carbon::now();
