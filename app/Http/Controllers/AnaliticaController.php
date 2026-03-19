@@ -93,7 +93,7 @@ class AnaliticaController extends Controller
         }
 
         // 2. EXTRACCIÓN DE KPIs — partimos de un clone limpio de $filterQuery (sin selects)
-        // y aplicamos SOLO el selectRaw de agregados. Así MySQL no ve columnas
+        // y aplicamos SOLO el selectRaw de agregados. Así  no ve columnas
         // individuales mezcladas con COUNT/SUM sin GROUP BY.
         $kpis = (clone $filterQuery)
             ->whereHas('estadoActual', function ($q) {
@@ -102,7 +102,7 @@ class AnaliticaController extends Controller
             ->selectRaw('
                 COUNT(*) as total_cuentas,
                 COUNT(DISTINCT contrato_id) as total_contratos,
-                SUM(CASE WHEN finalizada = true THEN 1 ELSE 0 END) as finalizadas,
+                SUM(CASE WHEN finalizada::int = 1 THEN 1 ELSE 0 END) as finalizadas,
                 SUM(COALESCE(numero_facturas_radicadas, 0)) as radicadas_total,
                 SUM(COALESCE(numero_pagos_totales, 0)) as pagos_totales
             ')
@@ -205,8 +205,8 @@ class AnaliticaController extends Controller
     {
         return (clone $query)->leftJoin('usuarios', 'cuentas_cobro.responsable_actual_id', '=', 'usuarios.id')
             ->selectRaw("COALESCE(primer_nombre, '') || ' ' || COALESCE(primer_apellido, '') as name")
-            ->selectRaw("SUM(CASE WHEN finalizada = false THEN 1 ELSE 0 END) as tramite")
-            ->selectRaw("SUM(CASE WHEN finalizada = true THEN 1 ELSE 0 END) as finalizadas")
+            ->selectRaw("SUM(CASE WHEN finalizada::int = 0 THEN 1 ELSE 0 END) as tramite")
+            ->selectRaw("SUM(CASE WHEN finalizada::int = 1 THEN 1 ELSE 0 END) as finalizadas")
             ->groupBy('usuarios.id', 'primer_nombre', 'primer_apellido')
             ->limit(10)
             ->get();
