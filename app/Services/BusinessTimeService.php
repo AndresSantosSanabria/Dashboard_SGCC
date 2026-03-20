@@ -140,9 +140,8 @@ class BusinessTimeService
             $holidays[] = $this->moveToNextMonday($f);
         }
 
-        // 3. Festivos basados en Pascua
-        $daysToEaster = easter_days($year);
-        $easter = Carbon::create($year, 3, 21)->addDays($daysToEaster);
+        // 3. Festivos basados en Pascua (Domingo de Resurrección)
+        $easter = $this->calculateEaster($year);
 
         // Jueves y Viernes Santo
         $holidays[] = $easter->copy()->subDays(3)->format('Y-m-d');
@@ -164,5 +163,33 @@ class BusinessTimeService
             return $date->next(Carbon::MONDAY)->format('Y-m-d');
         }
         return $dateStr;
+    }
+
+    /**
+     * Calcula el Domingo de Pascua sin depender de la extensión php-calendar (easter_days).
+     * Algoritmo de Butcher-Meeus.
+     */
+    private function calculateEaster(int $year): Carbon
+    {
+        if (function_exists('easter_days')) {
+            return Carbon::create($year, 3, 21)->addDays(easter_days($year));
+        }
+
+        $a = $year % 19;
+        $b = floor($year / 100);
+        $c = $year % 100;
+        $d = floor($b / 4);
+        $e = $b % 4;
+        $f = floor(($b + 8) / 25);
+        $g = floor(($b - $f + 1) / 3);
+        $h = (19 * $a + $b - $d - $g + 15) % 30;
+        $i = floor($c / 4);
+        $k = $c % 4;
+        $l = (32 + 2 * $e + 2 * $i - $h - $k) % 7;
+        $m = floor(($a + 11 * $h + 22 * $l) / 451);
+        $mouth = floor(($h + $l - 7 * $m + 114) / 31);
+        $day = (($h + $l - 7 * $m + 114) % 31) + 1;
+
+        return Carbon::create((int)$year, (int)$mouth, (int)$day);
     }
 }

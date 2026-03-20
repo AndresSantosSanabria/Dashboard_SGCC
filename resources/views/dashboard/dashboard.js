@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
             importSpinner.style.display = "block";
 
             window.apiFetch(
-                importForm.dataset.url || "{{ route('dashboard.importar') }}",
+                importForm.dataset.url || '/dashboard/importar',
                 {
                     method: "POST",
                     body: formData,
@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
             const formData = new FormData(manualForm);
-            const url = manualForm.dataset.url || "{{ route('dashboard.manual') }}";
+            const url = manualForm.dataset.url || '/dashboard/manual';
 
             // Determinar si es Update (contiene 'actualizar' en la URL)
             const isUpdate = url.includes("actualizar");
@@ -546,7 +546,7 @@ window.editAccount = function (id) {
             if (inputCuentaManual) inputCuentaManual.value = 1;
             modalTitle.textContent = "Cargar Información Manualmente";
             btnSave.textContent = "Cargar Registro";
-            form.dataset.url = "{{ route('dashboard.manual') }}";
+            form.dataset.url = "/dashboard/manual";
 
             // Desbloquear campos
             const readOnlyFields = [
@@ -625,7 +625,8 @@ window.deleteContrato = function (id, numero) {
         if (!result.isConfirmed) return;
 
         window.apiFetch(`/dashboard/contrato/${id}`, {
-            method: 'DELETE'
+            method: 'POST',
+            body: JSON.stringify({ _method: 'DELETE' })
         })
             .then(res => res.json())
             .then(data => {

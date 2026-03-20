@@ -111,7 +111,7 @@
             btnSpinner.classList.remove('d-none');
             resultsArea.classList.add('d-none');
 
-            window.apiFetch("{{ route('public.consultation') }}", {
+            window.apiFetch("/public/consultation", {
                     method: 'POST',
                     body: JSON.stringify({
                         nit: nit

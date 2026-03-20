@@ -196,22 +196,21 @@ class WorkflowController extends Controller
         $cuenta = CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
 
         // Get allowed transitions from current state
-        $transiciones = TransicionPermitida::with('estadoDestino.bloque')
-            ->where('estado_origen_id', $cuenta->estado_actual_id)
+        $estadosDisponibles = TransicionPermitida::where('estado_origen_id', $cuenta->estado_actual_id)
             ->where('es_activa', true)
-            ->get();
-
-        $estadosDisponibles = $transiciones->map(function ($transicion) {
-            return [
-                'id' => $transicion->estadoDestino->id,
-                'nombre' => $transicion->estadoDestino->nombre,
-                'tipo' => $transicion->estadoDestino->tipo,
-                'color' => $transicion->estadoDestino->color_hex ?? $this->getColorPorTipo($transicion->estadoDestino->tipo),
-                'bloque_id' => $transicion->estadoDestino->bloque_id,
-                'bloque_nombre' => $transicion->estadoDestino->bloque->nombre ?? '',
-                'requiere_comentario' => $transicion->requiere_comentario,
-            ];
-        });
+            ->with(['estadoDestino:id,nombre,tipo,color_hex,bloque_id', 'estadoDestino.bloque:id,nombre'])
+            ->get()
+            ->map(function ($transicion) {
+                return [
+                    'id' => $transicion->estadoDestino->id,
+                    'nombre' => $transicion->estadoDestino->nombre,
+                    'tipo' => $transicion->estadoDestino->tipo,
+                    'color' => $transicion->estadoDestino->color_hex ?? $this->getColorPorTipo($transicion->estadoDestino->tipo),
+                    'bloque_id' => $transicion->estadoDestino->bloque_id,
+                    'bloque_nombre' => $transicion->estadoDestino->bloque->nombre ?? '',
+                    'requiere_comentario' => $transicion->requiere_comentario,
+                ];
+            });
 
         return response()->json([
             'success' => true,

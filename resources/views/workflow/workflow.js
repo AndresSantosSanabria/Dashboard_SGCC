@@ -55,11 +55,15 @@ document.addEventListener('show.bs.modal', function (event) {
 
     if (!statusButtons || statusButtons.dataset.loaded === 'true') return;
 
+    console.log(`[Workflow] Cargando estados para Cuenta ${cuentaId} desde: /workflow/estados-disponibles/${cuentaId}`);
     window.apiFetch(`/workflow/estados-disponibles/${cuentaId}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 statusButtons.innerHTML = '';
+                if (data.estados_disponibles.length === 0) {
+                    statusButtons.innerHTML = '<span class="text-white-50 small">Sin acciones disponibles</span>';
+                }
                 data.estados_disponibles.forEach(estado => {
                     const btn = document.createElement('button');
                     btn.className = `btn-estado ${estado.tipo === 'APROBADO' ? 'btn-aprobado' : (estado.tipo === 'DEVUELTO' ? 'btn-devuelto' : 'btn-proceso')}`;
@@ -71,6 +75,10 @@ document.addEventListener('show.bs.modal', function (event) {
                 });
                 statusButtons.dataset.loaded = 'true';
             }
+        })
+        .catch(err => {
+            console.error('[Workflow] Error al cargar estados:', err);
+            statusButtons.innerHTML = '<span class="text-danger small"><i class="fas fa-exclamation-circle me-1"></i>Error al cargar estados</span>';
         });
 });
 

@@ -76,8 +76,24 @@
          * MOTOR DE PETICIONES GLOBAL (Standardized SGCC Fetch)
          * Centraliza la seguridad (CSRF), autenticación (401/419) y 
          * el manejo de errores técnicos.
+         * Soporta automáticamente subcarpetas en producción (Gobernación).
          */
         window.apiFetch = async function(url, options = {}) {
+            // Sincronización inteligente de URL Base
+            // Combina lo que detecta Laravel con lo que el navegador ve realmente en la barra de direcciones.
+            let baseUrl = '{{ url('/') }}'.replace(/\/$/, '');
+            const currentPath = window.location.pathname;
+            
+            // Si Laravel cree que es raíz pero el navegador muestra que estamos en una subcarpeta /public
+            if (currentPath.includes('/public/') && !baseUrl.includes('/public')) {
+                const subfolder = currentPath.substring(0, currentPath.indexOf('/public') + 7);
+                baseUrl = window.location.origin + subfolder;
+            }
+
+            const fullUrl = (url.startsWith('http') || url.startsWith('//')) 
+                ? url 
+                : (baseUrl + '/' + url.replace(/^\//, ''));
+
             const defaults = {
                 method: 'GET',
                 credentials: 'same-origin',
@@ -96,7 +112,7 @@
             const config = { ...defaults, ...options, headers };
 
             try {
-                const response = await fetch(url, config);
+                const response = await fetch(fullUrl, config);
                 
                 // 1. Manejo de Sesión Expirada o No Autorizada
                 if (response.status === 419 || response.status === 401) {
@@ -105,10 +121,14 @@
                     return response;
                 }
 
-                // 2. Manejo de Errores de Servidor (500+)
-                if (response.status >= 500) {
-                    window.showSnackbar('❌ Error interno del servidor. Contacte a soporte.', 'error');
-                    throw new Error('Server Error');
+                // 2. Manejo de Errores de Servidor o Rutas (404, 500)
+                if (!response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    if (contentType && !contentType.includes('application/json')) {
+                        console.error('[Base de Datos/Ruta Error]', response);
+                        window.showSnackbar('❌ Error de comunicación con el servidor (Ruta no encontrada o error de servidor).', 'error');
+                        throw new Error('Server returned HTML instead of JSON');
+                    }
                 }
 
                 return response;

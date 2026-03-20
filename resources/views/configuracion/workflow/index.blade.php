@@ -309,9 +309,9 @@
                 const id = formData.get('id');
                 const url = id ? `/configuracion/workflow-estados/actualizar/${id}` :
                     '/configuracion/workflow-estados/store';
-                const method = id ? 'PUT' : 'POST';
+                const method = 'POST';
+                const bodyMethod = id ? 'PUT' : 'POST';
 
-                // Transform form data to JSON for PUT/POST consistency
                 const data = {};
                 formData.forEach((value, key) => {
                     data[key] = value;
@@ -321,6 +321,8 @@
                 ['es_inicial', 'es_final', 'contabiliza_tiempo', 'afecta_indicadores'].forEach(key => {
                     data[key] = document.getElementById(`form_${key}`).checked ? 1 : 0;
                 });
+
+                data['_method'] = bodyMethod;
 
                 window.apiFetch(url, {
                         method: method,
@@ -366,7 +368,8 @@
                 }).then((result) => {
                     if (result.isConfirmed) {
                         window.apiFetch(`/configuracion/workflow-estados/eliminar/${id}`, {
-                                method: 'DELETE'
+                                method: 'POST',
+                                body: JSON.stringify({ _method: 'DELETE' })
                             })
                             .then(res => res.json())
                             .then(res => {
@@ -383,7 +386,7 @@
             };
 
             window.toggleEstadoStatus = function(id) {
-                window.apiFetch(`/configuracion/workflow-estados/toggle-status/${id}`, {
+                window.apiFetch(`{{ url('/configuracion/workflow-estados/toggle-status') }}/${id}`, {
                         method: 'POST'
                     })
                     .then(res => res.json())

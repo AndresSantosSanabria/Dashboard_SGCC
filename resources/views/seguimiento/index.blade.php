@@ -421,7 +421,7 @@
             parentDiv.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
 
             try {
-                const res = await window.apiFetch('{{ route('seguimiento.update-status') }}', {
+                const res = await window.apiFetch('/seguimiento/update-status', {
                     method: 'POST',
                     body: JSON.stringify({
                         id,
@@ -488,7 +488,7 @@
                     secop_filtro: document.getElementById('filterSecop').value,
                     mes_filtro: document.getElementById('filterMes').value
                 });
-                fetchUrl = `{{ route('seguimiento.index') }}?${params.toString()}`;
+                fetchUrl = `/seguimiento?${params.toString()}`;
             }
 
             // Preservar Scroll
@@ -618,7 +618,7 @@
         function openCreateModal() {
             document.getElementById('mainForm').reset();
             document.getElementById('mMethod').value = 'POST';
-            document.getElementById('mainForm').action = '{{ route('seguimiento.store') }}';
+            document.getElementById('mainForm').action = '/seguimiento/store';
             document.getElementById('mTitle').innerText = 'Registrar Nuevo Contrato';
             new bootstrap.Modal(document.getElementById('modalManagement')).show();
         }
@@ -669,7 +669,7 @@
             const link = document.getElementById('linkInput').value;
 
             try {
-                const res = await window.apiFetch('{{ route('seguimiento.update-status') }}', {
+                const res = await window.apiFetch('/seguimiento/update-status', {
                     method: 'POST',
                     body: JSON.stringify({
                         id,
@@ -713,7 +713,8 @@
             try {
                 // Usamos ruta relativa por consistencia con el dashboard que sí funciona
                 const res = await window.apiFetch(`/seguimiento/${id}`, {
-                    method: 'DELETE'
+                    method: 'POST',
+                    body: JSON.stringify({ _method: 'DELETE' })
                 });
 
                 const data = await res.json().catch(() => ({ success: false, message: 'Respuesta inválida del servidor' }));
