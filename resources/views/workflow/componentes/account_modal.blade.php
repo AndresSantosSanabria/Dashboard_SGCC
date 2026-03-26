@@ -96,7 +96,8 @@
                         @endphp
                         <div class="timeline-item">
                             <div class="timeline-marker-wrapper">
-                                <div class="timeline-marker {{ $colorClass }}">
+                                <div class="timeline-marker" 
+                                    style="background-color: {{ $hist->estadoDestino?->color_hex ?? '#6c757d' }}; box-shadow: 0 4px 10px {{ $hist->estadoDestino?->color_hex }}44;">
                                     <i class="fas {{ $icon }}"></i>
                                 </div>
                                 @if (!$loop->last)

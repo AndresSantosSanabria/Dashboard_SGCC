@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Auditoria;
 use App\Models\BloqueWorkflow;
 use App\Models\Contrato;
 use App\Models\CuentaCobro;
@@ -96,9 +97,22 @@ class WorkflowController extends Controller
             $query->where('numero_cuenta', (int) $request->numero_cuenta);
         }
 
+        if ($request->filled('responsable_id')) {
+            $query->where('cuentas_cobro.responsable_actual_id', $request->responsable_id);
+        }
+
         $cuentas = $query->get();
 
-        // 5. CONSTRUCCIÓN DE LA MATRIZ DEL WORKFLOW
+        // 5. AUTO-SINCRONIZACIÓN BAJO DEMANDA (Safeguarded)
+        // Garantiza que las reglas de negocio en base de datos coincidan exactamente
+        // con la configuración actual de los estados.
+        try {
+            app(\App\Http\Controllers\WorkflowAdminController::class)->regenerarTransiciones();
+        } catch (\Exception $e) {
+            Log::error("Error regenerando transiciones: " . $e->getMessage());
+        }
+
+        // 6. CONSTRUCCIÓN DE LA MATRIZ DEL WORKFLOW
         // El workflow es dinámico. Consultamos los bloques configurados en BD 
         // y organizamos las cuentas por "Bloque -> Estado".
         $bloquesQuery = BloqueWorkflow::with(['estados' => function ($q) {
@@ -116,11 +130,12 @@ class WorkflowController extends Controller
         foreach ($bloques as $bloque) {
             $columnas = [];
             foreach ($bloque->estados as $estado) {
-                $columnas[$estado->id] = [
-                    'nombre' => $estado->nombre,
-                    'tipo' => $estado->tipo,
-                    'cuentas' => [],
-                ];
+                    $columnas[$estado->id] = [
+                        'nombre' => $estado->nombre,
+                        'tipo' => $estado->tipo,
+                        'color_hex' => $estado->color_hex,
+                        'cuentas' => [],
+                    ];
             }
 
             $workflow[$bloque->id] = [
@@ -146,8 +161,13 @@ class WorkflowController extends Controller
 
         $supervisores = Supervisor::orderBy('nombres')->get();
         $estados = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->get();
+        $todosLosEstados = EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
+        $responsables = Usuario::where('es_activo', true)
+            ->orderBy('primer_nombre')
+            ->get()
+            ->filter(fn($u) => $u->puedeSerResponsableSap() || $u->puedeSerResponsableFac());
 
-        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados', 'canEdit'));
+        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados', 'responsables', 'canEdit', 'bloques', 'todosLosEstados'));
     }
 
     /**
@@ -250,6 +270,12 @@ class WorkflowController extends Controller
             ->first();
 
         if (! $transicion) {
+            $this->logWorkflowAudit('WORKFLOW_TRANSITION_REJECTED', $cuenta, [
+                'motivo' => 'Transición no permitida por el motor de reglas',
+                'estado_origen_id' => $cuenta->estado_actual_id,
+                'estado_origen_nombre' => $cuenta->estadoActual?->nombre,
+                'estado_destino_id' => $request->estado_destino_id,
+            ]);
             return response()->json(['success' => false, 'message' => 'Transición no permitida'], 403);
         }
 
@@ -258,13 +284,17 @@ class WorkflowController extends Controller
         // 2. PUNTO DE DECISIÓN (Handoff):
         // Si el estado implica un cambio de área (ej: de Revisión a SAP), 
         // detenemos el flujo para que el usuario elija explícitamente al responsable.
-        if ($estadoDestino->codigo === 'REV1_PASA' || $estadoDestino->codigo === 'SAP_OK') {
+        // Robustez: Verificamos código exacto O que sea el FINAL de un bloque clave.
+        $esPasoASap = ($estadoDestino->codigo === 'REV1_PASA' || ($estadoDestino->es_final && $estadoDestino->bloque->codigo === 'REV1'));
+        $esPasoAFac = ($estadoDestino->codigo === 'SAP_OK' || ($estadoDestino->es_final && $estadoDestino->bloque->codigo === 'SAP'));
+
+        if ($esPasoASap || $esPasoAFac) {
             return response()->json([
                 'success' => true,
                 'requires_responsible' => true,
                 'cuenta_id' => $cuentaId,
                 'estado_destino_id' => $request->estado_destino_id,
-                'estado_codigo' => $estadoDestino->codigo, // Added this line
+                'estado_codigo' => $esPasoASap ? 'REV1_PASA' : 'SAP_OK', // Normalizamos el código para el frontend
                 'message' => 'Se requiere asignar un responsable para la siguiente fase.',
             ]);
         }
@@ -287,6 +317,11 @@ class WorkflowController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'cambiarEstado', 'cuenta_id' => $cuentaId]);
+            $this->logWorkflowAudit('WORKFLOW_ERROR', $cuenta, [
+                'operacion' => 'cambiarEstado',
+                'error' => $e->getMessage(),
+                'estado_destino_id' => $request->estado_destino_id,
+            ]);
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
     }
@@ -314,6 +349,12 @@ class WorkflowController extends Controller
             ->first();
 
         if (! $transicion) {
+            $this->logWorkflowAudit('WORKFLOW_TRANSITION_REJECTED', $cuenta, [
+                'motivo' => 'Transición rechazada en asignación de responsable',
+                'estado_origen_id' => $estadoOrigenId,
+                'estado_destino_id' => $estadoDestinoId,
+                'responsable_solicitado' => $request->responsable_id,
+            ]);
             return response()->json([
                 'success' => false,
                 'message' => 'Transición no permitida',
@@ -333,10 +374,13 @@ class WorkflowController extends Controller
             $estadoDestino = EstadoWorkflow::findOrFail($estadoDestinoId);
             $bloqueTarget = null;
 
-            if ($estadoDestino->codigo === 'REV1_PASA') {
+            $esPasoASap = ($estadoDestino->codigo === 'REV1_PASA' || ($estadoDestino->es_final && $estadoDestino->bloque->codigo === 'REV1'));
+            $esPasoAFac = ($estadoDestino->codigo === 'SAP_OK' || ($estadoDestino->es_final && $estadoDestino->bloque->codigo === 'SAP'));
+
+            if ($esPasoASap) {
                 // For REV1_PASA, assign to SAP block
                 $bloqueTarget = BloqueWorkflow::where('codigo', 'SAP')->first();
-            } elseif ($estadoDestino->codigo === 'SAP_OK') {
+            } elseif ($esPasoAFac) {
                 // For SAP_OK (con ingreso mercancia), assign to Facturación block
                 $bloqueTarget = BloqueWorkflow::where('codigo', 'FAC')->first();
             }
@@ -390,6 +434,11 @@ class WorkflowController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Contrato::logException($e, 'cuentas_cobro', ['operacion' => 'assignResponsible', 'cuenta_id' => $cuentaId]);
+            $this->logWorkflowAudit('WORKFLOW_ERROR', $cuenta, [
+                'operacion' => 'assignResponsible',
+                'error' => $e->getMessage(),
+                'responsable_id' => $request->responsable_id,
+            ]);
 
             return response()->json([
                 'success' => false,
@@ -404,20 +453,24 @@ class WorkflowController extends Controller
      * Orquestador interno que maneja el historial, los tiempos de respuesta, 
      * detecta si es una devolución y gestiona el "Auto-Chaining" (estados automáticos).
      */
-    private function ejecutarTransicion($cuenta, $estadoDestinoId, $comentario = null)
+    private function ejecutarTransicion($cuenta, $estadoDestinoId, $comentario = null, $esAutomatica = false)
     {
         $estadoOrigenId = $cuenta->estado_actual_id;
         $estadoDestino = EstadoWorkflow::findOrFail($estadoDestinoId);
 
         // A. CRONÓMETRO DE ESTADO: Calculamos cuánto tiempo vivió en el estado anterior.
+        // Solo contabilizamos si el estado de origen está marcado para ello (SLA Engine rules).
+        $estadoOrigen = EstadoWorkflow::find($estadoOrigenId);
         $ultimoHistorial = HistorialWorkflow::where('cuenta_cobro_id', $cuenta->id)
             ->orderBy('fecha_transicion', 'desc')->first();
 
         $tiempoPrevio = 0;
-        if ($ultimoHistorial) {
-            $tiempoPrevio = (int) abs(now()->diffInMinutes($ultimoHistorial->fecha_transicion));
-        } else if ($cuenta->created_at) {
-            $tiempoPrevio = (int) abs(now()->diffInMinutes($cuenta->created_at));
+        if ($estadoOrigen && ($estadoOrigen->contabiliza_tiempo ?? true)) {
+            if ($ultimoHistorial) {
+                $tiempoPrevio = (int) abs(now()->diffInMinutes($ultimoHistorial->fecha_transicion));
+            } else if ($cuenta->created_at) {
+                $tiempoPrevio = (int) abs(now()->diffInMinutes($cuenta->created_at));
+            }
         }
 
         // C. DETECCIÓN DE DEVOLUCIONES:
@@ -450,6 +503,24 @@ class WorkflowController extends Controller
             'tiempo_en_estado_anterior_minutos' => $tiempoPrevio,
             'comentarios' => $comentario,
         ]);
+
+        // B2. REGISTRO EN AUDITORÍA GLOBAL: Toda transición queda trazada en el log centralizado.
+        $this->logWorkflowAudit(
+            $esDevolucion ? 'WORKFLOW_DEVOLUCION' : ($esAutomatica ? 'WORKFLOW_AUTO' : 'WORKFLOW_TRANSICION'),
+            $cuenta,
+            [
+                'estado_origen_id'     => $estadoOrigenId,
+                'estado_origen_nombre' => $estadoOrigen?->nombre ?? 'N/A',
+                'estado_destino_id'    => $estadoDestinoId,
+                'estado_destino_nombre'=> $estadoDestino->nombre,
+                'bloque_origen_id'     => $bloqueAnteriorId,
+                'bloque_destino_id'    => $estadoDestino->bloque_id,
+                'es_devolucion'        => $esDevolucion,
+                'es_automatica'        => $esAutomatica,
+                'tiempo_previo_min'    => $tiempoPrevio,
+                'comentario'           => $comentario,
+            ]
+        );
 
         // D. CIERRE DE BLOQUE: Si avanzamos de fase, sellamos el progreso del bloque anterior.
         if ($bloqueAnteriorId != $estadoDestino->bloque_id && ! $esDevolucion) {
@@ -503,12 +574,17 @@ class WorkflowController extends Controller
         }
 
         // G. AUTO-CHAINING (Propagación):
-        // Algunos estados son "puentes" que deben pasar automáticamente al siguiente paso.
+        // Algunos estados son "puentes" que deben pasar automáticamente al siguiente (o al anterior) paso.
         $auto = TransicionPermitida::where('estado_origen_id', $estadoDestinoId)
-            ->where('accion', 'PASAR_BLOQUE')->where('es_activa', true)->first();
+            ->where('accion', 'PASAR_BLOQUE')
+            ->where('es_activa', true)
+            ->first();
 
-        if ($auto) {
-            $this->ejecutarTransicion($cuenta, $auto->estado_destino_id, "Automatismo: {$auto->accion}");
+        if ($auto && !$esAutomatica) {
+            // Propagamos el comentario original si existe, para que el historial del landing sea útil.
+            // La bandera $esAutomatica = true evita que estados que son a su vez "puentes" disparen 
+            // saltos infinitos o en cadena (Efecto Cascada).
+            $this->ejecutarTransicion($cuenta, $auto->estado_destino_id, $comentario ?? "Automatismo: {$auto->accion}", true);
         }
     }
 
@@ -714,11 +790,11 @@ class WorkflowController extends Controller
             $cuenta->ultima_factura_hacienda = null; // Reset para el nuevo ciclo
             $cuenta->save();
 
-            // 3. Buscar el estado inicial del Bloque 1
-            $estadoInicialBloque1 = EstadoWorkflow::where('codigo', 'REV1_REV')->first();
+            // 3. Buscar el estado inicial del Bloque 1 (Sin Trámite)
+            $estadoInicialBloque1 = EstadoWorkflow::where('codigo', 'REV1_SIN')->first();
 
             if (! $estadoInicialBloque1) {
-                throw new \Exception('No se encontró el estado inicial del Bloque 1 (REV1_REV).');
+                throw new \Exception('No se encontró el estado inicial del Bloque 1 (REV1_SIN).');
             }
 
             // 4. LIMPIEZA: Eliminar registros de progreso de los bloques anteriores para el nuevo ciclo
@@ -728,6 +804,12 @@ class WorkflowController extends Controller
             $this->ejecutarTransicion($cuenta, $estadoInicialBloque1->id, "Inicio manual del ciclo - Cuenta #{$cuenta->numero_cuenta}.");
 
             DB::commit();
+
+            $this->logWorkflowAudit('WORKFLOW_NUEVO_CICLO', $cuenta, [
+                'numero_cuenta_nuevo' => $cuenta->numero_cuenta,
+                'estado_inicial'      => $estadoInicialBloque1->nombre ?? 'REV1_SIN',
+                'fecha_inicio_ciclo'  => now()->toDateTimeString(),
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -741,6 +823,33 @@ class WorkflowController extends Controller
                 'success' => false,
                 'message' => 'Error al iniciar el ciclo: ' . $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * HELPER: Registra un evento del workflow en la tabla 'auditorias' (log centralizado).
+     * Permite ver toda la actividad del workflow desde el Historial de Auditoría.
+     */
+    private function logWorkflowAudit(string $accion, $cuenta, array $payload = []): void
+    {
+        try {
+            Auditoria::create([
+                'usuario_id'      => Auth::id(),
+                'tabla_afectada'  => 'workflow',
+                'registro_id'     => $cuenta->id ?? 0,
+                'accion'          => $accion,
+                'payload_anterior'=> null,
+                'payload_nuevo'   => array_merge([
+                    'cuenta_id'        => $cuenta->id ?? null,
+                    'numero_cuenta'    => $cuenta->numero_cuenta ?? null,
+                    'contrato'         => $cuenta->contrato?->numero_contrato ?? 'N/A',
+                    'contratista'      => $cuenta->contrato?->contratista?->nombre_completo ?? 'N/A',
+                ], $payload),
+                'ip_origen'       => request()->ip() ?? '127.0.0.1',
+                'user_agent'      => substr(request()->userAgent() ?? 'none', 0, 200),
+            ]);
+        } catch (\Exception $ex) {
+            Log::error('[WorkflowAudit] Fallo al registrar en auditorías: ' . $ex->getMessage());
         }
     }
 }

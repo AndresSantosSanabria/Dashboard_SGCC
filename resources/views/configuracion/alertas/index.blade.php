@@ -270,7 +270,7 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribut
 document.getElementById('formConfig').addEventListener('submit', function(e) {
     e.preventDefault();
     const fd = new FormData(this);
-    window.apiFetch('/configuracion/alertas/config', {
+    window.apiFetch('{{ route("configuracion.alertas.config") }}', {
         method: 'POST',
         body: fd
     })
@@ -288,7 +288,7 @@ document.getElementById('btnSyncFestivos').addEventListener('click', function() 
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
     btn.disabled = true;
 
-    window.apiFetch('/configuracion/alertas/festivos/sync', {
+    window.apiFetch('{{ route("configuracion.alertas.festivos.sync") }}', {
         method: 'POST'
     })
     .then(r => r.json())
@@ -313,7 +313,7 @@ document.getElementById('btnSyncFestivos').addEventListener('click', function() 
 document.getElementById('formFestivo').addEventListener('submit', function(e) {
     e.preventDefault();
     const fd = new FormData(this);
-    window.apiFetch('/configuracion/alertas/festivos/store', {
+    window.apiFetch('{{ route("configuracion.alertas.festivos.store") }}', {
         method: 'POST',
         body: fd
     })
@@ -332,8 +332,7 @@ document.getElementById('formFestivo').addEventListener('submit', function(e) {
 window.eliminarFestivo = function(id) {
     if (!confirm('¿Eliminar este festivo?')) return;
     window.apiFetch(`/configuracion/alertas/festivos/${id}`, {
-        method: 'POST',
-        body: JSON.stringify({ _method: 'DELETE' })
+        method: 'DELETE'
     })
     .then(r => r.json())
     .then(data => {
@@ -362,7 +361,7 @@ document.getElementById('formDestinatario').addEventListener('submit', function(
     fd.append('tipo_destinatario', tipo);
     fd.append('destinatario_id', id);
 
-    window.apiFetch('/configuracion/alertas/destinatarios/store', {
+    window.apiFetch('{{ route("configuracion.alertas.destinatarios.store") }}', {
         method: 'POST',
         body: fd
     })
@@ -381,8 +380,7 @@ document.getElementById('formDestinatario').addEventListener('submit', function(
 window.eliminarDestinatario = function(id) {
     if (!confirm('¿Eliminar este destinatario?')) return;
     window.apiFetch(`/configuracion/alertas/destinatarios/${id}`, {
-        method: 'POST',
-        body: JSON.stringify({ _method: 'DELETE' })
+        method: 'DELETE'
     })
     .then(r => r.json())
     .then(data => {

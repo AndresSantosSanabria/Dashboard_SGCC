@@ -111,7 +111,7 @@
             btnSpinner.classList.remove('d-none');
             resultsArea.classList.add('d-none');
 
-            window.apiFetch("/public/consultation", {
+            window.apiFetch("{{ route('public.consultation') }}", {
                     method: 'POST',
                     body: JSON.stringify({
                         nit: nit
@@ -218,7 +218,7 @@
 
             historyModalInstance.show();
 
-            window.apiFetch(`/consultar-historial/${cuentaId}`)
+            window.apiFetch(`{{ url('/') }}/consultar-historial/${cuentaId}`)
                 .then(response => response.json())
                 .then(data => {
                     spinner.style.display = "none";

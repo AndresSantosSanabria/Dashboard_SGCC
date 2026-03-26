@@ -1,13 +1,14 @@
-<div id="sidebar" class="d-flex flex-column flex-shrink-0 p-3 text-white bg-govco-navbar"
-    style="width: 210px; height: 100vh; position: sticky; top: 0; z-index: 1000;">
+<div id="sidebar" class="d-flex flex-column flex-shrink-0 p-3 text-white bg-govco-navbar sidebar-transition"
+    style="height: 100vh; position: sticky; top: 0; z-index: 1000;">
     <div
         class="sidebar-header d-flex align-items-center justify-content-between mb-3 mb-md-0 me-md-auto text-white text-decoration-none w-100">
         <a href="/" class="d-flex align-items-center text-decoration-none sidebar-logo-link">
             <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo Gobernación" class="sidebar-logo"
                 style="max-width: 160px; height: auto;">
         </a>
-        <button id="sidebarToggle" class="btn btn-link text-white p-0">
-            <i class="bi bi-list"></i>
+        <button id="sidebarToggle" class="btn btn-link text-white p-0 d-flex align-items-center justify-content-center"
+            style="width: 32px; height: 32px; min-width: 32px;">
+            <i class="bi bi-list fs-4"></i>
         </button>
     </div>
     <hr>
@@ -49,7 +50,7 @@
                 </a>
             </li>
         @endif
-        @if (auth()->user()->isAdmin())
+        @if (auth()->user()->puedeVerConfiguracion())
             <li>
                 <a href="{{ route('configuracion.index') }}"
                     class="nav-link text-white {{ request()->routeIs('configuracion.*') ? 'active bg-primary' : '' }}">

@@ -219,11 +219,23 @@ if (filtersForm) {
         checkbox.addEventListener("change", fetchFilteredData);
     });
 
-    // Botón "Limpiar filtros" del offcanvas → resetear form y recargar async
-    filtersForm.querySelectorAll("a.btn-secondary, a.btn-danger").forEach((link) => {
+    // Botón "Limpiar filtros" → resetear form y recargar async
+    filtersForm.querySelectorAll("a.btn-secondary, a.btn-danger, a.btn-outline-secondary").forEach((link) => {
         link.addEventListener("click", function (e) {
             e.preventDefault();
             filtersForm.reset();
+            
+            // RESET DROPDOWN PERSONALIZADO
+            const labelSpan = document.getElementById('selectedEstadoLabel');
+            const hiddenInput = document.getElementById('hiddenSearchEstado');
+            if (labelSpan && hiddenInput) {
+                labelSpan.textContent = "Todos los estados";
+                hiddenInput.value = "";
+                document.querySelectorAll('.filter-estado-item').forEach(el => el.classList.remove('active'));
+                const allStatesItem = document.querySelector('.filter-estado-item[data-value=""]');
+                if (allStatesItem) allStatesItem.classList.add('active');
+            }
+            
             fetchFilteredData();
         });
     });
@@ -647,3 +659,84 @@ window.deleteContrato = function (id, numero) {
             });
     });
 };
+
+// --- Manejo de dropdown personalizado de estados ---
+document.addEventListener("DOMContentLoaded", function () {
+    // Delegación de eventos para clics en los items de estado
+    document.body.addEventListener('click', function (e) {
+        const item = e.target.closest('.filter-estado-item');
+        if (item) {
+            e.preventDefault();
+            const value = item.dataset.value;
+            const label = item.textContent.trim();
+
+            const hiddenInput = document.getElementById('hiddenSearchEstado');
+            const labelSpan = document.getElementById('selectedEstadoLabel');
+
+            if (hiddenInput && labelSpan) {
+                hiddenInput.value = value;
+                labelSpan.textContent = label;
+
+                // Activar clase active en el item seleccionado y desactivar en los demás
+                document.querySelectorAll('.filter-estado-item').forEach(el => el.classList.remove('active'));
+                item.classList.add('active');
+
+                // Cerrar el dropdown de Bootstrap
+                const dropdownBtn = document.getElementById('dropdownEstado');
+                if (dropdownBtn) {
+                    const bsDropdown = bootstrap.Dropdown.getInstance(dropdownBtn) || new bootstrap.Dropdown(dropdownBtn);
+                    if (bsDropdown) bsDropdown.hide();
+                }
+
+                // Disparar filtrado
+                if (typeof fetchFilteredData === 'function') {
+                    fetchFilteredData();
+                }
+            }
+        }
+
+        // Prevenir que los toggles de submenú cierren el menú
+        if (e.target.closest('.dropdown-submenu > .dropdown-toggle')) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+    });
+});
+
+window.toggleDashboardSort = function (column) {
+    const filtersForm = document.getElementById("filtersForm");
+    if (!filtersForm) return;
+
+    let sortOrderInput = document.getElementById("sortOrder");
+    if (!sortOrderInput) {
+        sortOrderInput = document.createElement("input");
+        sortOrderInput.type = "hidden";
+        sortOrderInput.id = "sortOrder";
+        sortOrderInput.name = "sort_order";
+        sortOrderInput.value = "asc";
+        filtersForm.appendChild(sortOrderInput);
+    }
+    
+    let sortByInput = document.getElementById("sortBy");
+    if (!sortByInput) {
+        sortByInput = document.createElement("input");
+        sortByInput.type = "hidden";
+        sortByInput.id = "sortBy";
+        sortByInput.name = "sort_by";
+        sortByInput.value = "numero_contrato";
+        filtersForm.appendChild(sortByInput);
+    }
+
+    const currentOrder = sortOrderInput.value;
+    const newOrder = currentOrder === "asc" ? "desc" : "asc";
+    
+    sortOrderInput.value = newOrder;
+    sortByInput.value = column;
+    
+    // Al re-ordenar, usualmente es mejor volver a la página 1
+    // Si fetchFilteredData usa el form, ya hereda los nuevos inputs
+    if (typeof fetchFilteredData === "function") {
+        fetchFilteredData();
+    }
+};
+

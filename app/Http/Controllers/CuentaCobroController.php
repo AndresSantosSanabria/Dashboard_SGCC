@@ -240,7 +240,10 @@ class CuentaCobroController extends Controller
             });
         }
 
-        // 4. FILTROS AVANZADOS
+        // 4. FILTROS AVANZADOS Y ORDENAMIENTO
+        $sortOrder = $request->input('sort_order', 'asc');
+        $sortBy = $request->input('sort_by', 'numero_contrato'); // Default a número contrato
+
         if ($request->filled('searchContrato')) {
             $query->whereHas('contrato', fn($q) => $q->where('numero_contrato', 'like', '%' . $request->searchContrato . '%'));
         }
@@ -262,19 +265,36 @@ class CuentaCobroController extends Controller
             $query->where('numero_cuenta', (int) $request->searchNumeroCuenta);
         }
 
-        $cuentas = $query->latest()->paginate(20)->appends($request->all());
+        // Aplicamos el ordenamiento por número de contrato (Natural Sort en BD)
+        // Usamos una subconsulta para el ordenamiento para evitar joins complejos que puedan filtrar resultados erróneamente
+        if ($sortBy === 'numero_contrato') {
+            $query->orderBy(
+                Contrato::selectRaw("CAST(NULLIF(regexp_replace(numero_contrato, '[^0-9]', '', 'g'), '') AS NUMERIC)")
+                    ->whereColumn('contratos.id', 'cuentas_cobro.contrato_id')
+                    ->limit(1),
+                $sortOrder
+            );
+        } else {
+            $query->latest();
+        }
+
+        $cuentas = $query->paginate(20)->appends($request->all());
+
+        $bloques = BloqueWorkflow::ordenados()->get();
 
         // Respuesta AJAX para refresco de tabla sin recargar toda la página.
         if ($request->ajax()) {
-            return response(view('dashboard.componentes.cuentas_table', compact('cuentas', 'canManage', 'canEditDashboard'))->render());
+            return response(view('dashboard.componentes.cuentas_table', compact('cuentas', 'canManage', 'canEditDashboard', 'bloques'))->render());
         }
 
         $supervisores = Supervisor::orderBy('nombres')->get();
         $estadosRevision = EstadoWorkflow::whereHas('bloque', fn($q) => $q->where('codigo', 'REV1'))->get();
         $todosLosEstados = EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
         $estadosFiltro  = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->orderBy('nombre')->get();
-
-        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados', 'estadosFiltro', 'canManage', 'canEditDashboard'));
+        $todosLosEstados = EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
+        $estadosFiltro  = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->orderBy('nombre')->get();
+ 
+        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados', 'estadosFiltro', 'canManage', 'canEditDashboard', 'bloques'));
     }
 
     /**

@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ups! Algo salió mal - SGCC</title>
+    <link rel="icon" type="image/webp" href="{{ asset('assets/img/unnamed.webp') }}">
+
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
         :root {

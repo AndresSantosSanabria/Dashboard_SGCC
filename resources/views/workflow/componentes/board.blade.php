@@ -17,8 +17,9 @@
         <div class="kanban-board">
             @foreach ($block['columnas'] as $estadoId => $columna)
                 <div class="kanban-column">
-                    <div class="column-title">
-                        <span class="text-capitalize">{{ $columna['nombre'] }}</span>
+                    <div class="column-title d-flex align-items-center">
+                        <div class="me-2" style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ $columna['color_hex'] ?? '#adb5bd' }}; shadow: 0 0 5px {{ $columna['color_hex'] }}44;"></div>
+                        <span class="text-capitalize flex-grow-1">{{ $columna['nombre'] }}</span>
                         <span
                             class="badge rounded-pill bg-white text-dark shadow-sm">{{ count($columna['cuentas']) }}</span>
                     </div>
@@ -40,7 +41,9 @@
                                     $estadoBloqueActual?->fecha_ultima_actualizacion ??
                                     ($estadoBloqueActual?->fecha_ingreso_bloque ?? $cuenta->created_at);
                             @endphp
-                            <div class="account-card {{ $alertClass }} sortable-item" data-bs-toggle="modal"
+                            <div class="account-card sortable-item" 
+                                style="border-left-color: {{ $cuenta->estadoActual?->color_hex ?? '#6c757d' }};"
+                                data-bs-toggle="modal"
                                 data-bs-target="#modalCuenta{{ $cuenta->id }}" data-cuenta-id="{{ $cuenta->id }}">
                                 <div class="card-id">CONTRATO: {{ $cuenta->contrato?->numero_contrato ?? 'N/A' }}
                                 </div>
@@ -51,8 +54,8 @@
                                 <div class="d-flex justify-content-between align-items-center mb-1">
                                     <div class="small text-muted" style="font-size: 0.75rem;">Cuenta
                                         #{{ $cuenta->numero_cuenta }}</div>
-                                    <span class="badge border text-dark bg-light"
-                                        style="font-size: 0.65rem; padding: 2px 5px;">
+                                    <span class="state-badge"
+                                        style="background-color: {{ $cuenta->estadoActual?->color_hex }}15; color: {{ $cuenta->estadoActual?->color_hex }}; border: 1px solid {{ $cuenta->estadoActual?->color_hex }}44; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 600;">
                                         {{ $cuenta->estadoActual?->nombre }}
                                     </span>
                                 </div>

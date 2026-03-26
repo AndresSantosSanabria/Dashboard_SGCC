@@ -5,6 +5,8 @@ namespace App\Providers;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,11 +23,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Paginator::useBootstrapFive();
+        // Soporte para hosting en subcarpetas en producción 
+        // Detecta el APP_URL del archivo .env y fuerza a Laravel a usarlo como base.
+        if (config('app.url') && config('app.url') !== 'http://localhost') {
+            URL::forceRootUrl(config('app.url'));
+            
+            // Si el APP_URL usa HTTPS, forzar que todos los assets y rutas lo usen.
+            if (Str::startsWith(config('app.url'), 'https')) {
+                URL::forceScheme('https');
+            }
+        }
 
-        // Lanzar el scheduler como proceso en background al iniciar el servidor.
-        // Esto garantiza que el verificador de estancamiento esté siempre activo
-        // sin necesidad de configurar un cron externo.
+        Paginator::useBootstrapFive();
         $this->ensureSchedulerRunning();
     }
 

@@ -140,10 +140,8 @@ class CuentaCobro extends Model
      */
     public function getDiferenciaCuentasAttribute()
     {
-        $numeroCuenta = (int) ($this->numero_cuenta ?? 0);
-        if ($numeroCuenta <= 0) $numeroCuenta = 1;
-
-        return (int) ($this->numero_pagos_totales ?? 0) - $numeroCuenta;
+        // Se calcula restando del total de pagos pactados, las facturas que ya llegaron a feliz término (finalizadas)
+        return (int) ($this->numero_pagos_totales ?? 0) - (int) ($this->numero_facturas_radicadas ?? 0);
     }
 
     /**

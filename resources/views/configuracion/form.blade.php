@@ -87,7 +87,7 @@
                                 required onchange="showRolePermissions()">
                                 <option value="">-- Seleccione un rol --</option>
                                 @foreach ($roles as $role)
-                                    <option value="{{ $role->id }}" data-permisos="{{ json_encode($role->permisos) }}"
+                                    <option value="{{ $role->id }}" data-permisos="{{ json_encode($role->lista_permisos) }}"
                                         {{ old('rol_id', $usuario->rol_id ?? '') == $role->id ? 'selected' : '' }}>
                                         {{ $role->nombre }}
                                     </option>

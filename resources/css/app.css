@@ -16,25 +16,51 @@ body {
 
 /* 2. NAVEGACIÓN (Sidebar Architecture) */
 #sidebar {
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 250px;
+    min-width: 250px;
+    max-width: 250px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     overflow-x: hidden;
     font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+#sidebar.collapsed {
+    width: 78px !important;
+    min-width: 78px !important;
+    max-width: 78px !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
 }
 
 .bg-govco-navbar {
     background-color: var(--govcolor-cobalt) !important;
 }
 
+#sidebar .sidebar-logo-link {
+    transition: opacity 0.2s;
+}
+
+#sidebar.collapsed .sidebar-logo-link {
+    opacity: 0;
+    pointer-events: none;
+}
+
 #sidebar .nav-link {
-    padding: 0.6rem 0.8rem;
-    border-radius: 8px; /* Bordes suaves para un look moderno */
-    margin: 2px 0;
-    transition: all 0.2s ease;
+    padding: 0.7rem 1.1rem;
+    border-radius: 12px;
+    margin: 4px 0;
+    transition: all 0.25s ease;
+    display: flex;
+    align-items: center;
 }
 
 #sidebar .sidebar-text {
-    font-weight: 500;
-    letter-spacing: 0.3px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    margin-left: 10px;
+    opacity: 1;
+    transition: opacity 0.15s;
 }
 
 /* 3. JERARQUÍA TIPOGRÁFICA (Visual Authority) */
@@ -70,21 +96,27 @@ h2, .h2 {
 }
 
 #sidebar.collapsed .nav-link {
-    text-align: center;
-    padding-left: 0;
-    padding-right: 0;
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
 }
 
-#sidebar.collapsed .dropdown-toggle {
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
+#sidebar.collapsed .nav-link i {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    font-size: 1.3rem !important;
+}
+
+#sidebar.collapsed .sidebar-header {
+    justify-content: center !important;
+    padding: 0 !important;
 }
 
 #sidebar.collapsed .user-sidebar-section {
     flex-direction: column !important;
     gap: 12px;
     justify-content: center !important;
+    align-items: center !important;
 }
 
 #sidebar.collapsed .user-profile-info {

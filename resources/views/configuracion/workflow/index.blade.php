@@ -8,9 +8,14 @@
             <h1 class="h3 mb-0 text-gray-800">
                 <i class="bi bi-diagram-3-fill me-2"></i>Gestión de Workflow
             </h1>
-            <a href="{{ route('configuracion.index') }}" class="btn btn-outline-secondary btn-sm shadow-sm">
-                <i class="bi bi-chevron-left"></i> Volver
-            </a>
+            <div class="d-flex gap-2">
+                <button id="btnSyncTransiciones" class="btn btn-outline-warning btn-sm shadow-sm" title="Limpia transiciones huérfanas y regenera todas las conexiones">
+                    <i class="bi bi-arrow-repeat me-1"></i> Sincronizar Transiciones
+                </button>
+                <a href="{{ route('configuracion.index') }}" class="btn btn-outline-secondary btn-sm shadow-sm">
+                    <i class="bi bi-chevron-left"></i> Volver
+                </a>
+            </div>
         </div>
 
         <div class="alert alert-info">
@@ -164,10 +169,8 @@
                             <div class="col-md-6">
                                 <label class="form-label fw-bold">Tipo <span class="text-danger">*</span></label>
                                 <select class="form-select" name="tipo" id="form_tipo" required>
-                                    <option value="INICIAL">🟡 INICIAL</option>
                                     <option value="EN_PROCESO">🔵 EN PROCESO</option>
                                     <option value="APROBADO">🟢 APROBADO</option>
-                                    <option value="DEVUELTO">🔴 DEVUELTO</option>
                                     <option value="FINAL">🏁 FINAL</option>
                                 </select>
                             </div>
@@ -204,6 +207,14 @@
                                                 <label class="form-check-label fw-600" for="form_es_final">Estado de
                                                     Salida</label>
                                                 <p class="small text-muted mb-0">Permite avanzar al siguiente bloque.</p>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check form-switch custom-switch">
+                                                <input class="form-check-input" type="checkbox" name="permite_devolucion"
+                                                    id="form_permite_devolucion" value="1">
+                                                <label class="form-check-label fw-600 text-danger" for="form_permite_devolucion">Estado de Devolución</label>
+                                                <p class="small text-muted mb-0">Retorna la cuenta al bloque anterior.</p>
                                             </div>
                                         </div>
                                         <div class="col-md-6">
@@ -254,13 +265,77 @@
             const form = document.getElementById('estadoForm');
             const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-            // Vincular inputs de color
+            // Sincronización de switches y tipos
+            const switchInicial = document.getElementById('form_es_inicial');
+            const switchFinal = document.getElementById('form_es_final');
+            const switchDevuelto = document.getElementById('form_permite_devolucion');
+            const selectTipo = document.getElementById('form_tipo');
+
+            switchInicial.addEventListener('change', function() {
+                if (this.checked) {
+                    switchFinal.checked = false;
+                    switchDevuelto.checked = false;
+                }
+            });
+
+            switchFinal.addEventListener('change', function() {
+                if (this.checked) {
+                    switchInicial.checked = false;
+                    switchDevuelto.checked = false;
+                    selectTipo.value = 'FINAL';
+                } else if (selectTipo.value === 'FINAL') {
+                    selectTipo.value = 'EN_PROCESO';
+                }
+            });
+
+            switchDevuelto.addEventListener('change', function() {
+                if (this.checked) {
+                    switchInicial.checked = false;
+                    switchFinal.checked = false;
+                    selectTipo.value = 'EN_PROCESO';
+                }
+            });
+
+            selectTipo.addEventListener('change', function() {
+                if (this.value === 'FINAL') {
+                    switchFinal.checked = true;
+                    switchInicial.checked = false;
+                }
+            });
+
             document.getElementById('form_color').addEventListener('input', (e) => {
                 document.getElementById('form_color_text').value = e.target.value;
             });
             document.getElementById('form_color_text').addEventListener('input', (e) => {
                 document.getElementById('form_color').value = e.target.value;
             });
+
+            // Botón Sincronizar Transiciones
+            const btnSync = document.getElementById('btnSyncTransiciones');
+            if (btnSync) {
+                btnSync.addEventListener('click', function () {
+                    btnSync.disabled = true;
+                    btnSync.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sincronizando...';
+
+                    window.apiFetch('/configuracion/workflow-estados/sync-transiciones', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.success) {
+                                window.showSnackbar('✅ ' + res.message, 'success');
+                                setTimeout(() => location.reload(), 1000);
+                            } else {
+                                window.showSnackbar('❌ ' + res.message, 'error');
+                                btnSync.disabled = false;
+                                btnSync.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Sincronizar Transiciones';
+                            }
+                        })
+                        .catch(() => {
+                            window.showSnackbar('❌ Error de red al sincronizar', 'error');
+                            btnSync.disabled = false;
+                            btnSync.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Sincronizar Transiciones';
+                        });
+                });
+            }
 
             window.openCreateModal = function(bloqueId, bloqueNombre) {
                 form.reset();
@@ -288,6 +363,7 @@
                     // Checkboxes behavior
                     document.getElementById('form_es_inicial').checked = !!estado.es_inicial;
                     document.getElementById('form_es_final').checked = !!estado.es_final;
+                    document.getElementById('form_permite_devolucion').checked = !!estado.permite_devolucion;
                     document.getElementById('form_contabiliza_tiempo').checked = !!estado.contabiliza_tiempo;
                     document.getElementById('form_afecta_indicadores').checked = !!estado.afecta_indicadores;
 
@@ -318,7 +394,7 @@
                 });
 
                 // Special handling for checkboxes since FormData only includes checked ones
-                ['es_inicial', 'es_final', 'contabiliza_tiempo', 'afecta_indicadores'].forEach(key => {
+                ['es_inicial', 'es_final', 'permite_devolucion', 'contabiliza_tiempo', 'afecta_indicadores'].forEach(key => {
                     data[key] = document.getElementById(`form_${key}`).checked ? 1 : 0;
                 });
 

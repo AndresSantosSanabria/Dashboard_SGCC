@@ -4,7 +4,7 @@
             <tr>
                 @php
                     $headers = [
-                        ['label' => 'NUMERO DE CONTRATO', 'class' => 'sticky-col sticky-col-1'],
+                        ['label' => 'NUMERO DE CONTRATO', 'class' => 'sticky-col sticky-col-1', 'sortable' => true, 'id' => 'numero_contrato'],
                         ['label' => 'CONTRATISTA', 'class' => 'sticky-col sticky-col-2'],
                         ['label' => 'CEDULA', 'class' => 'sticky-col sticky-col-3'],
                         ['label' => 'ESTADO ACTUAL', 'class' => ''],
@@ -25,28 +25,44 @@
                         ['label' => 'RADICADO POR', 'class' => ''],
                         ['label' => 'FECHA RADICACIÓN', 'class' => ''],
                         ['label' => 'OBSERVACIONES', 'class' => ''],
-                        ['label' => 'ESTADO 1ERA REVISIÓN', 'class' => ''],
-                        ['label' => 'FECHA DEVUELTA/SAP', 'class' => ''],
-                        ['label' => 'ENVIADA SAP', 'class' => ''],
-                        ['label' => 'RESPONSABLE', 'class' => ''],
-                        ['label' => 'FECHA ENVIO FACT/CORR', 'class' => ''],
-                        ['label' => 'EN FACTURACIÓN', 'class' => ''],
-                        ['label' => 'RESPONSABLE', 'class' => ''],
-                        ['label' => 'FECHA FACTURACIÓN', 'class' => ''],
-                        ['label' => 'FIRMA SECRETARIO', 'class' => ''],
-                        ['label' => 'FECHA FIRMA', 'class' => ''],
-                        ['label' => 'RADICADA HACIENDA', 'class' => ''],
-                        ['label' => 'FECHA RAD. HACIENDA', 'class' => ''],
-                        ['label' => 'ULTIMA FACTURA HACIENDA', 'class' => ''],
-                        ['label' => 'OBS. DEVOLUCION', 'class' => ''],
-                        ['label' => 'Diferencia Cuentas Totales - vs Cuentas Radicadas', 'class' => ''],
-                        ['label' => 'TRÁMITE SIGUIENTE CUENTA', 'class' => ''],
                     ];
+ 
+                    // BLOQUES DINÁMICOS: Agregamos las columnas de cada etapa del flujograma
+                    foreach ($bloques as $b) {
+                        $shortName = match($b->codigo) {
+                            'REV1' => 'REVISIÓN',
+                            'SAP' => 'SAP',
+                            'FACT' => 'FACTURACIÓN',
+                            'FIRMA' => 'FIRMA',
+                            'HACIENDA' => 'HACIENDA',
+                            default => strtoupper($b->nombre)
+                        };
+ 
+                        $headers[] = ['label' => "ESTADO $shortName", 'class' => ''];
+                        $headers[] = ['label' => "FECHA / RESP. $shortName", 'class' => ''];
+                    }
+ 
+                    $headers[] = ['label' => 'ULTIMA FACTURA HACIENDA', 'class' => ''];
+                    $headers[] = ['label' => 'OBS. DEVOLUCION', 'class' => ''];
+                    $headers[] = ['label' => 'Diferencia Cuentas Totales - vs Cuentas Radicadas', 'class' => ''];
+                    $headers[] = ['label' => 'TRÁMITE SIGUIENTE CUENTA', 'class' => ''];
                 @endphp
                 @foreach ($headers as $h)
                     <th class="{{ $h['class'] }}">
-                        <div class="d-flex align-items-center justify-content-between gap-2">
+                        <div class="d-flex align-items-center justify-content-between gap-2 {{ !empty($h['sortable']) ? 'cursor-pointer' : '' }}" 
+                             @if(!empty($h['sortable'])) onclick="toggleDashboardSort('{{ $h['id'] }}')" @endif>
                             <span>{{ $h['label'] }}</span>
+                            @if(!empty($h['sortable']))
+                                @php
+                                    $currentSortBy = request('sort_by', 'numero_contrato');
+                                    $currentOrder = request('sort_order', 'asc');
+                                    $iconClass = 'bi-sort-alpha-down';
+                                    if ($currentSortBy === $h['id']) {
+                                        $iconClass = $currentOrder === 'asc' ? 'bi-sort-numeric-up' : 'bi-sort-numeric-down';
+                                    }
+                                @endphp
+                                <i class="bi {{ $iconClass }} ms-1 opacity-75"></i>
+                            @endif
                             <button type="button" class="btn btn-sm btn-link text-white p-0 toggle-col-btn"
                                 title="Minimizar">
                                 <i class="bi bi-dash-lg"></i>
@@ -80,12 +96,7 @@
                         : null;
                     $ssVigente = $contratista?->seguridadSocialVigente;
 
-                    // Lógica para bloques específicos usando IDs para mayor confiabilidad
-                    $bloqueRevision = $cuenta->estadosBloques->where('bloque_id', 1)->first();
-                    $bloqueSap = $cuenta->estadosBloques->where('bloque_id', 2)->first();
-                    $bloqueFacturacion = $cuenta->estadosBloques->where('bloque_id', 3)->first();
-                    $bloqueFirma = $cuenta->estadosBloques->where('bloque_id', 4)->first();
-                    $bloqueHacienda = $cuenta->estadosBloques->where('bloque_id', 5)->first();
+                    // Los bloques se cargan dinámicamente mediante el loop inferior
                 @endphp
                 <tr style="--row-index: {{ $index }};">
                     <td class="sticky-col sticky-col-1"><strong>{{ $contrato?->numero_contrato ?? 'N/A' }}</strong></td>
@@ -112,7 +123,17 @@
                     <td>{{ $cuenta->numero_cuenta ?? '0' }}</td>
                     <td>{{ $cuenta->numero_pagos_totales ?? '0' }}</td>
                     <td>{{ $cuenta->numero_facturas_radicadas ?? '0' }}</td>
-                    <td>{{ number_format($cuenta->porcentaje_cuentas ?? 0, 2) }}%</td>
+                    @php
+                        $pCuentas = $cuenta->porcentaje_cuentas ?? 0;
+                        // Cálculo de color (HSL): 0% = Rojo (0), 100% = Verde (120)
+                        $hue = ($pCuentas * 1.2); 
+                        $bgProgreso = "hsl($hue, 85%, 45%)";
+                    @endphp
+                    <td class="text-center">
+                        <div style="background-color: {{ $bgProgreso }}; color: white; padding: 4px 8px; border-radius: 12px; font-weight: bold; display: inline-block; min-width: 75px; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            {{ number_format($pCuentas, 2) }}%
+                        </div>
+                    </td>
 
                     {{-- Información de Seguridad Social --}}
                     <td>{{ $ssVigente?->entidadSalud?->nombre ?? 'N/A' }}</td>
@@ -129,115 +150,43 @@
                             {{ $cuenta->observaciones ?? 'Sin observaciones' }}
                         </small>
                     </td>
-
-                    {{-- Workflow: Revisión --}}
-                    <td>
-                        @if ($bloqueRevision && $bloqueRevision->estadoActual)
-                            @php
-                                $estadoRevisionNombre = $bloqueRevision->estadoActual->nombre;
-                                $esDevueltaRevision =
-                                    stripos($estadoRevisionNombre, 'devuelta') !== false ||
-                                    stripos($estadoRevisionNombre, 'devolución') !== false ||
-                                    stripos($estadoRevisionNombre, 'devuelto') !== false;
-                            @endphp
-                            <span
-                                class="badge {{ $esDevueltaRevision ? 'bg-danger' : ($bloqueRevision->bloque_completado ? 'bg-success' : 'bg-warning text-dark') }}">
-                                {{ $bloqueRevision->estadoActual->nombre }}
-                            </span>
-                        @else
-                            <span class="text-muted small">N/A</span>
-                        @endif
-                    </td>
-                    <td>{{ $bloqueRevision?->fecha_completado_bloque ? $bloqueRevision->fecha_completado_bloque->format('d/m/Y') : 'N/A' }}
-                    </td>
-                    {{-- Workflow: SAP --}}
-                    <td>
-                        @if ($bloqueSap && $bloqueSap->estadoActual)
-                            @php
-                                $estadoSapNombre = $bloqueSap->estadoActual->nombre;
-                                $esDevueltaSap =
-                                    stripos($estadoSapNombre, 'devuelta') !== false ||
-                                    stripos($estadoSapNombre, 'devolución') !== false ||
-                                    stripos($estadoSapNombre, 'devuelto') !== false;
-                            @endphp
-                            <span
-                                class="badge {{ $esDevueltaSap ? 'bg-danger' : ($bloqueSap->bloque_completado ? 'bg-success' : 'bg-secondary') }}">
-                                {{ $bloqueSap->estadoActual->nombre }}
-                            </span>
-                        @else
-                            <span class="text-muted small">N/A</span>
-                        @endif
-                    </td>
-                    <td>{{ $bloqueSap?->responsable->primer_nombre ?? 'Sin asignar' }}</td>
-
-                    {{-- Workflow: Facturación --}}
-                    <td>{{ $bloqueFacturacion?->fecha_ingreso_bloque ? $bloqueFacturacion->fecha_ingreso_bloque->format('d/m/Y') : 'N/A' }}
-                    </td>
-                    <td>
-                        @if ($bloqueFacturacion && $bloqueFacturacion->estadoActual)
-                            @php
-                                $estadoFactNombre = $bloqueFacturacion->estadoActual->nombre;
-                                $esDevueltaFact =
-                                    stripos($estadoFactNombre, 'devuelta') !== false ||
-                                    stripos($estadoFactNombre, 'devolución') !== false ||
-                                    stripos($estadoFactNombre, 'devuelto') !== false;
-                            @endphp
-                            <span
-                                class="badge {{ $esDevueltaFact ? 'bg-danger' : ($bloqueFacturacion->bloque_completado ? 'bg-success' : 'bg-primary') }}">
-                                {{ $bloqueFacturacion->estadoActual->nombre }}
-                            </span>
-                        @else
-                            <span class="text-muted small">N/A</span>
-                        @endif
-                    </td>
-                    <td>{{ $bloqueFacturacion?->responsable->primer_nombre ?? 'Sin asignar' }}</td>
-                    <td>{{ $bloqueFacturacion?->fecha_completado_bloque ? $bloqueFacturacion->fecha_completado_bloque->format('d/m/Y') : 'N/A' }}
-                    </td>
-
-                    {{-- Firma y Hacienda --}}
-                    <td>
-                        @if ($bloqueFirma && $bloqueFirma->estadoActual)
-                            @php
-                                $estadoFirmaNombre = $bloqueFirma->estadoActual->nombre;
-                                $esDevueltaFirma =
-                                    stripos($estadoFirmaNombre, 'devuelta') !== false ||
-                                    stripos($estadoFirmaNombre, 'devolución') !== false ||
-                                    stripos($estadoFirmaNombre, 'devuelto') !== false;
-                            @endphp
-                            <span
-                                class="badge {{ $esDevueltaFirma ? 'bg-danger' : ($bloqueFirma->bloque_completado ? 'bg-success' : 'bg-secondary') }}">
-                                {{ $bloqueFirma->estadoActual->nombre }}
-                            </span>
-                        @else
-                            <span class="text-muted small">N/A</span>
-                        @endif
-                    </td>
-                    <td>{{ $bloqueFirma?->fecha_ingreso_bloque ? $bloqueFirma->fecha_ingreso_bloque->format('d/m/Y') : 'N/A' }}
-                    </td>
-                    <td>
-                        @if ($bloqueHacienda && $bloqueHacienda->estadoActual)
-                            @php
-                                $estadoHaciendaNombre = $bloqueHacienda->estadoActual->nombre;
-                                $esDevueltaHacienda =
-                                    stripos($estadoHaciendaNombre, 'devuelta') !== false ||
-                                    stripos($estadoHaciendaNombre, 'devolución') !== false ||
-                                    stripos($estadoHaciendaNombre, 'devuelto') !== false;
-                            @endphp
-                            <span
-                                class="badge {{ $esDevueltaHacienda ? 'bg-danger' : ($bloqueHacienda->bloque_completado ? 'bg-success' : 'bg-secondary') }}">
-                                {{ $bloqueHacienda->estadoActual->nombre }}
-                            </span>
-                        @elseif ($cuenta->finalizada)
-                            <span class="badge bg-success">SÍ</span>
-                        @else
-                            <span class="text-muted small text-uppercase">Pendiente</span>
-                        @endif
-                    </td>
-                    <td>{{ $bloqueHacienda?->fecha_ingreso_bloque ? $bloqueHacienda->fecha_ingreso_bloque->format('d/m/Y') : ($cuenta->fecha_radicacion_hacienda ? $cuenta->fecha_radicacion_hacienda->format('d/m/Y') : 'N/A') }}
-                    </td>
+                    {{-- BLOQUES DINÁMICOS: Renderizado automático de todas las etapas del workflow --}}
+                    @foreach($bloques as $b)
+                        @php 
+                            $histBlock = $cuenta->estadosBloques->where('bloque_id', $b->id)->first();
+                        @endphp
+                        <td>
+                            @if ($histBlock && $histBlock->estadoActual)
+                                @php
+                                    $estN = $histBlock->estadoActual->nombre;
+                                    $esDev = stripos($estN, 'devuelta') !== false || stripos($estN, 'devolución') !== false || stripos($estN, 'devuelto') !== false;
+                                @endphp
+                                <span class="badge {{ $esDev ? 'bg-danger' : ($histBlock->bloque_completado ? 'bg-success' : 'bg-warning text-dark') }}">
+                                    {{ $histBlock->estadoActual->nombre }}
+                                </span>
+                            @else
+                                <span class="text-muted small">Pendiente</span>
+                            @endif
+                        </td>
+                        <td>
+                            <div class="small">
+                                @if($histBlock)
+                                    @if($histBlock->bloque_completado)
+                                        <i class="bi bi-calendar-check text-success me-1"></i>{{ $histBlock->fecha_completado_bloque ? $histBlock->fecha_completado_bloque->format('d/m/Y') : 'Finalizado' }}
+                                    @else
+                                        <i class="bi bi-person text-secondary me-1"></i>{{ $histBlock->responsable->primer_nombre ?? 'Asignado' }}
+                                        <br>
+                                        <span class="text-muted" style="font-size: 0.7rem;">Ingreso: {{ $histBlock->fecha_ingreso_bloque ? $histBlock->fecha_ingreso_bloque->format('d/m/Y') : '-' }}</span>
+                                    @endif
+                                @else
+                                    -
+                                @endif
+                            </div>
+                        </td>
+                    @endforeach
+ 
                     <td>{{ $cuenta->ultima_factura_hacienda ?? 'N/A' }}</td>
-                    <td>{{ $cuenta->observacion_hacienda ?? 'N/A' }}</td>
-                    <td class="text-center">{{ $cuenta->diferencia_cuentas }}</td>
+                    <td>{{ $cuenta->observacion_hacienda ?? 'N/A' }}</td>                   <td class="text-center">{{ $cuenta->diferencia_cuentas }}</td>
                     <td class="text-center">
                         @if ($cuenta->finalizada)
                             @if ($cuenta->numero_cuenta < $cuenta->numero_pagos_totales)

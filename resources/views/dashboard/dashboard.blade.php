@@ -88,15 +88,54 @@
                         </div>
                         <div class="col-md-3">
                             <label class="form-label fw-bold">Estado</label>
-                            <select name="searchEstado" class="form-select filter-input">
-                                <option value="">Todos los estados</option>
-                                @foreach ($estadosFiltro as $est)
-                                    <option value="{{ $est->nombre }}"
-                                        {{ request('searchEstado') == $est->nombre ? 'selected' : '' }}>
-                                        {{ $est->nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
+                            <div class="dropdown custom-multilevel-dropdown">
+                                <button
+                                    class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center"
+                                    type="button" id="dropdownEstado" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span id="selectedEstadoLabel">{{ request('searchEstado') ?: 'Todos los estados' }}</span>
+                                    <i class="bi bi-chevron-down small opacity-50"></i>
+                                </button>
+                                <input type="hidden" name="searchEstado" id="hiddenSearchEstado"
+                                    value="{{ request('searchEstado') }}">
+
+                                <ul class="dropdown-menu w-100 shadow-lg" aria-labelledby="dropdownEstado">
+                                    <li>
+                                        <a class="dropdown-item filter-estado-item {{ !request('searchEstado') ? 'active' : '' }}"
+                                            href="#" data-value="">
+                                            <i class="bi bi-layers me-2"></i> Todos los estados
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+
+                                    @foreach ($bloques as $bloque)
+                                        @php
+                                            $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect();
+                                        @endphp
+
+                                        @if ($estadosDelBloque->isNotEmpty())
+                                            <li class="dropdown-submenu">
+                                                <a class="dropdown-item dropdown-toggle d-flex justify-content-between align-items-center"
+                                                    href="#">
+                                                    <span>{{ $bloque->nombre }}</span>
+                                                    <i class="bi bi-chevron-right small opacity-50"></i>
+                                                </a>
+                                                <ul class="dropdown-menu shadow-lg">
+                                                    @foreach ($estadosDelBloque as $est)
+                                                        <li>
+                                                            <a class="dropdown-item filter-estado-item {{ request('searchEstado') == $est->nombre ? 'active' : '' }}"
+                                                                href="#" data-value="{{ $est->nombre }}">
+                                                                {{ $est->nombre }}
+                                                            </a>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </li>
+                                        @endif
+                                    @endforeach
+                                </ul>
+                            </div>
                         </div>
                         <div class="col-md-1">
                             <label class="form-label fw-bold">N° Cuenta</label>

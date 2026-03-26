@@ -40,14 +40,22 @@ class SeguimientoController extends Controller
         $query = Contrato::with(['contratista', 'supervisor', 'modalidad', 'planta', 'concepto']);
 
         // Filtros de búsqueda: Optimizamos usando subconsultas para contratistas
-        if ($request->filled('search')) {
-            $search = $request->search;
+        if ($request->filled('numero_contrato')) {
+            $search = $request->numero_contrato;
             $query->where(function ($q) use ($search) {
                 $q->where('numero_contrato', 'LIKE', "%{$search}%")
                     ->orWhereHas('contratista', function ($sq) use ($search) {
                         $sq->where('razon_social', 'LIKE', "%{$search}%");
                     });
             });
+        }
+
+        if ($request->filled('tipo_contratista') && $request->tipo_contratista !== 'Todos') {
+            $query->where('tipo_contratista', $request->tipo_contratista);
+        }
+
+        if ($request->filled('supervisor_id') && $request->supervisor_id !== 'Todos') {
+            $query->where('supervisor_id', $request->supervisor_id);
         }
 
         // 2. HIDRATACIÓN DINÁMICA (The Magic Layer)
@@ -120,9 +128,14 @@ class SeguimientoController extends Controller
             $c->perc_cumplimiento = $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0;
         }
 
-        // 4. ORDENAMIENTO POR PRIORIDAD DE RIESGO
-        $priority = ['CRÍTICO' => 4, 'PENDIENTES' => 3, 'EN PROGRESO' => 2, 'COMPLETO' => 1, 'VACÍO' => 0];
-        $contratos = $allContratos->sortByDesc(fn($c) => $priority[$c->global_status] ?? 0);
+        // 4. ORDENAMIENTO POR NÚMERO (Natural Sort)
+        $order = $request->input('sort_order', 'asc');
+        $isDesc = ($order === 'desc');
+
+        $contratos = $allContratos->sortBy(function ($c) {
+            preg_match('/\d+/', $c->numero_contrato, $matches);
+            return (int) ($matches[0] ?? 0);
+        }, SORT_REGULAR, $isDesc);
 
         // Filtros de colección (Filtro Compuesto: Estado Interno Y/O Mes)
         if ($request->filled('estado_filtro') || $request->filled('mes_filtro')) {
@@ -193,6 +206,14 @@ class SeguimientoController extends Controller
      */
     public function index(Request $request)
     {
+        /** @var Usuario $user */
+        $user = Auth::user();
+        
+        // Verificación estricta de permiso: Si no tiene acceso al seguimiento SECOP, redirigir al dashboard base
+        if (!$user->puedeAccederSeguimiento()) {
+            return redirect()->route('dashboard')->with('error', 'No tienes permisos para acceder al Seguimiento SECOP.');
+        }
+
         Contrato::logManualAudit(null, 'READ', 'El usuario cargó la vista de seguimiento/dashboard', 'contratos');
 
         $contratos = $this->getFilteredContratos($request);

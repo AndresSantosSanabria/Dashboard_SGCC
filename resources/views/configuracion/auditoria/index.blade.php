@@ -39,13 +39,25 @@
                         <label class="form-label small fw-bold">Acción</label>
                         <select name="accion" class="form-select">
                             <option value="">Todas las acciones</option>
-                            <option value="INSERT" {{ request('accion') == 'INSERT' ? 'selected' : '' }}>INSERT</option>
-                            <option value="UPDATE" {{ request('accion') == 'UPDATE' ? 'selected' : '' }}>UPDATE</option>
-                            <option value="DELETE" {{ request('accion') == 'DELETE' ? 'selected' : '' }}>DELETE</option>
-                            <option value="READ" {{ request('accion') == 'READ' ? 'selected' : '' }}>READ</option>
-                            <option value="FAILURE" {{ request('accion') == 'FAILURE' ? 'selected' : '' }}>⚠️ TODOS LOS FALLOS</option>
-                            <option value="FAILURE_DATABASE" {{ request('accion') == 'FAILURE_DATABASE' ? 'selected' : '' }}>🔴 FALLOS BD (QueryException)</option>
-                            <option value="FAILURE_SERVER" {{ request('accion') == 'FAILURE_SERVER' ? 'selected' : '' }}>🟠 FALLOS SERVIDOR (500)</option>
+                            <optgroup label="💾 Operaciones de Datos">
+                                <option value="INSERT" {{ request('accion') == 'INSERT' ? 'selected' : '' }}>INSERT</option>
+                                <option value="UPDATE" {{ request('accion') == 'UPDATE' ? 'selected' : '' }}>UPDATE</option>
+                                <option value="DELETE" {{ request('accion') == 'DELETE' ? 'selected' : '' }}>DELETE</option>
+                                <option value="READ" {{ request('accion') == 'READ' ? 'selected' : '' }}>READ</option>
+                            </optgroup>
+                            <optgroup label="⚙️ Eventos de Workflow">
+                                <option value="WORKFLOW_TRANSICION" {{ request('accion') == 'WORKFLOW_TRANSICION' ? 'selected' : '' }}>&#x1F504; Transición</option>
+                                <option value="WORKFLOW_DEVOLUCION" {{ request('accion') == 'WORKFLOW_DEVOLUCION' ? 'selected' : '' }}>&#x21B5; Devolución</option>
+                                <option value="WORKFLOW_AUTO" {{ request('accion') == 'WORKFLOW_AUTO' ? 'selected' : '' }}>&#x26A1; Paso Automático</option>
+                                <option value="WORKFLOW_NUEVO_CICLO" {{ request('accion') == 'WORKFLOW_NUEVO_CICLO' ? 'selected' : '' }}>&#x25B6; Nuevo Ciclo</option>
+                                <option value="WORKFLOW_TRANSITION_REJECTED" {{ request('accion') == 'WORKFLOW_TRANSITION_REJECTED' ? 'selected' : '' }}>&#x274C; Transición Rechazada</option>
+                                <option value="WORKFLOW_ERROR" {{ request('accion') == 'WORKFLOW_ERROR' ? 'selected' : '' }}>&#x1F534; Error Workflow</option>
+                            </optgroup>
+                            <optgroup label="&#x26A0; Fallos del Sistema">
+                                <option value="FAILURE" {{ request('accion') == 'FAILURE' ? 'selected' : '' }}>&#x26A0;&#xFE0F; TODOS LOS FALLOS</option>
+                                <option value="FAILURE_DATABASE" {{ request('accion') == 'FAILURE_DATABASE' ? 'selected' : '' }}>&#x1F534; FALLOS BD (QueryException)</option>
+                                <option value="FAILURE_SERVER" {{ request('accion') == 'FAILURE_SERVER' ? 'selected' : '' }}>&#x1F7E0; FALLOS SERVIDOR (500)</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="col-md-4 d-flex gap-2">
@@ -103,21 +115,34 @@
                                     <td>
                                         @php
                                             $badgeClass = match(true) {
-                                                $auditoria->accion === 'INSERT' => 'bg-success',
-                                                $auditoria->accion === 'UPDATE' => 'bg-info',
-                                                $auditoria->accion === 'DELETE' => 'bg-danger',
-                                                $auditoria->accion === 'READ' => 'bg-secondary',
-                                                $auditoria->accion === 'FAILURE_DATABASE' => 'bg-danger',
-                                                $auditoria->accion === 'FAILURE_SERVER' => 'bg-warning text-dark',
-                                                str_contains($auditoria->accion, 'FAILURE') => 'bg-danger',
-                                                str_contains($auditoria->accion, 'IMPORT') => 'bg-primary',
-                                                default => 'bg-secondary'
+                                                $auditoria->accion === 'INSERT'                          => 'bg-success',
+                                                $auditoria->accion === 'UPDATE'                          => 'bg-info',
+                                                $auditoria->accion === 'DELETE'                          => 'bg-danger',
+                                                $auditoria->accion === 'READ'                            => 'bg-secondary',
+                                                $auditoria->accion === 'WORKFLOW_TRANSICION'             => 'bg-primary',
+                                                $auditoria->accion === 'WORKFLOW_DEVOLUCION'             => 'bg-warning text-dark',
+                                                $auditoria->accion === 'WORKFLOW_AUTO'                   => 'bg-info text-dark',
+                                                $auditoria->accion === 'WORKFLOW_NUEVO_CICLO'            => 'bg-success',
+                                                $auditoria->accion === 'WORKFLOW_TRANSITION_REJECTED'    => 'bg-danger',
+                                                $auditoria->accion === 'WORKFLOW_ERROR'                  => 'bg-danger',
+                                                $auditoria->accion === 'FAILURE_DATABASE'                => 'bg-danger',
+                                                $auditoria->accion === 'FAILURE_SERVER'                  => 'bg-warning text-dark',
+                                                str_contains($auditoria->accion, 'FAILURE')              => 'bg-danger',
+                                                str_contains($auditoria->accion, 'IMPORT')               => 'bg-primary',
+                                                str_contains($auditoria->accion, 'WORKFLOW')             => 'bg-primary',
+                                                default                                                   => 'bg-secondary'
                                             };
                                             $iconClass = match(true) {
-                                                $auditoria->accion === 'FAILURE_DATABASE' => 'fas fa-database',
-                                                $auditoria->accion === 'FAILURE_SERVER' => 'fas fa-server',
-                                                str_contains($auditoria->accion, 'FAILURE') => 'fas fa-exclamation-triangle',
-                                                default => ''
+                                                $auditoria->accion === 'WORKFLOW_TRANSICION'             => 'fas fa-exchange-alt',
+                                                $auditoria->accion === 'WORKFLOW_DEVOLUCION'             => 'fas fa-undo-alt',
+                                                $auditoria->accion === 'WORKFLOW_AUTO'                   => 'fas fa-bolt',
+                                                $auditoria->accion === 'WORKFLOW_NUEVO_CICLO'            => 'fas fa-play-circle',
+                                                $auditoria->accion === 'WORKFLOW_TRANSITION_REJECTED'    => 'fas fa-ban',
+                                                $auditoria->accion === 'WORKFLOW_ERROR'                  => 'fas fa-exclamation-circle',
+                                                $auditoria->accion === 'FAILURE_DATABASE'                => 'fas fa-database',
+                                                $auditoria->accion === 'FAILURE_SERVER'                  => 'fas fa-server',
+                                                str_contains($auditoria->accion, 'FAILURE')              => 'fas fa-exclamation-triangle',
+                                                default                                                   => ''
                                             };
                                         @endphp
                                         <span class="badge {{ $badgeClass }}">

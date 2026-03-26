@@ -39,8 +39,10 @@ class StagnationService
 
 
         $limitMins = (int)($configs->get('ALERTA_ESTANCAMIENTO_MINUTOS') ?? 2880);
-        $preLimitMins = (int)($configs->get('ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS') ?? 120);
-        $bufferMins = $limitMins - $preLimitMins;
+        $warningMins = (int)($configs->get('ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS') ?? 0);
+        
+        // El umbral de activación es el menor entre el aviso y el límite crítico.
+        $minThresholdMins = ($warningMins > 0) ? min($limitMins, $warningMins) : $limitMins;
 
         // 2. DESTINATARIOS BASE (Administradores y Supervisores)
         $baseUserIds = DB::table('alerta_destinatarios')
@@ -64,7 +66,7 @@ class StagnationService
 
         // 3. CONSULTA MAESTRA (Excluir lo que ya está alertado - Filtrado Drástico)
         $ahora = Carbon::now();
-        $bufferDate = $ahora->copy()->subMinutes($bufferMins);
+        $bufferDate = $ahora->copy()->subMinutes($minThresholdMins);
 
         $alertasBatch = [];
         $processedCount = 0;
@@ -74,15 +76,18 @@ class StagnationService
             ->join('contratistas', 'contratos.contratista_id', '=', 'contratistas.id')
             ->join('estados_workflow', 'cuentas_cobro.estado_actual_id', '=', 'estados_workflow.id')
             // JOIN EXCLUYENTE: Si ya hay una alerta activa para este contrato, no hagamos NADA.
+            // JOIN EXCLUYENTE: Solo excluimos si ya existe una alerta de nivel DANGER sin leer.
+            // Esto permite que el sistema detecte si una cuenta pasó de WARNING a DANGER.
             ->leftJoin('alertas', function ($join) {
                 $join->on('alertas.cuenta_cobro_id', '=', 'cuentas_cobro.id')
                     ->where('alertas.tipo_alerta', '=', 'ESTANCAMIENTO')
-                    ->where('alertas.leida', '=', false);
+                    ->where('alertas.leida', '=', false)
+                    ->where('alertas.nivel', '=', 'DANGER');
             })
             ->where('cuentas_cobro.finalizada', false)
-            ->where('cuentas_cobro.updated_at', '<=', $bufferDate)
+            ->where('cuentas_cobro.updated_at', '<=', $ahora->copy()->subMinutes($minThresholdMins))
             ->where('estados_workflow.contabiliza_tiempo', true)
-            ->whereNull('alertas.id') // FILTRO DRÁSTICO: Si ya hay un alerta sin leer, se omite.
+            ->whereNull('alertas.id') 
             ->select(
                 'cuentas_cobro.id',
                 'cuentas_cobro.updated_at',
@@ -92,12 +97,13 @@ class StagnationService
                 'estados_workflow.nombre as estado_nombre'
             )
             ->orderBy('cuentas_cobro.id')
-            ->chunk(200, function ($cuentas) use (&$alertasBatch, &$processedCount, $limitMins, $bufferMins, $configs, $baseUserIds, $ahora) {
+            ->chunk(200, function ($cuentas) use (&$alertasBatch, &$processedCount, $limitMins, $warningMins, $configs, $baseUserIds, $ahora) {
                 foreach ($cuentas as $cuenta) {
                     $segundos = $this->businessTime->getWorkingSecondsBetween($cuenta->updated_at, $ahora);
                     $mins = $segundos / 60;
 
-                    $nivel = ($mins >= $limitMins) ? 'DANGER' : (($mins >= $bufferMins) ? 'WARNING' : null);
+                    // Lógica de umbrales absolutos: DANGER tiene prioridad sobre WARNING.
+                    $nivel = ($mins >= $limitMins) ? 'DANGER' : (($warningMins > 0 && $mins >= $warningMins) ? 'WARNING' : null);
                     if (!$nivel) continue;
 
                     $msgKey = ($nivel === 'DANGER') ? 'ALERTA_ESTANCAMIENTO_MSG_DANGER' : 'ALERTA_ESTANCAMIENTO_MSG_WARNING';

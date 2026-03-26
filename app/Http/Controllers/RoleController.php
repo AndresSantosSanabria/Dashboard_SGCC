@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\BloqueWorkflow;
+use App\Models\Contrato;
 use App\Models\Permiso;
 use App\Models\Role;
 use App\Models\Usuario;
@@ -113,6 +114,11 @@ class RoleController extends Controller
             'editar_dashboard' => false,
             'reportes_exportar' => false,
             'logs_ver' => false,
+            'ver_configuracion' => false,
+            'editar_configuracion' => false,
+            'ver_analitica' => false,
+            'ver_seguimiento_secop' => false,
+            'editar_seguimiento_secop' => false,
         ];
 
         // 1. Dashboard Module
@@ -138,20 +144,22 @@ class RoleController extends Controller
             }
         }
 
-        // 3. Contracts Module
-        if (! empty($matrix['contracts']['view'])) {
+        // 3-4 UNIFIED: Contracts and Accounts (Expedientes)
+        if (! empty($matrix['seguimiento']['view'])) {
             $permissions['contratos_ver'] = true;
-        }
-        if (! empty($matrix['contracts']['edit'])) {
-            $permissions['contratos_editar'] = true;
-        }
-
-        // 4. Accounts Module
-        if (! empty($matrix['accounts']['view'])) {
             $permissions['cuentas_ver'] = true;
         }
-        if (! empty($matrix['accounts']['edit'])) {
+        if (! empty($matrix['seguimiento']['edit'])) {
+            $permissions['contratos_editar'] = true;
             $permissions['cuentas_editar'] = true;
+        }
+
+        // 9. Seguimiento SECOP (SIA OBSERVA)
+        if (! empty($matrix['seguimiento_secop']['view'])) {
+            $permissions['ver_seguimiento_secop'] = true;
+        }
+        if (! empty($matrix['seguimiento_secop']['edit'])) {
+            $permissions['editar_seguimiento_secop'] = true;
         }
 
         // 5. Workflow Module
@@ -166,6 +174,21 @@ class RoleController extends Controller
         if (! empty($matrix['reports']['export'])) {
             $permissions['reportes_exportar'] = true;
         }
+
+        // 7. Configuration
+        if (! empty($matrix['config']['view'])) {
+            $permissions['ver_configuracion'] = true;
+        }
+        if (! empty($matrix['config']['edit'])) {
+            $permissions['editar_configuracion'] = true;
+        }
+
+        // 8. Analytics
+        if (! empty($matrix['analitica']['view'])) {
+            $permissions['ver_analitica'] = true;
+        }
+
+        // 9 is now handled in 3-4-9 UNIFIED
 
         return $permissions;
     }
@@ -243,6 +266,7 @@ class RoleController extends Controller
 
             return redirect()->route('configuracion.roles.index')->with('success', 'Rol actualizado exitosamente.');
         } catch (\Exception $e) {
+            Contrato::logException($e, 'roles', ['operacion' => 'update', 'id' => $id]);
             return back()->withInput()->withErrors(['error' => 'Error inesperado al actualizar el rol: ' . $e->getMessage()]);
         }
     }
@@ -283,6 +307,7 @@ class RoleController extends Controller
                 'es_activo' => $role->es_activo,
             ]);
         } catch (\Exception $e) {
+            Contrato::logException($e, 'roles', ['operacion' => 'toggleStatus', 'id' => $id]);
             return response()->json([
                 'success' => false,
                 'message' => 'Error inesperado: ' . $e->getMessage(),

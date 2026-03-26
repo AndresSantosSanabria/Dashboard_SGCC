@@ -238,16 +238,16 @@
                                     </td>
                                 </tr>
 
-                                <!-- Contracts -->
-                                <tr data-module="contracts">
+                                <!-- Contracts / Expedientes -->
+                                <tr data-module="seguimiento">
                                     <td class="fw-bold">
-                                        <i class="fas fa-file-contract me-2 text-info"></i>Contratos
+                                         <i class="fas fa-file-contract me-2 text-info"></i>Gestión de Expedientes y Cuentas de Cobro
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[contracts][view]" value="1"
-                                                {{ $role->lista_permisos['contratos_ver'] ?? false ? 'checked' : '' }}>
+                                                name="permisos_matrix[seguimiento][view]" value="1"
+                                                {{ ($role->lista_permisos['contratos_ver'] ?? false) || ($role->lista_permisos['cuentas_ver'] ?? false) ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -256,8 +256,8 @@
                                     <td class="text-center">
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[contracts][edit]" value="1"
-                                                {{ $role->lista_permisos['contratos_editar'] ?? false ? 'checked' : '' }}>
+                                                name="permisos_matrix[seguimiento][edit]" value="1"
+                                                {{ ($role->lista_permisos['contratos_editar'] ?? false) || ($role->lista_permisos['cuentas_editar'] ?? false) ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -265,16 +265,16 @@
                                     </td>
                                 </tr>
 
-                                <!-- Accounts -->
-                                <tr data-module="accounts">
+                                <!-- Seguimiento SECOP (SIA OBSERVA) -->
+                                <tr data-module="seguimiento_secop">
                                     <td class="fw-bold">
-                                        <i class="fas fa-file-invoice-dollar me-2 text-info"></i>Cuentas de Cobro
+                                        Seguimiento SECOP (SIA OBSERVA)
                                     </td>
                                     <td class="text-center">
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[accounts][view]" value="1"
-                                                {{ $role->lista_permisos['cuentas_ver'] ?? false ? 'checked' : '' }}>
+                                                name="permisos_matrix[seguimiento_secop][view]" value="1"
+                                                {{ $role->lista_permisos['ver_seguimiento_secop'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -283,8 +283,8 @@
                                     <td class="text-center">
                                         <div class="form-check d-flex justify-content-center">
                                             <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[accounts][edit]" value="1"
-                                                {{ $role->lista_permisos['cuentas_editar'] ?? false ? 'checked' : '' }}>
+                                                name="permisos_matrix[seguimiento_secop][edit]" value="1"
+                                                {{ $role->lista_permisos['editar_seguimiento_secop'] ?? false ? 'checked' : '' }}>
                                         </div>
                                     </td>
                                     <td class="text-center bg-light">
@@ -313,6 +313,48 @@
                                             <label class="form-check-label" for="export_reports">Puede Exportar
                                                 Excel</label>
                                         </div>
+                                    </td>
+                                </tr>
+
+                                <!-- Analitica -->
+                                <tr data-module="analitica">
+                                    <td class="fw-bold">
+                                        <i class="fas fa-chart-bar me-2 text-info"></i>Analítica / Estadísticas
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input perm-view" type="checkbox"
+                                                name="permisos_matrix[analitica][view]" value="1"
+                                                {{ $role->lista_permisos['ver_analitica'] ?? false ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
+                                    <td colspan="3" class="bg-light"></td>
+                                </tr>
+
+                                <!-- Configuración -->
+                                <tr data-module="config">
+                                    <td class="fw-bold">
+                                        <i class="fas fa-cogs me-2 text-info"></i>Configuración del Sistema
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input perm-view" type="checkbox"
+                                                name="permisos_matrix[config][view]" value="1"
+                                                {{ $role->lista_permisos['ver_configuracion'] ?? false ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
+                                    <td class="text-center bg-light">
+                                        <small class="text-muted">N/A</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="form-check d-flex justify-content-center">
+                                            <input class="form-check-input perm-action" type="checkbox"
+                                                name="permisos_matrix[config][edit]" value="1"
+                                                {{ $role->lista_permisos['editar_configuracion'] ?? false ? 'checked' : '' }}>
+                                        </div>
+                                    </td>
+                                    <td class="text-center bg-light">
+                                        <small class="text-muted">N/A</small>
                                     </td>
                                 </tr>
 

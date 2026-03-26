@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class BloqueWorkflow extends Model
 {
-    use HasFactory, \Illuminate\Database\Eloquent\SoftDeletes;
+    use Auditable, HasFactory, \Illuminate\Database\Eloquent\SoftDeletes;
 
     protected $table = 'bloques_workflow';
 

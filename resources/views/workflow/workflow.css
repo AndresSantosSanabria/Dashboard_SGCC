@@ -208,6 +208,8 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
     margin-bottom: 30px;
     border: 1px solid #e9ecef;
+    position: relative;
+    z-index: 1060;
 }
 
 .filter-label {
@@ -490,4 +492,102 @@
 
 .bg-secondary-timeline {
     background-color: #8898aa;
+}
+
+/* Custom Multilevel Dropdown */
+.custom-multilevel-dropdown .dropdown-toggle {
+    background-color: white;
+    border-color: #dee2e6;
+    color: #212529;
+    font-size: 0.875rem;
+    padding: 0.4rem 0.75rem;
+    transition: all 0.2s;
+    height: 38px;
+}
+
+.custom-multilevel-dropdown .dropdown-toggle:hover,
+.custom-multilevel-dropdown .dropdown-toggle:focus {
+    background-color: #f8f9fa;
+    border-color: #5e72e4;
+    box-shadow: 0 0 0 2px rgba(94, 114, 228, 0.1);
+}
+
+.custom-multilevel-dropdown .dropdown-menu {
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 0.5rem 0;
+    min-width: 320px;
+    width: max-content;
+    max-width: 450px;
+    z-index: 2500 !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    background-color: white;
+}
+
+.custom-multilevel-dropdown .dropdown-item {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    white-space: normal;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    line-height: 1.4;
+}
+
+.custom-multilevel-dropdown .dropdown-item:hover {
+    background-color: #f6f9fc;
+    color: #5e72e4;
+}
+
+.custom-multilevel-dropdown .dropdown-item.active {
+    background-color: #5e72e4;
+    color: white;
+}
+
+.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-submenu > .dropdown-menu {
+    top: 0;
+    left: 100%;
+    margin-top: -1px;
+    margin-left: 0;
+    display: none;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    z-index: 2501 !important;
+    background-color: white;
+}
+
+.dropdown-submenu:hover > .dropdown-menu {
+    display: block;
+}
+
+.dropdown-submenu > .dropdown-toggle i {
+    transition: transform 0.2s;
+}
+
+.dropdown-submenu:hover > .dropdown-toggle i {
+    transform: translateX(3px);
+}
+
+/* Responsive adjustment for submenus */
+@media (max-width: 768px) {
+    .dropdown-submenu > .dropdown-menu {
+        position: static;
+        margin-left: 1rem;
+        display: block;
+        box-shadow: none;
+        border: none;
+        background: transparent;
+    }
+    
+    .custom-multilevel-dropdown .dropdown-menu {
+        max-height: 400px;
+        overflow-y: auto;
+    }
 }

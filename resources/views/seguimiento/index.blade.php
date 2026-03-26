@@ -138,6 +138,8 @@
                     onclick="window.location.href='{{ route('seguimiento.index') }}'"><i
                         class="bi bi-x-circle"></i></button>
             </div>
+            {{-- Hidden input to store current sort order --}}
+            <input type="hidden" id="sortOrder" value="{{ request('sort_order', 'asc') }}">
         </div>
 
         {{-- TABLA MAESTRA INTEGRAL --}}
@@ -175,7 +177,12 @@
                             <th class="stk-gest text-center">GESTIÓN</th>
                             <th class="stk-risk text-center">PROGRESO</th>
                             <th class="stk-saas stk-proc text-center">PROCESO</th>
-                            <th class="stk-saas stk-num text-center">Nº CONTRATO</th>
+                            <th class="stk-saas stk-num text-center">
+                                <div class="d-flex align-items-center justify-content-center gap-1 cursor-pointer" onclick="toggleSort()">
+                                    Nº CONTRATO 
+                                    <i class="bi bi-sort-numeric-{{ request('sort_order') === 'desc' ? 'down' : 'up' }}" id="sortIcon"></i>
+                                </div>
+                            </th>
                             <th class="stk-saas stk-nom text-center" style="border-right: 2px solid #e2e8f0;">CONTRATISTA
                             </th>
 
@@ -421,7 +428,7 @@
             parentDiv.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
 
             try {
-                const res = await window.apiFetch('/seguimiento/update-status', {
+                const res = await window.apiFetch('{{ route('seguimiento.update-status') }}', {
                     method: 'POST',
                     body: JSON.stringify({
                         id,
@@ -486,9 +493,10 @@
                     estado_filtro: document.getElementById('filterEstado') ? document.getElementById(
                         'filterEstado').value : '',
                     secop_filtro: document.getElementById('filterSecop').value,
-                    mes_filtro: document.getElementById('filterMes').value
+                    mes_filtro: document.getElementById('filterMes').value,
+                    sort_order: document.getElementById('sortOrder').value
                 });
-                fetchUrl = `/seguimiento?${params.toString()}`;
+                fetchUrl = "{{ route('seguimiento.index') }}?" + params.toString();
             }
 
             // Preservar Scroll
@@ -556,7 +564,7 @@
         function openEditModal(c) {
             document.getElementById('mTitle').innerText = 'Editar Contrato #' + c.numero_contrato;
             document.getElementById('mMethod').value = 'PUT';
-            document.getElementById('mainForm').action = '{{ url('/seguimiento') }}/' + c.id;
+            document.getElementById('mainForm').action = '{{ route('seguimiento.index') }}/' + c.id;
             document.getElementById('mProceso').value = c.numero_proceso || '';
             document.getElementById('mContrato').value = c.numero_contrato;
             document.getElementById('mTipoCont').value = c.tipo_contratista || '';
@@ -669,7 +677,7 @@
             const link = document.getElementById('linkInput').value;
 
             try {
-                const res = await window.apiFetch('/seguimiento/update-status', {
+                const res = await window.apiFetch('{{ route('seguimiento.update-status') }}', {
                     method: 'POST',
                     body: JSON.stringify({
                         id,
@@ -712,7 +720,7 @@
 
             try {
                 // Usamos ruta relativa por consistencia con el dashboard que sí funciona
-                const res = await window.apiFetch(`/seguimiento/${id}`, {
+                const res = await window.apiFetch(`{{ route('seguimiento.index') }}/${id}`, {
                     method: 'POST',
                     body: JSON.stringify({ _method: 'DELETE' })
                 });
@@ -729,6 +737,21 @@
                 console.error('Delete Error:', e);
                 window.showSnackbar('Error al intentar eliminar. Intente recargar la página.', 'error');
             }
+        }
+
+        function toggleSort() {
+            const currentOrder = document.getElementById('sortOrder').value;
+            const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            document.getElementById('sortOrder').value = newOrder;
+            
+            const icon = document.getElementById('sortIcon');
+            if (newOrder === 'desc') {
+                icon.className = 'bi bi-sort-numeric-down';
+            } else {
+                icon.className = 'bi bi-sort-numeric-up';
+            }
+            
+            applyAdvancedFilters();
         }
     </script>
 @endsection

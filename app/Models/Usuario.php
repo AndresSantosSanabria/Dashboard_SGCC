@@ -98,17 +98,37 @@ class Usuario extends Authenticatable
 
     public function puedeAccederSeguimiento(): bool
     {
-        return $this->tienePermiso('acceder_seguimiento') || $this->isAdmin() || $this->puedeAccederDashboard();
+        return $this->tienePermiso('ver_seguimiento_secop') || $this->tienePermiso('acceder_seguimiento') || $this->isAdmin();
     }
 
     public function puedeAccederAnalitica(): bool
     {
-        return $this->tienePermiso('acceder_analitica') || $this->isAdmin();
+        return $this->tienePermiso('ver_analitica') || $this->tienePermiso('acceder_analitica') || $this->isAdmin();
     }
 
     public function puedeEditarWorkflow(): bool
     {
-        return $this->tienePermiso('editar_workflow');
+        return $this->tienePermiso('editar_workflow') || $this->isAdmin();
+    }
+
+    public function puedeVerConfiguracion(): bool
+    {
+        return $this->tienePermiso('ver_configuracion') || $this->isAdmin();
+    }
+
+    public function puedeEditarConfiguracion(): bool
+    {
+        return $this->tienePermiso('editar_configuracion') || $this->isAdmin();
+    }
+
+    public function puedeEditarDashboard(): bool
+    {
+        return $this->tienePermiso('editar_dashboard') || $this->isAdmin();
+    }
+
+    public function puedeEditarSeguimiento(): bool
+    {
+        return $this->tienePermiso('editar_seguimiento_secop') || $this->isAdmin();
     }
 
     public function verSoloAsignados(): bool
@@ -200,24 +220,59 @@ class Usuario extends Authenticatable
     public function scopeResponsablesSap($query)
     {
         return $query->where('es_activo', true)
+            ->whereHas('rol', function ($q) {
+                $q->where('nombre', '!=', 'Administrador');
+            })
             ->where(function ($q) {
                 $q->whereHas('individualPermissions', function ($sq) {
                     $sq->where('slug', 'responsable_sap');
                 })->orWhereHas('rol.permisos', function ($sq) {
                     $sq->where('slug', 'responsable_sap');
                 });
+            })
+            ->whereDoesntHave('individualPermissions', function ($sq) {
+                $sq->where('slug', 'es_admin');
             });
     }
 
     public function scopeResponsablesFac($query)
     {
         return $query->where('es_activo', true)
+            ->whereHas('rol', function ($q) {
+                $q->where('nombre', '!=', 'Administrador');
+            })
             ->where(function ($q) {
                 $q->whereHas('individualPermissions', function ($sq) {
                     $sq->where('slug', 'responsable_facturacion');
                 })->orWhereHas('rol.permisos', function ($sq) {
                     $sq->where('slug', 'responsable_facturacion');
                 });
+            })
+            ->whereDoesntHave('individualPermissions', function ($sq) {
+                $sq->where('slug', 'es_admin');
             });
+    }
+
+    // Accessor para mapa de permisos (slugs)
+    public function getPermisosAttribute()
+    {
+        $permisos = [];
+        $bloques = [];
+        
+        foreach ($this->individualPermissions()->pluck('slug') as $slug) {
+            if ($slug === 'acceso_bloque_all') {
+                $permisos['bloques_permitidos'] = true;
+            } elseif (str_starts_with($slug, 'acceso_bloque_')) {
+                $bloques[] = str_replace('acceso_bloque_', '', $slug);
+            } else {
+                $permisos[$slug] = true;
+            }
+        }
+        
+        if (!isset($permisos['bloques_permitidos']) && !empty($bloques)) {
+            $permisos['bloques_permitidos'] = $bloques;
+        }
+        
+        return $permisos;
     }
 }
