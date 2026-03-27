@@ -59,9 +59,9 @@
 </div>
 
 {{-- Fila 5 --}}
-<div class="col-md-4">
+<div class="col-md-4" id="containerPorcentaje">
     <label class="form-label">PORCENTAJE CUENTAS</label>
-    <input type="number" step="0.01" name="PORCENTAJE DE CUENTAS" class="form-control">
+    <input type="number" step="0.01" name="PORCENTAJE DE CUENTAS" class="form-control" readonly>
 </div>
 <div class="col-md-4">
     <label class="form-label">ENTIDAD SALUD</label>
@@ -189,8 +189,8 @@
     <label class="form-label small">OBS. DEVOL. HACIENDA</label>
     <input type="text" name="OBSERVACIÓN DEVOLUCIÓN HACIENDA" class="form-control form-control-sm">
 </div>
-<div class="col-md-4">
+<div class="col-md-4" id="containerDiferencia">
     <label class="form-label small">DIFERENCIA CUENTAS</label>
     <input type="number" name="DIFERENCIA CUENTAS TOTALES - VS CUENTAS RADICADAS"
-        class="form-control form-control-sm">
+        class="form-control form-control-sm" readonly>
 </div>

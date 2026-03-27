@@ -571,27 +571,17 @@ class CuentaCobroController extends Controller
             return response()->json(['success' => false, 'message' => 'No tienes permiso para realizar cargas manuales.'], 403);
         }
         try {
-            // Normalizar keys: PHP convierte espacios en guiones bajos (_) en los nombres de los campos
-            $data = [];
-            foreach ($request->all() as $key => $value) {
-                $normalizedKey = str_replace('_', ' ', strtoupper($key));
-                $data[$normalizedKey] = $value;
+            // Se usa getColumnValue para mayor flexibilidad con los nombres de los campos de formulario
+            $rawRequest = $request->all();
+            
+            // 1. Validar obligatorios
+            if (empty($this->getColumnValue($rawRequest, 'NUMERO DE CONTRATO'))) {
+                return response()->json(['success' => false, 'message' => "El campo 'Número de Contrato' es obligatorio."], 422);
             }
 
-            // 1. Validar obligatorios (Server-side)
-            $requiredFields = [
-                'NUMERO DE CONTRATO' => 'Número de Contrato',
-            ];
+            $numContrato = strtoupper(trim($this->getColumnValue($rawRequest, 'NUMERO DE CONTRATO')));
 
-            foreach ($requiredFields as $field => $label) {
-                if (empty($data[$field])) {
-                    return response()->json(['success' => false, 'message' => "El campo '$label' es obligatorio."], 422);
-                }
-            }
-
-            $numContrato = strtoupper(trim($data['NUMERO DE CONTRATO']));
-
-            // 2. Validar existencia para decidir si es actualización
+            // 2. Validar existencia
             $contratoExistente = Contrato::where(DB::raw('UPPER(TRIM(numero_contrato))'), $numContrato)->first();
             $esActualizacion = (bool) $contratoExistente;
 
@@ -605,19 +595,21 @@ class CuentaCobroController extends Controller
             $cuenta = null;
             $numeroCuenta = null;
 
-            DB::transaction(function () use ($data, $numContrato, $esActualizacion, &$cuenta, &$numeroCuenta) {
+            DB::transaction(function () use ($rawRequest, $numContrato, $esActualizacion, &$cuenta, &$numeroCuenta) {
                 // 1. Contratista
-                $nit = strtoupper(trim($data['CEDULA'] ?? $data['NIT'] ?? '0'));
-                $contratista = Contratista::firstOrCreate(
+                $nit = strtoupper(trim($this->getColumnValue($rawRequest, ['CEDULA', 'NIT'], '0')));
+                $razonSocial = strtoupper(trim($this->getColumnValue($rawRequest, 'CONTRATISTA', '')));
+                
+                $contratista = Contratista::updateOrCreate(
                     ['nit' => $nit],
-                    [
-                        'razon_social' => strtoupper(trim($data['CONTRATISTA'] ?? 'SIN NOMBRE')),
+                    array_filter([
+                        'razon_social' => !empty($razonSocial) ? $razonSocial : 'SIN NOMBRE',
                         'tipo_persona' => (strlen($nit) > 10) ? 'JURIDICA' : 'NATURAL',
-                    ]
+                    ])
                 );
 
                 // 2. Supervisor
-                $supervisorName = $data['SUPERVISOR'] ?? 'PENDIENTE';
+                $supervisorName = $this->getColumnValue($rawRequest, 'SUPERVISOR', 'PENDIENTE');
                 $supervisorParts = $this->splitFullName($supervisorName);
                 $supervisor = Supervisor::firstOrCreate(
                     ['nombres' => $supervisorParts['nombres'], 'apellidos' => $supervisorParts['apellidos']],
@@ -625,11 +617,11 @@ class CuentaCobroController extends Controller
                 );
 
                 // 3. Catálogos
-                $modalidad = Modalidad::firstOrCreate(['nombre' => strtoupper(trim($data['MODALIDAD'] ?? 'PRESTACIÓN DE SERVICIOS'))]);
-                $concepto = Concepto::firstOrCreate(['nombre' => strtoupper(trim($data['CONCEPTO'] ?? 'APOYO A LA GESTIÓN'))]);
+                $modalidad = Modalidad::firstOrCreate(['nombre' => strtoupper(trim($this->getColumnValue($rawRequest, 'MODALIDAD', 'PRESTACIÓN DE SERVICIOS')))]);
+                $concepto = Concepto::firstOrCreate(['nombre' => strtoupper(trim($this->getColumnValue($rawRequest, 'CONCEPTO', 'APOYO A LA GESTIÓN')))]);
                 $planta = Planta::firstOrCreate(['codigo' => 'P001'], ['nombre' => 'PLANTA CENTRAL']);
 
-                // 4. Contrato (Crear o Actualizar) - Normalización estricta para evitar duplicados
+                // 4. Contrato
                 $contrato = Contrato::where(DB::raw('UPPER(TRIM(numero_contrato))'), $numContrato)->first();
 
                 $contratoData = [
@@ -638,9 +630,9 @@ class CuentaCobroController extends Controller
                     'modalidad_id' => $modalidad->id,
                     'planta_id' => $planta->id,
                     'concepto_id' => $concepto->id,
-                    'fecha_inicio' => $this->parseDate($data['FECHA DE INICIO'] ?? null),
-                    'fecha_fin' => $this->parseDate($data['FECHA DE TERMINACIÓN'] ?? null),
-                    'monto_total' => $this->parseAmount($data['VALOR RP'] ?? 0),
+                    'fecha_inicio' => $this->parseDate($this->getColumnValue($rawRequest, 'FECHA DE INICIO')),
+                    'fecha_fin' => $this->parseDate($this->getColumnValue($rawRequest, 'FECHA DE TERMINACIÓN')),
+                    'monto_total' => $this->parseAmount($this->getColumnValue($rawRequest, 'VALOR RP', 0)),
                     'es_activo' => true,
                 ];
 
@@ -652,73 +644,92 @@ class CuentaCobroController extends Controller
                 }
 
                 // 5. Registro Presupuestal
-                $rpNum = trim($data['RP'] ?? '');
+                $rpNum = trim($this->getColumnValue($rawRequest, 'RP', ''));
                 if (! empty($rpNum)) {
                     RegistroPresupuestal::updateOrCreate(
                         ['numero_rp' => $rpNum, 'contrato_id' => $contrato->id],
                         [
-                            'fecha_rp' => $this->parseDate($data['FECHA RP'] ?? null),
-                            'valor_rp' => $this->parseAmount($data['VALOR RP'] ?? 0),
+                            'fecha_rp' => $this->parseDate($this->getColumnValue($rawRequest, 'FECHA RP')),
+                            'valor_rp' => $this->parseAmount($this->getColumnValue($rawRequest, 'VALOR RP', 0)),
                         ]
                     );
                 }
 
                 // 6. Seguridad Social
-                $this->crearSeguridadSocial($data, $contratista);
+                $this->crearSeguridadSocial($rawRequest, $contratista);
 
                 // 7. Cuenta de Cobro
-                $numeroCuenta = $this->normalizeAccountNumber($data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? '');
+                $numeroCuenta = $this->normalizeAccountNumber($this->getColumnValue($rawRequest, 'NUMERO DE CUENTA EN PROCESO DE CUENTAS', ''));
 
-                $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
-                $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? null;
+                $valorRP = $this->parseAmount($this->getColumnValue($rawRequest, 'VALOR RP', 0));
+                $pagosTotalesRaw = $this->getColumnValue($rawRequest, 'NUMERO DE PAGOS TOTALES');
                 $pagosTotales = (! empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int) $pagosTotalesRaw : null;
 
                 // Determinar bloque y estado actual
                 $bloqueId = $this->getBlockIdByCode('REV1');
-                $estadoId = $this->getStateIdByCode('REV1_SIN'); // Default: Sin tramite
+                $estadoId = $this->getStateIdByCode('REV1_SIN');
 
-                if (! empty($data['RADICADA EN HACIENDA'])) {
+                if (! empty($this->getColumnValue($rawRequest, 'RADICADA EN HACIENDA'))) {
                     $bloqueId = $this->getBlockIdByCode('HAC');
-                    $estadoId = EstadoWorkflow::where('nombre', $data['RADICADA EN HACIENDA'])
+                    $estadoId = EstadoWorkflow::where('nombre', $this->getColumnValue($rawRequest, 'RADICADA EN HACIENDA'))
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('HAC_ESP');
-                } elseif (! empty($data['FIRMA SECRETARIO'])) {
+                } elseif (! empty($this->getColumnValue($rawRequest, 'FIRMA SECRETARIO'))) {
                     $bloqueId = $this->getBlockIdByCode('FIR');
-                    $estadoId = EstadoWorkflow::where('nombre', $data['FIRMA SECRETARIO'])
+                    $estadoId = EstadoWorkflow::where('nombre', $this->getColumnValue($rawRequest, 'FIRMA SECRETARIO'))
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('FIR_ESP');
-                } elseif (! empty($data['EN FACTURACIÓN'])) {
+                } elseif (! empty($this->getColumnValue($rawRequest, 'EN FACTURACIÓN'))) {
                     $bloqueId = $this->getBlockIdByCode('FAC');
-                    $estadoId = EstadoWorkflow::where('nombre', $data['EN FACTURACIÓN'])
+                    $estadoId = EstadoWorkflow::where('nombre', $this->getColumnValue($rawRequest, 'EN FACTURACIÓN'))
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('FAC_ESP');
-                } elseif (! empty($data['ENVIADA A INGRESO MERCANCIA SAP'])) {
+                } elseif (! empty($this->getColumnValue($rawRequest, 'ENVIADA A INGRESO MERCANCIA SAP'))) {
                     $bloqueId = $this->getBlockIdByCode('SAP');
-                    $estadoId = EstadoWorkflow::where('nombre', $data['ENVIADA A INGRESO MERCANCIA SAP'])
+                    $estadoId = EstadoWorkflow::where('nombre', $this->getColumnValue($rawRequest, 'ENVIADA A INGRESO MERCANCIA SAP'))
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('SAP_ESP');
-                } elseif (! empty($data['ESTADO TRAS PRIMERA REVISIÓN'])) {
+                } elseif (! empty($this->getColumnValue($rawRequest, 'ESTADO TRAS PRIMERA REVISIÓN'))) {
                     $bloqueId = $this->getBlockIdByCode('REV1');
-                    $estadoId = EstadoWorkflow::where('nombre', $data['ESTADO TRAS PRIMERA REVISIÓN'])
+                    $estadoId = EstadoWorkflow::where('nombre', $this->getColumnValue($rawRequest, 'ESTADO TRAS PRIMERA REVISIÓN'))
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_SIN');
                 }
 
-                $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($data['RADICADA EN HACIENDA'] ?? '') === 'SI'));
+                $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($this->getColumnValue($rawRequest, 'RADICADA EN HACIENDA') === 'SI')));
 
-                // Buscar si ya existe para proteger el flujo
-                $cuentaExistente = CuentaCobro::where('contrato_id', $contrato->id)->where('numero_cuenta', (string)$numeroCuenta)->first();
+                $facturasRadicadas = (int) $this->getColumnValue($rawRequest, 'N° DE FACTURAS RADICADA HACIENDA', 0);
 
                 $cuenta = CuentaCobro::updateOrCreate(
                     ['contrato_id' => $contrato->id, 'numero_cuenta' => (string)$numeroCuenta],
                     [
                         'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
                         'numero_pagos_totales' => $pagosTotales,
+                        'numero_facturas_radicadas' => $facturasRadicadas,
+                        'porcentaje_cuentas' => ($pagosTotales > 0) ? (($facturasRadicadas / $pagosTotales) * 100) : 0,
+                        'diferencia_cuentas' => ($pagosTotales ?? 0) - ($facturasRadicadas ?? 0),
+                        'fecha_radicacion' => $this->parseDate($this->getColumnValue($rawRequest, 'FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES')),
+                        'radicado_por' => $this->getColumnValue($rawRequest, 'RADICADO POR'),
+                        'ultima_factura_hacienda' => $this->getColumnValue($rawRequest, 'ULTIMA FACTURA RADICADA HACIENDA'),
+                        'fecha_radicacion_hacienda' => $this->parseDate($this->getColumnValue($rawRequest, 'FECHA DE RADICACIÓN')),
+                        'observacion_hacienda' => $this->getColumnValue($rawRequest, 'OBSERVACIÓN DEVOLUCIÓN HACIENDA'),
                         'bloque_actual_id' => $bloqueId,
                         'estado_actual_id' => $estadoId,
                         'responsable_actual_id' => Auth::id(),
                         'finalizada' => $estaFinalizada,
-                        'observaciones' => $data['OBSERVACIONES'] ?? null,
+                        'observaciones' => $this->getColumnValue($rawRequest, 'OBSERVACIONES'),
                     ]
                 );
 
-                // 8. Procesar Bloques Históricos
-                $this->procesarBloquesHistoricos($cuenta, $data);
+                // 8. Planilla
+                $valPlanilla = $this->getColumnValue($rawRequest, 'PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA');
+                if ($valPlanilla) {
+                    PlanillaSeguridadSocial::updateOrCreate(
+                        ['cuenta_cobro_id' => $cuenta->id, 'es_ultima' => true],
+                        [
+                            'mes_planilla' => strtoupper($valPlanilla),
+                            'numero_planilla' => $valPlanilla
+                        ]
+                    );
+                }
+
+                // 9. Procesar Bloques Históricos
+                $this->procesarBloquesHistoricos($cuenta, $rawRequest);
             });
 
             // Registrar en auditoría la carga manual
@@ -765,7 +776,7 @@ class CuentaCobroController extends Controller
                 'VALOR RP' => $rp?->valor_rp,
                 'FECHA DE INICIO' => ($contrato->fecha_inicio instanceof Carbon) ? $contrato->fecha_inicio->format('Y-m-d') : null,
                 'FECHA DE TERMINACIÓN' => ($contrato->fecha_fin instanceof Carbon) ? $contrato->fecha_fin->format('Y-m-d') : null,
-                'SUPERVISOR' => $contrato->supervisor->nombres, // Asumiendo que solo se guardan nombres en este campo simple
+                'SUPERVISOR' => trim(($contrato->supervisor->nombres ?? '').' '.($contrato->supervisor->apellidos ?? '')),
                 'NUMERO DE CUENTA EN PROCESO DE CUENTAS' => $cuenta->numero_cuenta,
                 'NUMERO DE PAGOS TOTALES' => $cuenta->numero_pagos_totales,
                 'N° DE FACTURAS RADICADA HACIENDA' => $cuenta->numero_facturas_radicadas,
@@ -862,14 +873,17 @@ class CuentaCobroController extends Controller
                 $this->crearSeguridadSocial($data, $contrato->contratista);
 
                 // 6. Cuenta de Cobro
-                $valorRP = $this->parseAmount($data['VALOR RP'] ?? 0);
-                $pagosTotalesRaw = $data['NUMERO DE PAGOS TOTALES'] ?? null;
+                $valorRP = $this->parseAmount($this->getColumnValue($data, 'VALOR RP', 0));
+                $pagosTotalesRaw = $this->getColumnValue($data, 'NUMERO DE PAGOS TOTALES');
                 $pagosTotales = (! empty($pagosTotalesRaw) && $pagosTotalesRaw != 0) ? (int) $pagosTotalesRaw : null;
 
-                // Preservar numero_facturas_radicadas actual: NO sobrescribir con el valor del formulario
-                $facturasRadicadasActual = $cuenta->numero_facturas_radicadas ?? 0;
+                // Permitir edición manual de facturas radicadas
+                $facturasRadicadasForm = $this->getColumnValue($data, 'N° DE FACTURAS RADICADA HACIENDA');
+                $facturasRadicadasActual = ($facturasRadicadasForm !== null && $facturasRadicadasForm !== '') 
+                    ? (int) $facturasRadicadasForm 
+                    : ($cuenta->numero_facturas_radicadas ?? 0);
 
-                $newNumCuenta = $data['NUMERO DE CUENTA EN PROCESO DE CUENTAS'] ?? $cuenta->numero_cuenta;
+                $newNumCuenta = $this->getColumnValue($data, 'NUMERO DE CUENTA EN PROCESO DE CUENTAS') ?? $cuenta->numero_cuenta;
                 if (empty($newNumCuenta) || $newNumCuenta == 0) {
                     $newNumCuenta = 1;
                 }
@@ -878,17 +892,17 @@ class CuentaCobroController extends Controller
                     'numero_cuenta' => $newNumCuenta,
                     'valor_cobro' => ($pagosTotales && $pagosTotales > 0) ? ($valorRP / $pagosTotales) : $valorRP,
 
-                    'fecha_radicacion' => $this->parseDate($data['FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES'] ?? null) ?? $cuenta->fecha_radicacion,
+                    'fecha_radicacion' => $this->parseDate($this->getColumnValue($data, 'FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES')),
                     'numero_pagos_totales' => $pagosTotales,
                     'numero_facturas_radicadas' => $facturasRadicadasActual,
 
                     'porcentaje_cuentas' => ($pagosTotales > 0) ? (($facturasRadicadasActual / $pagosTotales) * 100) : 0,
-                    'radicado_por' => $data['RADICADO POR'] ?? $cuenta->radicado_por,
-                    'observaciones' => $data['OBSERVACIONES'] ?? null,
-                    'ultima_factura_hacienda' => $data['ULTIMA FACTURA RADICADA HACIENDA'] ?? null,
-                    'fecha_radicacion_hacienda' => $this->parseDate($data['FECHA DE RADICACIÓN'] ?? null),
-                    'observacion_hacienda' => $data['OBSERVACIÓN DEVOLUCIÓN HACIENDA'] ?? null,
-                    'diferencia_cuentas' => $data['DIFERENCIA CUENTAS TOTALES - VS CUENTAS RADICADAS'] ?? 0,
+                    'radicado_por' => $this->getColumnValue($data, 'RADICADO POR'),
+                    'observaciones' => $this->getColumnValue($data, 'OBSERVACIONES'),
+                    'ultima_factura_hacienda' => $this->getColumnValue($data, 'ULTIMA FACTURA RADICADA HACIENDA'),
+                    'fecha_radicacion_hacienda' => $this->parseDate($this->getColumnValue($data, 'FECHA DE RADICACIÓN')),
+                    'observacion_hacienda' => $this->getColumnValue($data, 'OBSERVACIÓN DEVOLUCIÓN HACIENDA'),
+                    'diferencia_cuentas' => ($pagosTotales ?? 0) - ($facturasRadicadasActual ?? 0),
                 ]);
 
                 // Lógica especial para actualizar ultima_factura_hacienda si cambia estado a Radicada
@@ -918,11 +932,14 @@ class CuentaCobroController extends Controller
                 $this->procesarBloquesHistoricos($cuenta, $data);
 
                 // 8. Planilla (Si cambia)
-                $mesPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? null;
-                if ($mesPlanilla) {
+                $valPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? null;
+                if ($valPlanilla) {
                     PlanillaSeguridadSocial::updateOrCreate(
                         ['cuenta_cobro_id' => $cuenta->id, 'es_ultima' => true],
-                        ['mes_planilla' => strtoupper($mesPlanilla)]
+                        [
+                            'mes_planilla' => strtoupper($valPlanilla),
+                            'numero_planilla' => $valPlanilla
+                        ]
                     );
                 }
             });
@@ -1311,23 +1328,31 @@ class CuentaCobroController extends Controller
         if (is_array($keys)) {
             foreach ($keys as $key) {
                 $searchKey = strtoupper(trim($key));
-                if (isset($data[$searchKey])) {
-                    return $data[$searchKey];
-                }
+                // Probar exacta
+                if (isset($data[$searchKey])) return $data[$searchKey];
+                // Probar con underscores
+                $underscoreKey = str_replace(' ', '_', $searchKey);
+                if (isset($data[$underscoreKey])) return $data[$underscoreKey];
             }
         } elseif (is_string($keys)) {
             $searchKey = strtoupper(trim($keys));
-            if (isset($data[$searchKey])) {
-                return $data[$searchKey];
-            }
+            // Probar exacta
+            if (isset($data[$searchKey])) return $data[$searchKey];
+            // Probar con underscores
+            $underscoreKey = str_replace(' ', '_', $searchKey);
+            if (isset($data[$underscoreKey])) return $data[$underscoreKey];
 
-            // Si no existe exactamente, buscar por coincidencia parcial o limpieza de paréntesis
+            // Si no existe exactamente, buscar por coincidencia parcial o limpieza de paréntesis y N°
             foreach ($data as $k => $v) {
-                // Remover paréntesis y su contenido (incluyendo paréntesis no cerrados al final)
-                $kClean = trim(preg_replace('/\s*\([^)]*\)?/', '', $k));
-                $keysClean = trim(preg_replace('/\s*\([^)]*\)?/', '', $searchKey));
+                // Normalizar clave de origen: strtoupper y cambiar _ por espacio
+                $kNorm = str_replace('_', ' ', strtoupper(trim($k)));
+                // Remover paréntesis y N° para comparar de forma flexible
+                $kClean = trim(preg_replace('/\s*\([^)]*\)?/', '', $kNorm));
+                $kClean = str_replace('N°', 'N', $kClean);
 
-                if (strtoupper($kClean) === strtoupper($keysClean)) {
+                $searchKeyClean = str_replace('N°', 'N', trim(preg_replace('/\s*\([^)]*\)?/', '', $searchKey)));
+
+                if ($kClean === $searchKeyClean) {
                     return $v;
                 }
             }

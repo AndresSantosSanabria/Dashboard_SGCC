@@ -97,12 +97,12 @@ class AnaliticaController extends Controller
         // individuales mezcladas con COUNT/SUM sin GROUP BY.
         $kpis = (clone $filterQuery)
             ->whereHas('estadoActual', function ($q) {
-                $q->where('afecta_indicadores', true);
+                $q->whereRaw('afecta_indicadores IS TRUE');
             })
             ->selectRaw('
                 COUNT(*) as total_cuentas,
                 COUNT(DISTINCT contrato_id) as total_contratos,
-                SUM(CASE WHEN cuentas_cobro.finalizada = true THEN 1 ELSE 0 END) as finalizadas,
+                SUM(CASE WHEN cuentas_cobro.finalizada IS TRUE THEN 1 ELSE 0 END) as finalizadas,
                 SUM(COALESCE(numero_facturas_radicadas, 0)) as radicadas_total,
                 SUM(COALESCE(numero_pagos_totales, 0)) as pagos_totales
             ')
@@ -110,7 +110,7 @@ class AnaliticaController extends Controller
 
         // Resolución de Montos: obtenemos el monto total de los contratos involucrados.
         $biContratosIds = (clone $filterQuery)
-            ->whereHas('estadoActual', fn($q) => $q->where('afecta_indicadores', true))
+            ->whereHas('estadoActual', fn($q) => $q->whereRaw('afecta_indicadores IS TRUE'))
             ->select('contrato_id')
             ->distinct();
 
@@ -187,7 +187,7 @@ class AnaliticaController extends Controller
     private function getGapDataSql($query)
     {
         $data = (clone $query)
-            ->whereHas('estadoActual', fn($q) => $q->where('afecta_indicadores', true))
+            ->whereHas('estadoActual', fn($q) => $q->whereRaw('afecta_indicadores IS TRUE'))
             ->join('bloques_workflow', 'cuentas_cobro.bloque_actual_id', '=', 'bloques_workflow.id')
             ->select('bloques_workflow.nombre')
             ->selectRaw('COUNT(*) as total')
@@ -206,11 +206,11 @@ class AnaliticaController extends Controller
     private function getHeatmapDataSql($query)
     {
         return (clone $query)
-            ->whereHas('estadoActual', fn($q) => $q->where('afecta_indicadores', true))
+            ->whereHas('estadoActual', fn($q) => $q->whereRaw('afecta_indicadores IS TRUE'))
             ->leftJoin('usuarios', 'cuentas_cobro.responsable_actual_id', '=', 'usuarios.id')
             ->selectRaw("COALESCE(primer_nombre, '') || ' ' || COALESCE(primer_apellido, '') as name")
-            ->selectRaw("SUM(CASE WHEN cuentas_cobro.finalizada = false THEN 1 ELSE 0 END) as tramite")
-            ->selectRaw("SUM(CASE WHEN cuentas_cobro.finalizada = true THEN 1 ELSE 0 END) as finalizadas")
+            ->selectRaw("SUM(CASE WHEN cuentas_cobro.finalizada IS FALSE THEN 1 ELSE 0 END) as tramite")
+            ->selectRaw("SUM(CASE WHEN cuentas_cobro.finalizada IS TRUE THEN 1 ELSE 0 END) as finalizadas")
             ->groupBy('usuarios.id', 'primer_nombre', 'primer_apellido')
             ->limit(10)
             ->get();
@@ -224,12 +224,12 @@ class AnaliticaController extends Controller
     private function getEstadoAnillos($query)
     {
         $enDevolucion = (clone $query)
-            ->whereHas('estadoActual', fn($q) => $q->where('afecta_indicadores', true)->where('tipo', 'DEVUELTO'))
+            ->whereHas('estadoActual', fn($q) => $q->whereRaw('afecta_indicadores IS TRUE')->where('tipo', 'DEVUELTO'))
             ->count();
 
         $enProceso = (clone $query)
-            ->where('finalizada', false)
-            ->whereHas('estadoActual', fn($q) => $q->where('afecta_indicadores', true)->where('tipo', '!=', 'DEVUELTO'))
+            ->whereRaw('finalizada IS FALSE')
+            ->whereHas('estadoActual', fn($q) => $q->whereRaw('afecta_indicadores IS TRUE')->where('tipo', '!=', 'DEVUELTO'))
             ->count();
 
         return [
@@ -265,8 +265,8 @@ class AnaliticaController extends Controller
                 $join->on('bw.id', '=', 'hw.bloque_id')
                      ->whereIn('hw.cuenta_cobro_id', $cuentaIds)
                      ->join('estados_workflow as ew', 'hw.estado_origen_id', '=', 'ew.id')
-                     ->where('ew.afecta_indicadores', true)
-                     ->where('ew.contabiliza_tiempo', true)
+                     ->whereRaw('ew.afecta_indicadores IS TRUE')
+                     ->whereRaw('ew.contabiliza_tiempo IS TRUE')
                      ->where('hw.tiempo_en_estado_anterior_minutos', '>', 0);
             })
             ->selectRaw('bw.id, bw.nombre as bloque, bw.orden, COALESCE(AVG(hw.tiempo_en_estado_anterior_minutos), 0) as promedio_minutos')
@@ -294,7 +294,7 @@ class AnaliticaController extends Controller
         $data = DB::table('historial_workflow as hw')
             ->join('estados_workflow as ew', 'hw.estado_destino_id', '=', 'ew.id')
             ->whereIn('hw.cuenta_cobro_id', $cuentaIds)
-            ->where('ew.afecta_indicadores', true)
+            ->whereRaw('ew.afecta_indicadores IS TRUE')
             ->where('hw.fecha_transicion', '>=', now()->subDays(30))
             ->selectRaw("DATE(hw.fecha_transicion) as dia, COUNT(*) as total")
             ->groupBy('dia')

@@ -165,9 +165,12 @@ class CuentaCobro extends Model
      */
     public function getTiempoTotalEjecucionAttribute()
     {
-        // Determinamos el marco temporal de la gestión activa
-        $inicio = $this->fecha_radicacion ?? $this->created_at;
-        if (! $inicio) return '0m';
+        // El tiempo de trámite 'limpio' en el Workflow debe empezar desde el 
+        // primer hito registrado en el historial para esta cuenta.
+        // Si no hay historial (cuenta nueva), usamos la fecha de creación en la plataforma.
+        // ESTO EVITA QUE FECHAS DE RADICACIÓN ANTIGUAS DEL EXCEL SUMEN DÍAS ILÓGICOS.
+        $primerHito = $this->historialWorkflow->sortBy('fecha_transicion')->first();
+        $inicio = $primerHito ? $primerHito->fecha_transicion : ($this->created_at ?? now());
 
         $fin = $this->finalizada
             ? ($this->historialWorkflow->max('fecha_transicion') ?? now())

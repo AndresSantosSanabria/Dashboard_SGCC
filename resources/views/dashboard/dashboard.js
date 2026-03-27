@@ -498,6 +498,12 @@ window.editAccount = function (id) {
         }
     });
 
+    // Ocultar campos calculados en edición (según requerimiento de usuario)
+    const containerPorcentaje = document.getElementById('containerPorcentaje');
+    const containerDiferencia = document.getElementById('containerDiferencia');
+    if (containerPorcentaje) containerPorcentaje.style.display = 'none';
+    if (containerDiferencia) containerDiferencia.style.display = 'none';
+
     // Cargar datos
     window.apiFetch(`/dashboard/editar/${id}`)
         .then((res) => res.json())
@@ -528,26 +534,32 @@ window.editAccount = function (id) {
         });
 
     // Listener para cálculo automático de porcentaje
-    const inputCuenta = form.querySelector('input[name="NUMERO DE CUENTA EN PROCESO DE CUENTAS"]');
     const inputPagos = form.querySelector('input[name="NUMERO DE PAGOS TOTALES"]');
+    const inputRadicadas = form.querySelector('input[name="N° DE FACTURAS RADICADA HACIENDA"]');
     const inputPorcentaje = form.querySelector('input[name="PORCENTAJE DE CUENTAS"]');
+    const inputDiferencia = form.querySelector('input[name="DIFERENCIA CUENTAS TOTALES - VS CUENTAS RADICADAS"]');
 
-    function calculatePercentage() {
-        const cuenta = parseFloat(inputCuenta.value) || 0;
+    function updateFormCalculations() {
         const pagos = parseFloat(inputPagos.value) || 0;
+        const radicadas = parseFloat(inputRadicadas.value) || 0;
 
         if (pagos > 0) {
-            const porcentaje = (pagos / cuenta);
+            const porcentaje = ((radicadas / pagos) * 100).toFixed(2);
             if (inputPorcentaje) {
                 inputPorcentaje.value = porcentaje;
             }
+            const diferencia = (pagos - radicadas);
+            if (inputDiferencia) {
+                inputDiferencia.value = diferencia;
+            }
         } else {
             if (inputPorcentaje) inputPorcentaje.value = 0;
+            if (inputDiferencia) inputDiferencia.value = 0;
         }
     }
 
-    if (inputCuenta) inputCuenta.addEventListener('input', calculatePercentage);
-    if (inputPagos) inputPagos.addEventListener('input', calculatePercentage);
+    if (inputPagos) inputPagos.addEventListener('input', updateFormCalculations);
+    if (inputRadicadas) inputRadicadas.addEventListener('input', updateFormCalculations);
 
     // Resetear modal al cerrar para que sirva para "Crear Nuevo" también
     manualModalElement.addEventListener(
@@ -560,19 +572,24 @@ window.editAccount = function (id) {
             btnSave.textContent = "Cargar Registro";
             form.dataset.url = "/dashboard/manual";
 
-            // Desbloquear campos
-            const readOnlyFields = [
+            // Desbloquear campos y restaurar visibilidad
+            const fieldsToUnlock = [
                 'NUMERO DE CONTRATO',
                 'PORCENTAJE DE CUENTAS',
                 'DIFERENCIA CUENTAS TOTALES - VS CUENTAS RADICADAS'
             ];
-            readOnlyFields.forEach(name => {
+            fieldsToUnlock.forEach(name => {
                 const input = form.querySelector(`input[name="${name}"]`);
                 if (input) {
                     input.readOnly = false;
                     input.classList.remove('bg-light');
                 }
             });
+
+            const containerPorcentaje = document.getElementById('containerPorcentaje');
+            const containerDiferencia = document.getElementById('containerDiferencia');
+            if (containerPorcentaje) containerPorcentaje.style.display = 'block';
+            if (containerDiferencia) containerDiferencia.style.display = 'block';
 
             // Remover listeners para evitar duplicados (aunque al ser named functions no es crítico si se reasignan, 
             // pero es buena práctica limpiar si fuera necesario. En este caso simple, basta con que el modal se reconstruye o los inputs se limpian)

@@ -356,7 +356,12 @@ class SeguimientoController extends Controller
             // CASO A: Seguimiento Mensual (Cta1, Cta2...) - Regex para detectar patrón
             if (preg_match('/^cta(\d+)_(secop|sia|rep)_status$/', $field, $matches)) {
                 SeguimientoMensual::updateOrCreate(
-                    ['contrato_id' => $validated['id'], 'mes' => $matches[1], 'fuente' => strtoupper($matches[2])],
+                    [
+                        'contrato_id' => $validated['id'], 
+                        'mes' => $matches[1], 
+                        'fuente' => strtoupper($matches[2]),
+                        'anio' => date('Y') // Fallback al año actual para evitar fallo por nulidad en PostgreSQL
+                    ],
                     ['estado' => $status]
                 );
             }
@@ -368,10 +373,20 @@ class SeguimientoController extends Controller
             }
             // CASO C: Requisitos de Checklist (Normalizados)
             else {
-                SeguimientoRequisito::updateOrCreate(
-                    ['contrato_id' => $validated['id'], 'nombre' => $field],
-                    ['estado' => $status]
-                );
+                // Forzamos una búsqueda explícita para evitar problemas de binding en PostgreSQL
+                $requisito = SeguimientoRequisito::where('contrato_id', $validated['id'])
+                    ->where('nombre', (string)$field)
+                    ->first();
+
+                if ($requisito) {
+                    $requisito->update(['estado' => $status]);
+                } else {
+                    SeguimientoRequisito::create([
+                        'contrato_id' => $validated['id'],
+                        'nombre' => (string)$field,
+                        'estado' => $status
+                    ]);
+                }
             }
 
             return response()->json(['success' => true]);
