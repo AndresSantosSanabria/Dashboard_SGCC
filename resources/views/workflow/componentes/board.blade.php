@@ -2,7 +2,7 @@
 {{-- SELECTORES DE BLOQUE (TABS INTERACTIVOS) --}}
 <div class="workflow-selectors animate-in mb-4">
     @foreach ($workflow as $key => $block)
-        <div class="workflow-selector {{ $loop->first ? 'active' : '' }}" 
+        <div class="workflow-selector selector-{{ $block['color'] ?? 'morado' }} {{ $loop->first ? 'active' : '' }}" 
              data-block-id="{{ $key }}" 
              onclick="selectWorkflowBlock('{{ $key }}')">
             <div class="selector-icon">

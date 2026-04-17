@@ -139,6 +139,37 @@
     color: var(--accent-primary);
 }
 
+/* Temas de Color para Selectores Activos */
+.workflow-selector.selector-morado.active { border-color: #8b5cf6; }
+.workflow-selector.selector-morado.active::after { background: #8b5cf6; }
+.workflow-selector.selector-morado.active .selector-icon { background: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
+.workflow-selector.selector-morado.active .selector-title { color: #8b5cf6; }
+
+.workflow-selector.selector-indigo.active { border-color: #4f46e5; }
+.workflow-selector.selector-indigo.active::after { background: #4f46e5; }
+.workflow-selector.selector-indigo.active .selector-icon { background: rgba(79, 70, 229, 0.1); color: #4f46e5; }
+.workflow-selector.selector-indigo.active .selector-title { color: #4f46e5; }
+
+.workflow-selector.selector-verde.active { border-color: #10b981; }
+.workflow-selector.selector-verde.active::after { background: #10b981; }
+.workflow-selector.selector-verde.active .selector-icon { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.workflow-selector.selector-verde.active .selector-title { color: #10b981; }
+
+.workflow-selector.selector-naranja.active { border-color: #f97316; }
+.workflow-selector.selector-naranja.active::after { background: #f97316; }
+.workflow-selector.selector-naranja.active .selector-icon { background: rgba(249, 115, 22, 0.1); color: #f97316; }
+.workflow-selector.selector-naranja.active .selector-title { color: #f97316; }
+
+.workflow-selector.selector-rosa.active { border-color: #ec4899; }
+.workflow-selector.selector-rosa.active::after { background: #ec4899; }
+.workflow-selector.selector-rosa.active .selector-icon { background: rgba(236, 72, 153, 0.1); color: #ec4899; }
+.workflow-selector.selector-rosa.active .selector-title { color: #ec4899; }
+
+.workflow-selector.selector-cian.active { border-color: #06b6d4; }
+.workflow-selector.selector-cian.active::after { background: #06b6d4; }
+.workflow-selector.selector-cian.active .selector-icon { background: rgba(6, 182, 212, 0.1); color: #06b6d4; }
+.workflow-selector.selector-cian.active .selector-title { color: #06b6d4; }
+
 /* Manejo de visibilidad de paneles */
 .workflow-panel {
     display: none;

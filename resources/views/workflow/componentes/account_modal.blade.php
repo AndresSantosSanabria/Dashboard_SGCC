@@ -6,7 +6,8 @@
                     <h5 class="modal-title fw-bold text-white">
                         <i class="bi bi-file-earmark-diff me-2"></i>Gestión de Cuenta #{{ $cuenta->numero_cuenta }}
                     </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
                 </div>
                 @if ($canEdit)
                     <div class="status-buttons-row" id="statusButtons{{ $cuenta->id }}">
@@ -34,7 +35,8 @@
                             </div>
                             <div class="mt-1 pt-1 border-top">
                                 <span class="badge bg-primary-soft text-primary" style="font-size: 0.75rem;">
-                                    <i class="fas fa-calendar-check me-1"></i> SS Mes: {{ $cuenta->ss_ultima_cuenta ?? 'N/A' }}
+                                    <i class="fas fa-calendar-check me-1"></i> SS Mes:
+                                    {{ $cuenta->ss_ultima_cuenta ?? 'N/A' }}
                                 </span>
                             </div>
                         </div>
@@ -101,7 +103,7 @@
                         @endphp
                         <div class="timeline-item">
                             <div class="timeline-marker-wrapper">
-                                <div class="timeline-marker" 
+                                <div class="timeline-marker"
                                     style="background-color: {{ $hist->estadoDestino?->color_hex ?? '#6c757d' }}; box-shadow: 0 4px 10px {{ $hist->estadoDestino?->color_hex }}44;">
                                     <i class="fas {{ $icon }}"></i>
                                 </div>
@@ -123,9 +125,11 @@
                                         <div class="mb-1">
                                             <span class="badge bg-light text-dark border">
                                                 <i class="fas fa-layer-group me-1"></i>
-                                                Bloque {{ $hist->estadoOrigen->bloque->codigo ?? $hist->estadoOrigen->bloque_id }} 
-                                                <i class="fas fa-arrow-right mx-1"></i> 
-                                                Bloque {{ $hist->estadoDestino->bloque->codigo ?? $hist->estadoDestino->bloque_id }}
+                                                Bloque
+                                                {{ $hist->estadoOrigen->bloque->codigo ?? $hist->estadoOrigen->bloque_id }}
+                                                <i class="fas fa-arrow-right mx-1"></i>
+                                                Bloque
+                                                {{ $hist->estadoDestino->bloque->codigo ?? $hist->estadoDestino->bloque_id }}
                                             </span>
                                         </div>
                                         <div class="small">
@@ -162,7 +166,8 @@
                 </div>
             </div>
             <div class="modal-footer justify-content-between">
-                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal" style="border-radius:12px;">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal"
+                    style="border-radius:12px;">
                     <i class="bi bi-x-lg me-1"></i> Cerrar
                 </button>
                 <a href="{{ route('dashboard') }}?searchContrato={{ $cuenta->contrato?->numero_contrato }}"

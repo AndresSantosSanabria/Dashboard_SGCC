@@ -86,7 +86,7 @@ class HistorialWorkflow extends Model
     // Accessor para tiempo formateado (en base a horas laborales configuradas)
     public function getTiempoFormateadoAttribute()
     {
-        if (! $this->tiempo_en_estado_anterior_minutos) {
+        if (!$this->tiempo_en_estado_anterior_minutos) {
             return null;
         }
 

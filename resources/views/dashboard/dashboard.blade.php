@@ -8,19 +8,15 @@
 @endpush
 
 @section('page-content')
-    <div class="position-relative premium-loading-container">
-        @include('layouts.partials._premium_loader', ['text' => 'Consolidando Cuentas'])
-
-        <h1 class="animate-in"
-            style="margin-top: 20px; margin-bottom: 30px; color: #000000; text-align: center; font-weight: bold;">
-            Vista consolidada de cuentas de cobro
+        <h1 class="main-dashboard-title">
+            Vista Consolidada de Cuentas
         </h1>
-        <p class="text-muted mt-3 animate-in">Bienvenido, <strong>{{ auth()->user()?->primer_nombre ?? 'Usuario' }}</strong>.
+        <p class="text-muted">Bienvenido, <strong>{{ auth()->user()?->primer_nombre ?? 'Usuario' }}</strong>.
         </p>
 
 
         @if ($canEditDashboard)
-            <div class="carga-archivo-govco" style="padding: 20px; background: #f8f9fa; border-radius: 8px;">
+            <div class="carga-archivo-govco animate-in delay-2 shadow-lg mb-4" style="padding: 24px; border-radius: 20px;">
                 <div class="row align-items-center">
                     <div class="col-lg-7">
                         <form id="importForm" enctype="multipart/form-data" class="m-0"
@@ -32,31 +28,30 @@
                                         class="input-carga-archivo-govco active" data-error="false" data-action="uploadFile"
                                         data-action-delete="deleteFile" accept=".xlsx,.xls,.xlsm,.csv" />
                                     <label for="inputId" class="container-input-carga-archivo-govco m-0"
-                                        style="display: inline-flex; align-items: center; width: 100%;">
-                                        <span class="button-file-carga-archivo-govco">Seleccionar archivo Excel</span>
-                                        <span class="file-name-carga-archivo-govco" id="fileNameDisplay">Sin archivo
-                                            seleccionado</span>
+                                        style="display: inline-flex; align-items: center; width: 100%; height: 50px;">
+                                        <span class="button-file-carga-archivo-govco h-100 d-flex align-items-center">Seleccionar Excel</span>
+                                        <span class="file-name-carga-archivo-govco text-muted ps-3" id="fileNameDisplay">Esperando archivo...</span>
                                     </label>
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
                                     <div id="importSpinner" style="display: none;">
-                                        <div class="spinner-indicador-de-carga-govco" role="status"></div>
+                                        <div class="spinner-border text-primary" role="status"></div>
                                     </div>
-                                    <button type="submit" id="btnImport" class="button-loader-carga-archivo-govco m-0"
-                                        disabled>Cargar archivo</button>
+                                    <button type="submit" id="btnImport" class="btn btn-dark fw-bold px-4"
+                                        style="height: 50px; border-radius: 12px;" disabled>Cargar</button>
                                 </div>
                             </div>
                         </form>
                     </div>
-                    <div class="col-lg-5 text-end d-flex gap-2 justify-content-end align-items-center">
-                        <button type="button" class="btn-govco fill-btn-govco m-0" data-bs-toggle="modal"
-                            data-bs-target="#manualEntryModal" style="height: fit-content;">
-                            Cargar Manual
+                    <div class="col-lg-5 text-end d-flex gap-3 justify-content-end align-items-center">
+                        <button type="button" class="btn btn-outline-primary fw-bold" data-bs-toggle="modal"
+                            data-bs-target="#manualEntryModal" style="height: 50px; border-radius: 12px; border-width: 2px;">
+                            <i class="bi bi-plus-circle me-2"></i>Carga Manual
                         </button>
                         <a href="{{ route('dashboard.plantilla') }}"
-                            class="btn-govco outline-btn-govco d-inline-flex align-items-center m-0"
-                            style="text-decoration: none; height: fit-content;">
-                            Plantilla
+                            class="btn btn-primary fw-bold d-inline-flex align-items-center"
+                            style="text-decoration: none; height: 50px; border-radius: 12px; background: #1e1e1e; border: none;">
+                            <i class="bi bi-file-earmark-arrow-down me-2"></i>Plantilla
                         </a>
                     </div>
                 </div>
@@ -68,69 +63,76 @@
 
         <form id="filtersForm" method="GET" action="{{ route('dashboard') }}">
             {{-- Nivel 1: Barra de Búsqueda Superior --}}
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
+            <div class="filters-container-glass mb-4 shadow-sm">
+                <div class="card-body p-4">
                     <div class="row g-3 align-items-end">
                         <div class="col-md-2">
-                            <label class="form-label fw-bold">No. Contrato</label>
+                            <label class="form-label fw-bold text-muted small uppercase">No. Contrato</label>
                             <input type="text" name="searchContrato" value="{{ request('searchContrato') }}"
-                                class="form-control filter-input" placeholder="Buscar...">
+                                class="form-control filter-input" placeholder="Ej: 2026-001">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label fw-bold">Contratista</label>
+                            <label class="form-label fw-bold text-muted small uppercase">Contratista</label>
                             <input type="text" name="searchContratista" value="{{ request('searchContratista') }}"
                                 class="form-control filter-input" placeholder="Nombre...">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label fw-bold">Cédula / NIT</label>
+                            <label class="form-label fw-bold text-muted small uppercase">Cédula / NIT</label>
                             <input type="text" name="searchCedula" value="{{ request('searchCedula') }}"
                                 class="form-control filter-input" placeholder="Identificación...">
                         </div>
                         <div class="col-md-2">
-                            <label class="form-label fw-bold">Estado</label>
+                            <label class="form-label fw-bold text-muted small uppercase">Estado</label>
                             <div class="dropdown custom-multilevel-dropdown">
                                 <button
-                                    class="btn btn-outline-secondary dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center"
-                                    type="button" id="dropdownEstado" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <span id="selectedEstadoLabel">{{ request('searchEstado') ?: 'Todos los estados' }}</span>
-                                    <i class="bi bi-chevron-down small opacity-50"></i>
+                                    class="dropdown-toggle w-100 text-start d-flex justify-content-between align-items-center shadow-none"
+                                    type="button" id="dropdownEstado" data-bs-toggle="dropdown" aria-expanded="false" 
+                                    style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 15px; background: rgba(248, 250, 252, 0.8);">
+                                    <span id="selectedEstadoLabel" class="text-truncate">{{ request('searchEstado') ?: 'Todos' }}</span>
+                                    <i class="bi bi-chevron-down small opacity-50 ms-2"></i>
                                 </button>
                                 <input type="hidden" name="searchEstado" id="hiddenSearchEstado"
                                     value="{{ request('searchEstado') }}">
 
-                                <ul class="dropdown-menu w-100 shadow-lg" aria-labelledby="dropdownEstado">
-                                    <li>
-                                        <a class="dropdown-item filter-estado-item {{ !request('searchEstado') ? 'active' : '' }}"
-                                            href="#" data-value="">
-                                            <i class="bi bi-layers me-2"></i> Todos los estados
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <hr class="dropdown-divider">
+                                <ul class="dropdown-menu w-100 shadow-2xl border-0" aria-labelledby="dropdownEstado" 
+                                    style="border-radius: 12px; z-index: 2000;">
+                                    {{-- HEADER --}}
+                                    <li class="dropdown-header-premium">
+                                        <i class="bi bi-layers"></i>
+                                        <span>Todos los estados</span>
                                     </li>
 
+                                    {{-- ALL OPTION --}}
+                                    <li>
+                                        <a class="dropdown-item-all filter-estado-item" href="#" data-value="">
+                                            <i class="bi bi-circle-fill" style="font-size: 0.85rem; color: #475569;"></i>
+                                            <span>Todos los estados</span>
+                                        </a>
+                                    </li>
+
+                                    {{-- SECTIONS (ACCORDION STYLE) --}}
                                     @foreach ($bloques as $bloque)
                                         @php
                                             $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect();
                                         @endphp
 
                                         @if ($estadosDelBloque->isNotEmpty())
-                                            <li class="dropdown-submenu">
-                                                <a class="dropdown-item dropdown-toggle d-flex justify-content-between align-items-center"
-                                                    href="#">
-                                                    <span>{{ $bloque->nombre }}</span>
-                                                    <i class="bi bi-chevron-right small opacity-50"></i>
-                                                </a>
-                                                <ul class="dropdown-menu shadow-lg">
+                                            <li>
+                                                <div class="accordion-trigger-item" onclick="event.stopPropagation(); this.nextElementSibling.classList.toggle('d-none');">
+                                                    <div class="title-container">
+                                                        <i class="bi bi-folder"></i>
+                                                        <span>{{ strtoupper($bloque->nombre) }}</span>
+                                                    </div>
+                                                    <i class="bi bi-chevron-down"></i>
+                                                </div>
+                                                <div class="dropdown-submenu-list d-none pt-1 pb-2" style="background: #fafbfc;">
                                                     @foreach ($estadosDelBloque as $est)
-                                                        <li>
-                                                            <a class="dropdown-item filter-estado-item {{ request('searchEstado') == $est->nombre ? 'active' : '' }}"
-                                                                href="#" data-value="{{ $est->nombre }}">
-                                                                {{ $est->nombre }}
-                                                            </a>
-                                                        </li>
+                                                        <a class="dropdown-item dropdown-item-state filter-estado-item {{ request('searchEstado') == $est->nombre ? 'active' : '' }}"
+                                                            href="#" data-value="{{ $est->nombre }}">
+                                                            {{ $est->nombre }}
+                                                        </a>
                                                     @endforeach
-                                                </ul>
+                                                </div>
                                             </li>
                                         @endif
                                     @endforeach
@@ -138,21 +140,21 @@
                             </div>
                         </div>
                         <div class="col-md-1">
-                            <label class="form-label fw-bold">N° Cuenta</label>
+                            <label class="form-label fw-bold text-muted small uppercase">N° Cuenta</label>
                             <input type="number" name="searchNumeroCuenta" value="{{ request('searchNumeroCuenta') }}"
                                 class="form-control filter-input" placeholder="Ej: 3" min="1">
                         </div>
                         <div class="col-md-3 d-flex gap-2">
-                            <button class="btn btn-primary" type="submit" style="flex: 1;">
-                                <i class="bi bi-search me-1"></i> Filtrar
+                            <button class="btn btn-primary fw-bold" type="submit" style="flex: 2; border-radius: 10px; background-color: var(--corp-blue) !important; border: none;">
+                                <i class="bi bi-funnel-fill me-1"></i> Filtrar
                             </button>
-                            <button class="btn btn-outline-danger" type="button" id="btnResetAllFilters"
-                                style="flex: 1;">
-                                <i class="bi bi-x-circle me-1"></i> Limpiar
+                            <button class="btn btn-outline-secondary fw-bold" type="button" id="btnResetAllFilters"
+                                style="flex: 1; border-radius: 10px;">
+                                <i class="bi bi-arrow-counterclockwise"></i>
                             </button>
-                            <button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas"
-                                data-bs-target="#offcanvasAdvancedFilters" style="flex: 1;">
-                                <i class="bi bi-funnel me-1"></i> Avanzados
+                            <button class="btn btn-dark fw-bold" type="button" data-bs-toggle="offcanvas"
+                                data-bs-target="#offcanvasAdvancedFilters" style="flex: 1.2; border-radius: 10px; background-color: #1e293b !important; border: none;">
+                                <i class="bi bi-gear-fill"></i>
                             </button>
                         </div>
                     </div>
@@ -200,20 +202,23 @@
             @include('dashboard.componentes.advanced_filters_offcanvas')
         </form>
 
-        <div class="card shadow-sm mt-4">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Gestión de Cuentas de Cobro</h5>
+        <div class="table-card-premium shadow-lg mt-4 border-0">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold text-white d-flex align-items-center">
+                    <i class="bi bi-list me-2"></i>
+                    Control Operativo de Pagos
+                </h6>
                 <div class="d-flex align-items-center gap-3">
-                    <button id="btnResetColumns" class="btn btn-sm btn-light text-primary btn-reset-columns"
-                        style="display: none;" onclick="resetColumns()">
-                        <i class="bi bi-layout-three-columns me-1"></i> Mostrar Todo
+                    <button id="btnResetColumns" class="btn btn-sm btn-link text-white text-decoration-none"
+                        style="display: none; font-size: 0.7rem; font-weight: 700;" onclick="resetColumns()">
+                        RESTAURAR COLUMNAS
                     </button>
-                    <div id="tableSpinner" style="display: none;" class="spinner-border spinner-border-sm text-white"
+                    <div id="tableSpinner" style="display: none;" class="spinner-border spinner-border-sm text-primary"
                         role="status">
-                        <span class="visually-hidden">Cargando...</span>
                     </div>
-                    <span class="badge bg-white text-primary" id="resultsCount">Resultados:
-                        {{ $cuentas->total() }}</span>
+                    <span class="badge badge-pill shadow-sm" id="resultsCount">
+                        {{ $cuentas->total() }} registros
+                    </span>
                 </div>
             </div>
             <div class="card-body p-0" id="tableContainer">

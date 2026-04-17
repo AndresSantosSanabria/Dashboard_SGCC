@@ -30,18 +30,40 @@
             </select>
         </div>
 
-        <div class="mb-3">
-            <label class="form-label fw-bold">Estado tras Primera Revisión</label>
-            <div class="p-2 border rounded" style="max-height: 200px; overflow-y: auto;">
-                @foreach ($estadosRevision as $estado)
-                    <div class="form-check">
-                        <input class="form-check-input filter-input" type="checkbox" name="filterEstadosRevision[]"
-                            value="{{ $estado->id }}" id="est_{{ $estado->id }}"
-                            {{ in_array($estado->id, (array) request('filterEstadosRevision')) ? 'checked' : '' }}>
-                        <label class="form-check-label" for="est_{{ $estado->id }}">
-                            {{ $estado->nombre }}
-                        </label>
-                    </div>
+        <div class="mb-4">
+            <label class="form-label fw-bold small text-muted uppercase">Estados por Etapa</label>
+            <div class="accordion accordion-flush border rounded overflow-hidden shadow-sm" id="accordionStates">
+                @foreach ($bloques as $bloque)
+                    @php
+                        $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect();
+                    @endphp
+                    @if ($estadosDelBloque->isNotEmpty())
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ $bloque->codigo }}">
+                                <button class="accordion-button collapsed py-2 px-3 fw-bold" type="button" 
+                                    data-bs-toggle="collapse" data-bs-target="#collapse{{ $bloque->codigo }}" 
+                                    aria-expanded="false" aria-controls="collapse{{ $bloque->codigo }}"
+                                    style="font-size: 0.8rem; background: #f8fafc;">
+                                    {{ $bloque->nombre }}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ $bloque->codigo }}" class="accordion-collapse collapse" 
+                                aria-labelledby="heading{{ $bloque->codigo }}" data-bs-parent="#accordionStates">
+                                <div class="accordion-body p-3 bg-white">
+                                    @foreach ($estadosDelBloque as $est)
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="checkbox" name="filterEstadosRevision[]"
+                                                value="{{ $est->id }}" id="est_adv_{{ $est->id }}"
+                                                {{ in_array($est->id, (array) request('filterEstadosRevision')) ? 'checked' : '' }}>
+                                            <label class="form-check-label ms-2 small" for="est_adv_{{ $est->id }}">
+                                                {{ $est->nombre }}
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+                    @endif
                 @endforeach
             </div>
         </div>

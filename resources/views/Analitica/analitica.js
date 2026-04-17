@@ -15,19 +15,27 @@ document.addEventListener('DOMContentLoaded', function () {
     // PALETA DE COLORES INSTITUCIONAL
     // Basada en la guía GOV.CO con extensiones para semántica de BI (Green/Amber/Red).
     const P = {
-        blue: '#004884',
-        blueLt: '#0070cc',
-        indigo: '#4f46e5',
-        teal: '#0d9488',
-        green: '#0a8754',
-        greenLt: '#10b981',
-        amber: '#d97706',
+        primary: '#0f172a',
+        accent: '#3b82f6',
+        success: '#10b981',
+        warning: '#f59e0b',
+        danger: '#ef4444',
+        info: '#6366f1',
+        slate: '#475569',
+        slateLt: '#94a3b8',
+        muted: '#f1f5f9',
+        blue: '#0f172a',
+        blueLt: '#3b82f6',
+        indigo: '#6366f1',
+        teal: '#14b8a6',
+        green: '#10b981',
+        greenLt: '#34d399',
+        amber: '#f59e0b',
         orange: '#f97316',
-        red: '#D60D0D',
-        redLt: '#ef4444',
-        gray: '#64748b',
-        grayLt: '#94a3b8',
-        muted: '#e2e8f0',
+        red: '#ef4444',
+        redLt: '#f87171',
+        gray: '#475569',
+        grayLt: '#94a3b8'
     };
 
     const baseFont = { fontFamily: 'Inter, sans-serif' };
@@ -46,39 +54,41 @@ document.addEventListener('DOMContentLoaded', function () {
                 series: data.estado_anillos.series,
                 chart: { type: 'donut', height: 320, ...baseFont },
                 labels: data.estado_anillos.labels,
-                colors: [P.blue, P.red],
+                colors: [P.accent, P.danger],
                 legend: {
                     position: 'bottom',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    markers: { radius: 4 },
-                    itemMargin: { horizontal: 12, vertical: 4 }
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    fontFamily: 'Inter, sans-serif',
+                    markers: { radius: 12 },
+                    itemMargin: { horizontal: 15, vertical: 8 }
                 },
                 plotOptions: {
                     pie: {
                         donut: {
-                            size: '62%',
+                            size: '75%',
                             labels: {
                                 show: true,
                                 total: {
                                     show: true,
-                                    label: 'Total',
-                                    fontSize: '13px',
-                                    fontWeight: 700,
-                                    color: P.gray,
+                                    label: 'Total General',
+                                    fontSize: '12px',
+                                    fontWeight: 600,
+                                    color: P.slateLt,
                                     formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
                                 },
                                 value: {
-                                    fontSize: '1.8rem',
+                                    fontSize: '2.2rem',
                                     fontWeight: 800,
-                                    color: P.blue,
+                                    color: P.primary,
+                                    offsetY: 5
                                 }
                             }
                         }
                     }
                 },
-                dataLabels: { enabled: true, style: { fontSize: '12px', fontWeight: 700 } },
-                stroke: { width: 3, colors: ['#fff'] },
+                dataLabels: { enabled: false },
+                stroke: { width: 5, colors: ['#fff'] },
             });
             charts.donut.render();
         }
@@ -106,17 +116,18 @@ document.addEventListener('DOMContentLoaded', function () {
                     name: 'Promedio (Horas)',
                     data: data.demora_bloques.map(d => d.promedio_horas)
                 }],
-                chart: { type: 'bar', height: 280, toolbar: noToolbar, ...baseFont },
+                chart: { type: 'bar', height: 280, toolbar: noToolbar, ...baseFont, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
                 plotOptions: {
-                    bar: { horizontal: true, borderRadius: 6, barHeight: '50%', distributed: true }
+                    bar: { horizontal: true, borderRadius: 8, barHeight: '45%', distributed: true }
                 },
                 colors: delayColors,
                 xaxis: {
                     categories: data.demora_bloques.map(d => d.bloque),
-                    labels: { style: { fontSize: '11px', colors: P.grayLt } }
+                    labels: { style: { fontSize: '11px', colors: P.slateLt, fontWeight: 500 } }
                 },
-                yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.gray } } },
+                yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.slate } } },
                 tooltip: {
+                    theme: 'dark',
                     y: {
                         formatter: val => {
                             const h = Math.floor(val);
@@ -135,7 +146,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     style: { fontSize: '11px', fontWeight: 700, colors: ['#fff'] },
                     offsetX: 5
                 },
-                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
+                grid: { borderColor: '#f8fafc', strokeDashArray: 4 },
                 legend: { show: false }
             });
             charts.delay.render();
@@ -148,25 +159,25 @@ document.addEventListener('DOMContentLoaded', function () {
             if (charts.gap) charts.gap.destroy();
             charts.gap = new ApexCharts(document.querySelector("#gapChart"), {
                 series: [{ name: 'Contratos', data: data.gap_chart.series }],
-                chart: { type: 'bar', height: 320, toolbar: noToolbar, ...baseFont },
+                chart: { type: 'bar', height: 320, toolbar: noToolbar, ...baseFont, animations: { enabled: true, speed: 800 } },
                 plotOptions: {
-                    bar: { horizontal: true, borderRadius: 6, barHeight: '60%', distributed: true },
+                    bar: { horizontal: true, borderRadius: 10, barHeight: '55%', distributed: true },
                 },
-                colors: [P.indigo, P.blue, P.teal, P.green, P.amber, P.red],
+                colors: [P.blue, P.indigo, P.teal, P.green, P.amber, P.red],
                 xaxis: {
                     categories: data.gap_chart.labels,
-                    labels: { style: { fontSize: '11px', colors: P.grayLt, ...baseFont } }
+                    labels: { style: { fontSize: '11px', colors: P.slateLt } }
                 },
-                yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.gray, ...baseFont } } },
+                yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.slate } } },
                 legend: { show: false },
-                tooltip: { y: { formatter: val => val + " contratos en esta etapa" } },
+                tooltip: { theme: 'dark', y: { formatter: val => val + " contratos" } },
                 dataLabels: {
                     enabled: true,
                     textAnchor: 'start',
-                    style: { colors: ['#fff'], fontSize: '12px', fontWeight: 800 },
+                    style: { colors: ['#fff'], fontSize: '12px', fontWeight: 700 },
                     offsetX: 10
                 },
-                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 }
+                grid: { borderColor: '#f8fafc', strokeDashArray: 4 }
             });
             charts.gap.render();
         } else {
@@ -178,25 +189,26 @@ document.addEventListener('DOMContentLoaded', function () {
             if (charts.timeline) charts.timeline.destroy();
             charts.timeline = new ApexCharts(document.querySelector("#timelineChart"), {
                 series: [{ name: 'Transiciones', data: data.timeline.series }],
-                chart: { type: 'area', height: 280, toolbar: noToolbar, ...baseFont },
-                colors: [P.indigo],
+                chart: { type: 'area', height: 280, toolbar: noToolbar, ...baseFont, sparkline: { enabled: false } },
+                colors: [P.accent],
                 fill: {
                     type: 'gradient',
-                    gradient: { shadeIntensity: 1, opacityFrom: 0.35, opacityTo: 0.05, stops: [0, 95] }
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.0, stops: [0, 100] }
                 },
-                stroke: { curve: 'smooth', width: 2.5 },
+                stroke: { curve: 'smooth', width: 3 },
                 xaxis: {
                     categories: data.timeline.labels,
-                    labels: { rotate: -45, style: { fontSize: '10px', colors: P.grayLt } }
+                    labels: { rotate: -45, style: { fontSize: '10px', colors: P.slateLt } },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
                 },
                 yaxis: {
-                    title: { text: 'Transiciones', style: { fontSize: '11px', color: P.gray } },
-                    labels: { formatter: val => Math.round(val), style: { colors: P.grayLt } }
+                    labels: { formatter: val => Math.round(val), style: { colors: P.slateLt } }
                 },
                 dataLabels: { enabled: false },
-                grid: { borderColor: '#f1f5f9', strokeDashArray: 4 },
-                markers: { size: 4, colors: [P.indigo], strokeWidth: 0, hover: { size: 7 } },
-                tooltip: { y: { formatter: val => val + " transiciones" } }
+                grid: { borderColor: '#f8fafc', strokeDashArray: 4 },
+                markers: { size: 5, colors: ['#fff'], strokeColors: P.accent, strokeWidth: 3, hover: { size: 7 } },
+                tooltip: { theme: 'dark', y: { formatter: val => val + " transiciones" } }
             });
             charts.timeline.render();
         } else {
@@ -454,33 +466,74 @@ document.addEventListener('DOMContentLoaded', function () {
                 allowTaint: true,
                 logging: false,
                 backgroundColor: "#ffffff",
-                windowWidth: 1400,
+                windowWidth: 1400, // Aumentado para evitar cortes laterales
                 width: 1400,
-                // Removido height fijo para permitir que capture contenido desplazado por los shifts
                 onclone: (clonedDoc) => {
                     const header = clonedDoc.getElementById('pdfHeader');
+                    const footer = clonedDoc.getElementById('pdfFooter');
+                    
                     if (header) {
                         header.classList.remove('d-none');
                         header.style.display = 'block';
 
+                        // Valor RP
                         const rpValue = document.querySelector('.mini-value')?.textContent || '';
                         const indicators = clonedDoc.getElementById('pdfIndicators');
                         if (indicators) {
                             indicators.innerHTML = `
-                                <div style="background: #001a3d; padding: 10px 18px; border-radius: 12px; border: 1px solid rgba(218, 165, 32, 0.4);">
-                                    <div style="font-size: 8px; color: #daa520; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px;">Valor total RP</div>
-                                    <div style="font-size: 20px; color: #ffffff; font-weight: 800; line-height: 1;">${rpValue}</div>
+                                <div style="background: #0f172a; padding: 12px 20px; border-radius: 14px; border: 1px solid #1e293b; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+                                    <div style="font-size: 8px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">VALOR TOTAL RP</div>
+                                    <div style="font-size: 22px; color: #ffffff; font-weight: 900; line-height: 1;">${rpValue}</div>
                                 </div>
                             `;
                         }
+
+                        // Fecha del reporte (Rango visible)
+                        const dateText = document.getElementById('dateDisplay')?.textContent || '';
+                        const pdfDateDisplay = clonedDoc.getElementById('pdfDateDisplay');
+                        if (pdfDateDisplay) pdfDateDisplay.textContent = dateText;
+
+                        // Filtros aplicados humanizados
+                        const filters = [];
+                        const fForm = document.getElementById('filterForm');
+                        if (fForm) {
+                            const contrato = fForm.querySelector('[name="contrato"]')?.value;
+                            if (contrato) filters.push(`Contrato: ${contrato}`);
+                            
+                            const supervisor = fForm.querySelector('[name="supervisor"] option:checked')?.text;
+                            if (supervisor && supervisor !== 'Todos') filters.push(`Supervisor: ${supervisor}`);
+                            
+                            const responsable = fForm.querySelector('[name="responsable"] option:checked')?.text;
+                            if (responsable && responsable !== 'Todos') filters.push(`Responsable: ${responsable}`);
+                            
+                            const estado = document.getElementById('selectedEstadoLabel')?.textContent;
+                            if (estado && estado !== 'Todos los estados') filters.push(`Estado: ${estado}`);
+                            
+                            const minP = document.getElementById('minVal')?.value;
+                            const maxP = document.getElementById('maxVal')?.value;
+                            if (minP !== "0" || maxP !== "100") filters.push(`Avance: ${minP}% - ${maxP}%`);
+                        }
+                        
+                        const pdfAppliedFilters = clonedDoc.getElementById('pdfAppliedFilters');
+                        if (pdfAppliedFilters) {
+                            pdfAppliedFilters.textContent = filters.length > 0 ? filters.join(' | ') : 'Sin filtros específicos (Global)';
+                        }
                     }
 
-                    const charts = clonedDoc.querySelectorAll('.apexcharts-canvas');
-                    charts.forEach(c => c.style.background = '#ffffff');
+                    if (footer) {
+                        footer.classList.remove('d-none');
+                        footer.style.display = 'block';
+                    }
 
-                    // LÓGICA PARA EVITAR CORTES:
-                    const pageHeightPx = 980;
-                    const cards = clonedDoc.querySelectorAll('.card, .kpi-card, .chart-container, .card-premium');
+                    // Forzar fondos blancos en ApexCharts para el PDF
+                    clonedDoc.querySelectorAll('.apexcharts-canvas').forEach(c => {
+                         c.style.background = '#ffffff';
+                         c.style.borderRadius = '0px';
+                    });
+
+                    // LÓGICA DE SALTO DE PÁGINA PARA TARJETAS
+                    const pageHeightPx = 990; // Proporción A4 Landscape para 1400px de ancho
+                    const cards = clonedDoc.querySelectorAll('.card, .kpi-card, .chart-container, .card-premium, .section-title');
 
                     cards.forEach(card => {
                         const rect = card.getBoundingClientRect();
@@ -488,7 +541,6 @@ document.addEventListener('DOMContentLoaded', function () {
                         let curr = card;
                         const container = clonedDoc.getElementById('captureArea');
 
-                        // Usamos offsetTop acumulado para mayor precisión en clones
                         while (curr && curr !== container && curr !== clonedDoc.body) {
                             top += curr.offsetTop;
                             curr = curr.offsetParent;
@@ -498,10 +550,9 @@ document.addEventListener('DOMContentLoaded', function () {
                         const pageNumAtTop = Math.floor(top / pageHeightPx);
                         const pageNumAtBottom = Math.floor(bottom / pageHeightPx);
 
-                        // Si la tarjeta cruza una frontera de página y no es excesivamente larga
-                        if (pageNumAtTop !== pageNumAtBottom && rect.height < pageHeightPx * 0.9) {
+                        if (pageNumAtTop !== pageNumAtBottom && rect.height < pageHeightPx * 0.8) {
                             const neededShift = (pageNumAtBottom * pageHeightPx) - top;
-                            card.style.marginTop = (neededShift + 25) + 'px';
+                            card.style.marginTop = (neededShift + 40) + 'px';
                         }
                     });
                 }

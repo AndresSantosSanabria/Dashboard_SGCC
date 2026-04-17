@@ -1,421 +1,254 @@
-.sticky-col {
-    position: sticky !important;
-    background-color: var(--govcolor-white) !important;
-    z-index: 5;
-    box-shadow: 2px 0 5px -2px rgba(0, 0, 0, 0.1);
-    border-right: 1px solid var(--govcolor-silver) !important;
-}
+/* ==========================================================================
+   REFURBISHED DASHBOARD - CLEAN CORPORATE THEME
+   ========================================================================== */
 
-/* En el header, fondo oscuro y z-index mayor */
-thead th.sticky-col {
-    background-color: var(--govcolor-matterhorn) !important;
-    color: var(--govcolor-white) !important;
-    z-index: 15;
-    /* Por encima de celdas sticky del body */
-}
-
-/* ... (pagination omitted for brevity as it remains same) ... */
-/* Estilo para filas en hover para que las celdas sticky no tapen el efecto */
-.table-hover tbody tr:hover td.sticky-col {
-    background-color: var(--govcolor-white-smoke) !important;
-}
-
-/* Timeline Styles */
-.timeline-container {
-    position: relative;
-    padding: 20px 0;
-}
-
-.timeline-item {
-    display: flex;
-    position: relative;
-    margin-bottom: 25px;
-    align-items: flex-start;
-}
-
-.timeline-marker-wrapper {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-right: 20px;
-    min-width: 50px;
-}
-
-.timeline-marker {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-size: 1rem;
-    z-index: 2;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    flex-shrink: 0;
-    background-color: var(--govcolor-cobalt);
-}
-
-.timeline-line {
-    position: absolute;
-    top: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 2px;
-    height: calc(100% + 25px);
-    background: var(--govcolor-silver);
-}
-
-.timeline-item:last-child .timeline-line {
-    display: none;
-}
-
-.timeline-content {
-    flex: 1;
-    background: var(--govcolor-white);
-    border-radius: 10px;
-    padding: 15px;
-    border: 1px solid var(--govcolor-silver);
-}
-
-.timeline-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-}
-
-.timeline-title {
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: var(--govcolor-cobalt);
-}
-
-.timeline-date {
-    font-size: 0.7rem;
-    color: var(--govcolor-grey);
-}
-
-.timeline-transition {
-    font-size: 0.8rem;
-    color: var(--govcolor-matterhorn);
-    margin-bottom: 5px;
-}
-
-.timeline-meta {
-    display: flex;
-    gap: 15px;
-    font-size: 0.75rem;
-    color: var(--govcolor-grey);
-    margin-top: 8px;
-}
-
-.timeline-comment {
-    background: var(--govcolor-white-smoke);
-    border-radius: 6px;
-    padding: 10px;
-    font-size: 0.8rem;
-    color: var(--govcolor-matterhorn);
-    border-left: 3px solid var(--govcolor-havelock-lue);
-    margin-top: 10px;
-    font-style: italic;
-}
-
-/* ===== COLUMN HIDING ===== */
-.column-hidden {
-    display: none !important;
-}
-
-.toggle-col-btn {
-    transition: all 0.2s ease;
-    cursor: pointer;
-    opacity: 0.6;
-}
-
-.toggle-col-btn:hover {
-    opacity: 1;
-    transform: scale(1.1);
-}
-
-.btn-reset-columns {
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(-5px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ===== REFINED GOV.CO TABLE STYLES ===== */
 :root {
-    --gov-blue-dark: #004884;
-    --gov-blue-light: #0066ff;
-    --gov-border: #E6E6E6;
-    --gov-bg-soft: #F2F5F7;
+    --corp-blue: #004884;
+    --corp-blue-light: #0056b3;
+    --corp-bg: #f5f7f9;
+    --corp-border: #e2e8f0;
+    --corp-text: #334155;
 }
 
-.table-responsive {
-    scrollbar-width: thin;
-    scrollbar-color: #CCCCCC transparent;
-    border: 1px solid var(--gov-border);
-    border-radius: 4px;
+body {
+    background-color: var(--corp-bg);
+}
+
+.premium-loading-container {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-top: 15px;
+    margin-bottom: 25px;
+    border: 1px solid var(--corp-border);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Header & Title */
+.main-dashboard-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--corp-blue);
+    margin-bottom: 4px;
+}
+
+/* Operation Section */
+.carga-archivo-govco {
+    background: #ffffff !important;
+    border: 1px solid var(--corp-border) !important;
+    border-radius: 10px !important;
+    padding: 16px !important;
+}
+
+/* Filters Card */
+.filters-container-glass {
+    background: white;
+    border: 1px solid var(--corp-border);
+    border-radius: 12px;
+}
+
+.filter-input {
+    border-radius: 6px !important;
+    border: 1px solid #cbd5e1 !important;
+    font-size: 0.85rem !important;
+    padding: 8px 12px !important;
+}
+
+/* TABLE DESIGN REPLICATION - AS REQUESTED */
+.table-card-premium {
+    border-radius: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
     background: white;
 }
 
-#cuentasTable {
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
+.table-card-premium .card-header {
+    background: #1e293b !important;
+    padding: 6px 16px !important; /* Slimmer header */
+    border-bottom: none !important;
+}
+
+.table-card-premium .card-header .badge {
+    background-color: #3b82f6 !important;
+    font-weight: 700;
+    font-size: 0.72rem !important;
+    padding: 3px 10px !important;
 }
 
 #cuentasTable thead th {
-    background-color: var(--gov-blue-dark) !important;
+    background: #2d4a6d !important; 
     color: white !important;
-    text-align: center;
-    vertical-align: middle;
-    font-size: 0.75rem !important;
     font-weight: 700 !important;
-    padding: 12px 10px !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.1) !important;
-    white-space: nowrap;
+    font-size: 0.78rem !important; /* Slightly smaller font */
+    text-transform: uppercase;
+    padding: 6px 12px !important; /* REDUCED PADDING */
+    border-right: 1px solid rgba(255,255,255,0.1) !important;
+    vertical-align: middle !important;
+    white-space: nowrap; /* PREVENT WRAPPING */
+}
+
+#cuentasTable thead th.sticky-col {
+    background: #2d4a6d !important;
+    z-index: 30 !important;
 }
 
 #cuentasTable tbody td {
-    padding: 10px 12px !important;
-    border-bottom: 1px solid var(--gov-border) !important;
-    border-right: 1px solid var(--gov-border) !important;
-    vertical-align: middle;
-    font-size: 0.8rem;
-    color: #333;
+    padding: 8px 12px !important; /* REDUCED PADDING */
+    border-bottom: 1px solid #edf2f7 !important;
+    color: #1e293b;
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
-#cuentasTable tbody tr:hover td {
-    background-color: var(--gov-bg-soft) !important;
+/* PILL BADGE STYLING */
+.badge-pill-custom {
+    border-radius: 50px !important;
+    padding: 4px 15px !important;
+    font-weight: 700 !important;
+    font-size: 0.75rem !important;
+    display: inline-block;
 }
 
-/* Fix Sticky Column Offsets to prevent overlapping */
+.bg-pasa { background: #10b981 !important; color: white !important; }
+.bg-devuelta { background: #ef4444 !important; color: white !important; }
+.bg-revision { background: #065f46 !important; color: white !important; }
+.bg-espera { background: #1d4ed8 !important; color: white !important; }
+
+/* STICKY COLUMNS - GAP FIX */
 .sticky-col {
     position: sticky !important;
     background-color: white !important;
-    z-index: 5;
+    z-index: 10;
 }
 
-.sticky-col-1 {
-    left: 0;
-    width: 140px;
-    min-width: 140px;
-}
-
-.sticky-col-2 {
-    left: 140px;
-    width: 300px;
-    min-width: 300px;
-}
-
-.sticky-col-3 {
-    left: 440px;
-    width: 120px;
-    min-width: 120px;
-}
+/* Correcting math: 0 + 140 = 140. 140 + 250 = 390. */
+.sticky-col-1 { left: 0; min-width: 140px; max-width: 140px; z-index: 11; border-right: 1px solid rgba(0,0,0,0.05) !important; }
+.sticky-col-2 { left: 140px; min-width: 250px; max-width: 250px; z-index: 11; border-right: 1px solid rgba(0,0,0,0.05) !important; }
+.sticky-col-3 { left: 390px; min-width: 120px; max-width: 120px; z-index: 11; border-right: 1px solid rgba(0,0,0,0.1) !important; }
 
 thead th.sticky-col {
-    z-index: 10;
-    background-color: var(--gov-blue-dark) !important;
-}
-
-/* Modern Badges for Workflow */
-.badge {
-    padding: 5px 12px !important;
-    font-weight: 600 !important;
-    border-radius: 4px !important;
-    text-transform: none;
-    font-size: 0.75rem !important;
-}
-
-/* Gov Action Buttons */
-.btn-action-premium {
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: all 0.2s;
-    border: 1px solid var(--gov-border);
-    background: white;
-    color: var(--gov-blue-dark);
-}
-
-.btn-action-premium:hover {
-    background: var(--gov-bg-soft);
-    border-color: var(--gov-blue-light);
-    color: var(--gov-blue-light);
-    transform: scale(1.05);
-}
-
-.govco-svg {
-    transform: scale(1.2);
-}
-
-/* Custom Scrollbar for GOV theme */
-.table-responsive::-webkit-scrollbar {
-    height: 10px;
-    width: 8px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb {
-    background: #CCC;
-    border-radius: 5px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb:hover {
-    background: #999;
+    background-color: #2d4a6d !important;
+    color: white !important;
+    z-index: 20 !important;
 }
 
 /* Action Buttons */
 .btn-action-premium {
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    transition: all 0.2s;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
     border: 1px solid #e2e8f0;
-    background: white;
-    color: #64748b;
+    background: #f8fafc;
 }
 
 .btn-action-premium:hover {
-    background: var(--premium-light-blue);
-    color: white;
-    border-color: var(--premium-light-blue);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    background: var(--corp-blue);
+    color: white !important;
 }
 
-.btn-action-premium i,
-.btn-action-premium span {
-    font-size: 1rem;
+/* Offcanvas Styling */
+.offcanvas-header {
+    background-color: var(--corp-blue) !important;
 }
 
-/* Row Animation */
-@keyframes rowFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.offcanvas-title {
+    font-weight: 700;
 }
 
-#cuentasTable tbody tr {
-    animation: rowFadeIn 0.3s ease forwards;
-    animation-delay: calc(var(--row-index) * 0.05s);
+.offcanvas-body {
+    padding: 20px;
 }
 
-/* Custom Multilevel Dropdown */
-.custom-multilevel-dropdown .dropdown-toggle {
-    background-color: white;
-    border-color: #dee2e6;
-    color: #212529;
-    font-size: 0.9rem;
-    padding: 0.375rem 0.75rem;
-    transition: all 0.2s;
+.form-check {
+    margin-bottom: 8px;
 }
 
-.custom-multilevel-dropdown .dropdown-toggle:hover,
-.custom-multilevel-dropdown .dropdown-toggle:focus {
-    background-color: #f8f9fa;
-    border-color: #004884;
-    box-shadow: 0 0 0 0.25rem rgba(0, 72, 132, 0.1);
-}
-
-.custom-multilevel-dropdown .dropdown-menu {
-    border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    padding: 0.5rem 0;
-    min-width: 320px;
-    width: max-content;
-    max-width: 450px;
-    z-index: 1050;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-.custom-multilevel-dropdown .dropdown-item {
-    padding: 0.75rem 1.25rem;
+.form-check-label {
     font-size: 0.85rem;
-    transition: all 0.2s;
     cursor: pointer;
-    white-space: normal;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 15px;
-    line-height: 1.4;
 }
 
-.custom-multilevel-dropdown .dropdown-item:hover {
-    background-color: #F2F5F7;
-    color: #004884;
+/* Animations */
+/* ACCORDION DROPDOWN STYLING - AS REQUESTED */
+.custom-multilevel-dropdown .dropdown-menu {
+    padding: 0 !important;
+    border: 1px solid #e2e8f0 !important;
+    overflow: hidden;
+    min-width: 380px !important;
 }
 
-.custom-multilevel-dropdown .dropdown-item.active {
-    background-color: #004884;
+.dropdown-header-premium {
+    background-color: var(--corp-blue);
     color: white;
+    padding: 12px 18px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
-.dropdown-submenu {
-    position: relative;
+.dropdown-item-all {
+    background-color: #e6f0ff;
+    color: #475569;
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    border-bottom: 1px solid #f1f5f9;
 }
 
-.dropdown-submenu > .dropdown-menu {
-    top: 0;
-    left: 100%;
-    margin-top: -1px;
-    margin-left: 0;
-    display: none;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+.accordion-trigger-item {
+    padding: 14px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: white;
+    cursor: pointer;
+    transition: background 0.2s;
 }
 
-.dropdown-submenu:hover > .dropdown-menu {
-    display: block;
+.accordion-trigger-item:hover {
+    background: #f8fafc;
 }
 
-.dropdown-submenu > .dropdown-toggle i {
-    transition: transform 0.2s;
+.accordion-trigger-item .title-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #334155;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.4px;
 }
 
-.dropdown-submenu:hover > .dropdown-toggle i {
-    transform: translateX(3px);
+.accordion-trigger-item i.bi-folder {
+    color: #64748b;
+    font-size: 1.1rem;
 }
 
-/* Responsive adjustment for submenus */
-@media (max-width: 768px) {
-    .dropdown-submenu > .dropdown-menu {
-        position: static;
-        margin-left: 1rem;
-        display: block;
-        box-shadow: none;
-        border: none;
-        background: transparent;
-    }
-    
-    .custom-multilevel-dropdown .dropdown-menu {
-        max-height: 400px;
-        overflow-y: auto;
-    }
-}
+.accordion-trigger-item i.bi-chevron-down {
+    color: #cbd5e1;
+    font-size: 0.8rem;
+}
+
+/* Specific item styles when open */
+.dropdown-submenu-open {
+    display: block !important;
+    background: #fdfdfd;
+}
+
+.dropdown-item-state {
+    padding: 10px 45px !important;
+    font-size: 0.8rem !important;
+    color: #475569 !important;
+}
+
+.dropdown-item-state:hover {
+    background: #f1f5f9 !important;
+    color: var(--corp-blue) !important;
+}
+
+

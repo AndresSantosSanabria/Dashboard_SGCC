@@ -256,7 +256,24 @@ class CuentaCobroController extends Controller
         // 3. SEGURIDAD DE FILTRADO (Sandboxing)
         // Aplicamos las mismas reglas de visibilidad que en el Workflow para coherencia de datos.
         if ($user->verSoloAsignados()) {
-            $query->where('responsable_actual_id', $user->id);
+            $query->where(function($q) use ($user) {
+                // a. Es el responsable directo del trámite actual
+                $q->where('responsable_actual_id', $user->id)
+                // b. O es parte del equipo de gestión del contrato (Abogado, Contador, OPS)
+                ->orWhereHas('contrato', function($cq) use ($user) {
+                    $cq->where('abogado_user_id', $user->id)
+                       ->orWhere('contador_user_id', $user->id)
+                       ->orWhere('ops_user_id', $user->id);
+                    
+                    // c. O es el Supervisor del contrato (con el mismo nombre)
+                    $nombreCompleto = $user->nombre_completo;
+                    if ($nombreCompleto) {
+                        $cq->orWhereHas('supervisor', function($sq) use ($nombreCompleto) {
+                            $sq->where(DB::raw("TRIM(CONCAT(nombres, ' ', apellidos))"), 'ilike', '%' . $nombreCompleto . '%');
+                        });
+                    }
+                });
+            });
         }
 
         $bloquesPermitidos = $user->bloquesPermitidos();
@@ -306,6 +323,11 @@ class CuentaCobroController extends Controller
             $query->whereHas('contrato', fn($q) => $q->where('supervisor_id', $request->filterSupervisor));
         }
 
+        // Filtro por Responsable Actual
+        if ($request->filled('filterResponsable')) {
+            $query->where('responsable_actual_id', $request->filterResponsable);
+        }
+
         // Filtro por Estados de Revisión (Checkboxes)
         if ($request->filled('filterEstadosRevision')) {
             $query->whereIn('estado_actual_id', (array) $request->filterEstadosRevision);
@@ -353,10 +375,9 @@ class CuentaCobroController extends Controller
         $estadosRevision = EstadoWorkflow::whereHas('bloque', fn($q) => $q->where('codigo', 'REV1'))->get();
         $todosLosEstados = EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
         $estadosFiltro  = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->orderBy('nombre')->get();
-        $todosLosEstados = EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
-        $estadosFiltro  = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->orderBy('nombre')->get();
- 
-        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados', 'estadosFiltro', 'canManage', 'canEditDashboard', 'bloques'));
+        $responsables = Usuario::where('es_activo', true)->get();
+
+        return view('dashboard.dashboard', compact('cuentas', 'supervisores', 'estadosRevision', 'todosLosEstados', 'estadosFiltro', 'canManage', 'canEditDashboard', 'bloques', 'responsables'));
     }
 
     /**
@@ -555,19 +576,23 @@ class CuentaCobroController extends Controller
                                 $estadoActual = $bloqueActual?->estadoInicial;
                             }
 
-                            // AUTO-ADVANCE: Si el estado determinado es "final" para su bloque, 
-                            // avanzamos automáticamente al siguiente bloque en su estado inicial.
+                            // AUTO-ADVANCE RECURSIVO: Si el estado determinado es "final" para su bloque, 
+                            // avanzamos automáticamente al siguiente bloque hasta encontrar uno donde deba esperar.
                             // Esto resuelve el problema de contratos que se quedan "estancados" en estados de salida.
-                            if ($estadoActual && $estadoActual->es_final && $bloqueActual && $bloqueActual->codigo !== 'FIN') {
+                            while ($estadoActual && $estadoActual->es_final && $bloqueActual && $bloqueActual->codigo !== 'FIN') {
                                 $prevBloqueCodigo = $bloqueActual->codigo;
                                 $siguienteBloque = BloqueWorkflow::where('orden', '>', $bloqueActual->orden)
                                     ->orderBy('orden')->first();
                                 
-                                if ($siguienteBloque) {
-                                    $bloqueActual = $siguienteBloque;
-                                    $estadoActual = $siguienteBloque->estadoInicial;
-                                    Log::info("  Auto-avance: El contrato estaba en estado final de {$prevBloqueCodigo}, movido a {$siguienteBloque->codigo}");
-                                }
+                                if (!$siguienteBloque) break;
+
+                                Log::info("  Auto-avance: El contrato estaba en estado final de {$prevBloqueCodigo}, movido a {$siguienteBloque->codigo}");
+                                
+                                $bloqueActual = $siguienteBloque;
+                                $estadoActual = $siguienteBloque->estadoInicial;
+                                
+                                // Si el siguiente bloque no tiene estado inicial, paramos para evitar bucles
+                                if (!$estadoActual) break;
                             }
 
                             // Preservar estado si la cuenta ya existía y el archivo no trae avances nuevos
@@ -769,17 +794,22 @@ class CuentaCobroController extends Controller
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_SIN');
                 }
 
-                // AUTO-ADVANCE MANUAL: Aplicar la misma lógica de avance para cargas manuales
+                // AUTO-ADVANCE MANUAL RECURSIVO: Aplicar la misma lógica de avance para cargas manuales
                 $estadoObj = EstadoWorkflow::find($estadoId);
-                if ($estadoObj && $estadoObj->es_final && $bloqueId != $this->getBlockIdByCode('FIN')) {
-                    $bloqueActualObj = BloqueWorkflow::find($bloqueId);
+                $bloqueActualObj = BloqueWorkflow::find($bloqueId);
+
+                while ($estadoObj && $estadoObj->es_final && $bloqueId != $this->getBlockIdByCode('FIN')) {
                     $siguienteBloque = BloqueWorkflow::where('orden', '>', $bloqueActualObj->orden)
                         ->orderBy('orden')->first();
                     
-                    if ($siguienteBloque) {
-                        $bloqueId = $siguienteBloque->id;
-                        $estadoId = $siguienteBloque->estadoInicial?->id ?? $estadoId;
-                    }
+                    if (!$siguienteBloque) break;
+
+                    $bloqueId = $siguienteBloque->id;
+                    $bloqueActualObj = $siguienteBloque;
+                    $estadoObj = $siguienteBloque->estadoInicial;
+                    $estadoId = $estadoObj?->id ?? $estadoId;
+
+                    if (!$estadoObj) break;
                 }
 
                 $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($this->getColumnValue($rawRequest, 'RADICADA EN HACIENDA') === 'SI')));
@@ -1155,9 +1185,9 @@ class CuentaCobroController extends Controller
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('REV1_REV'),
                     'fecha_ingreso_bloque' => $fechaIngresoBloque,
-                    'fecha_completado_bloque' => $fechaRev,
+                    'fecha_completado_bloque' => $fechaRev ?? (($cuenta->bloque_actual_id > $bloqueId) ? now() : null),
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => ! empty($fechaRev),
+                    'bloque_completado' => ! empty($fechaRev) || ($cuenta->bloque_actual_id > $bloqueId),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
@@ -1178,9 +1208,9 @@ class CuentaCobroController extends Controller
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('SAP_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($this->getColumnValue($data, 'FECHA DEVUELTA DE REVISIÓN O ENVIADA A SAP')) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
-                    'fecha_completado_bloque' => $fechaSap,
+                    'fecha_completado_bloque' => $fechaSap ?? (($cuenta->bloque_actual_id > $bloqueId) ? now() : null),
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => ! empty($fechaSap),
+                    'bloque_completado' => ! empty($fechaSap) || ($cuenta->bloque_actual_id > $bloqueId),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
@@ -1201,9 +1231,9 @@ class CuentaCobroController extends Controller
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('FAC_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($this->getColumnValue($data, 'FECHA DE ENVIO A FACTURACIÓN O DEVUELTA A CORRECIONES')) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
-                    'fecha_completado_bloque' => $fechaFac,
+                    'fecha_completado_bloque' => $fechaFac ?? (($cuenta->bloque_actual_id > $bloqueId) ? now() : null),
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => ! empty($fechaFac),
+                    'bloque_completado' => ! empty($fechaFac) || ($cuenta->bloque_actual_id > $bloqueId),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
@@ -1224,9 +1254,9 @@ class CuentaCobroController extends Controller
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('FIR_ESP'),
                     'fecha_ingreso_bloque' => $this->parseDate($this->getColumnValue($data, 'FECHA EN QUE SE GENERA FACURACIÓN')) ?? $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now(),
-                    'fecha_completado_bloque' => $fechaFir,
+                    'fecha_completado_bloque' => $fechaFir ?? (($cuenta->bloque_actual_id > $bloqueId) ? now() : null),
                     'fecha_ultima_actualizacion' => now(),
-                    'bloque_completado' => ! empty($fechaFir),
+                    'bloque_completado' => ! empty($fechaFir) || ($cuenta->bloque_actual_id > $bloqueId),
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );

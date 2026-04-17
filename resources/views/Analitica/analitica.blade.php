@@ -16,12 +16,12 @@
         <div class="header-bg"></div>
 
         <div class="container-fluid py-4 contents-container">
-            <!-- Dashboard Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4 header-content flex-wrap gap-3">
+            <!-- Dashboard UI Header (Not captured in PDF) -->
+            <div class="d-flex justify-content-between align-items-end mb-5 header-content flex-wrap gap-4">
                 <div>
-                    <h2 class="fw-bold mb-1 animate-in">Tablero Analítico</h2>
-                    <p class="header-subtitle mb-2 animate-in">Inteligencia de Negocio — Gestión de Cuentas de Cobro</p>
-                    <div class="header-date-selector animate-in" id="dateRangePicker">
+                    <h2 class="animate-in">Tablero Analítico</h2>
+                    <p class="header-subtitle animate-in">Inteligencia de Negocio — Gestión de Cuentas de Cobro</p>
+                    <div class="header-date-selector animate-in mt-3" id="dateRangePicker">
                         <i class="bi bi-calendar3"></i>
                         <span id="dateDisplay">
                             @if (request('fecha_desde') && request('fecha_hasta'))
@@ -35,15 +35,111 @@
                     </div>
                 </div>
 
-                <div class="d-flex gap-2 flex-wrap align-items-center">
-                    <div class="hero-indicator-mini animate-in">
+                <div class="d-flex gap-3 flex-wrap align-items-center animate-in">
+                    <div class="hero-indicator-mini">
                         <div class="mini-label">Valor total RP</div>
                         <div class="mini-value">${{ number_format($montoTotal, 0, ',', '.') }}</div>
                     </div>
-                    <button id="btnExportPDF" class="btn btn-glass h-100">
-                        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+                    <button id="btnExportPDF" class="btn btn-glass h-100 px-4 py-3">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>Exportar PDF
                     </button>
                 </div>
+            </div>
+
+            <div id="filterSection" class="filter-bar mb-4 animate-in">
+                <form action="{{ route('analitica') }}" method="GET" class="row g-3 align-items-end" id="filterForm">
+                    <input type="hidden" name="fecha_desde" id="fecha_desde" value="{{ request('fecha_desde') }}">
+                    <input type="hidden" name="fecha_hasta" id="fecha_hasta" value="{{ request('fecha_hasta') }}">
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                        <label class="form-label">N° Contrato</label>
+                        <input type="text" name="contrato" class="form-control" placeholder="Ej: 119-2025"
+                            value="{{ request('contrato') }}">
+                    </div>
+                    <div class="col-xl-1 col-lg-3 col-md-4 col-6">
+                        <label class="form-label">N° Cuenta</label>
+                        <input type="text" name="numero_cuenta" class="form-control" placeholder="Ej: 1"
+                            value="{{ request('numero_cuenta') }}">
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                        <label class="form-label">Supervisor</label>
+                        <select name="supervisor" class="form-select">
+                            <option value="">Todos</option>
+                            @foreach ($supervisores as $sup)
+                                <option value="{{ $sup->id }}"
+                                    {{ request('supervisor') == $sup->id ? 'selected' : '' }}>
+                                    {{ $sup->nombre_completo }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                        <label class="form-label">Responsable</label>
+                        <select name="responsable" class="form-select">
+                            <option value="">Todos</option>
+                            @foreach ($responsables as $resp)
+                                <option value="{{ $resp->id }}"
+                                    {{ request('responsable') == $resp->id ? 'selected' : '' }}>
+                                    {{ $resp->nombre_completo }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                        <label class="form-label">Estado</label>
+                        <div class="analitica-estado-picker" id="estadoPicker">
+                            <button type="button" class="analitica-picker-btn" id="estadoPickerBtn">
+                                <span id="selectedEstadoLabel">{{ request('estado') ?: 'Todos los estados' }}</span>
+                                <i class="bi bi-chevron-down" id="estadoChevron"></i>
+                            </button>
+                            <input type="hidden" name="estado" id="hiddenSearchEstado" value="{{ request('estado') }}">
+                            <div class="analitica-picker-menu" id="estadoPickerMenu">
+                                <div class="analitica-picker-item {{ !request('estado') ? 'is-active' : '' }}"
+                                    data-value="" data-label="Todos los estados">
+                                    <i class="bi bi-layers me-2"></i> Todos los estados
+                                </div>
+                                <hr class="my-1">
+                                @foreach ($bloques as $bloque)
+                                    @php $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect(); @endphp
+                                    @if ($estadosDelBloque->isNotEmpty())
+                                        <div class="analitica-picker-group">
+                                            <div class="analitica-picker-group-header">
+                                                <i class="bi bi-folder2 me-2"></i>{{ $bloque->nombre }}
+                                                <i class="bi bi-chevron-right ms-auto picker-group-arrow"></i>
+                                            </div>
+                                            <div class="analitica-picker-submenu">
+                                                @foreach ($estadosDelBloque as $est)
+                                                    <div class="analitica-picker-item {{ request('estado') == $est->nombre ? 'is-active' : '' }}"
+                                                        data-value="{{ $est->nombre }}"
+                                                        data-label="{{ $est->nombre }}">
+                                                        {{ $est->nombre }}
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                        <label class="form-label">% Avance</label>
+                        <div class="px-1">
+                            <div id="rangeSlider" class="mt-2"></div>
+                            <input type="hidden" name="porcentaje_min" id="minVal"
+                                value="{{ request('porcentaje_min', 0) }}">
+                            <input type="hidden" name="porcentaje_max" id="maxVal"
+                                value="{{ request('porcentaje_max', 100) }}">
+                        </div>
+                    </div>
+                    <div class="col-xl-1 col-lg-4 col-md-4 col-12">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-filter flex-grow-1" title="Aplicar filtros">
+                                <i class="bi bi-funnel"></i>
+                            </button>
+                            <button type="button" id="btnReset" class="btn btn-reset" title="Limpiar filtros">
+                                <i class="bi bi-arrow-counterclockwise"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
 
             <div id="captureArea" class="position-relative premium-loading-container">
@@ -51,134 +147,38 @@
 
                 <!-- Header para el PDF (Oculto en web) -->
                 <div id="pdfHeader" class="d-none">
-                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3"
-                        style="border-bottom: 2px solid #004884 !important;">
-                        <div class="d-flex align-items-center gap-3">
-                            <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo" style="height: 60px;">
-                            <div>
-                                <h3 style="margin:0; color:#004884; font-weight:800;">REPORTE ANALÍTICO BI</h3>
-                                <p style="margin:0; font-size:12px; color:#666;">Sistema de Gestión de Cuentas de Cobro —
-                                    SGCC</p>
+                    <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-4"
+                        style="border-bottom: 3px solid #0f172a !important;">
+                        <div class="d-flex align-items-center gap-4">
+                            <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo" style="height: 75px;">
+                            <div style="border-left: 2px solid #e2e8f0; padding-left: 20px;">
+                                <h2 style="margin:0; color:#0f172a; font-weight:900; letter-spacing: -0.5px; font-size: 26px;">INFORME DE GESTIÓN BI</h2>
+                                <p style="margin:0; font-size:13px; color:#64748b; font-weight: 500;">
+                                    Secretaría de Tecnologías de la Información y las Comunicaciones
+                                </p>
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-4">
-                            <div id="pdfIndicators" class="d-flex gap-2"></div>
-                            <div class="text-end">
+                            <div id="pdfIndicators"></div>
+                            <div class="text-end" style="background: #f8fafc; padding: 12px 18px; border-radius: 12px; border: 1px solid #e2e8f0;">
                                 <div class="mb-2">
-                                    <p
-                                        style="margin:0; font-size:9px; font-weight:700; color:#004884; letter-spacing: 0.5px; text-transform: uppercase;">
-                                        GENERADO POR</p>
-                                    <p style="margin:0; font-size:12px; color:#333; font-weight: 600;">
-                                        {{ Auth::user()->nombre_completo }}</p>
+                                    <p style="margin:0; font-size:9px; font-weight:800; color:#475569; letter-spacing: 1px; text-transform: uppercase;">GENERADO POR</p>
+                                    <p style="margin:0; font-size:13px; color:#0f172a; font-weight: 700;">{{ Auth::user()->nombre_completo }}</p>
                                 </div>
-                                <div>
-                                    <p
-                                        style="margin:0; font-size:9px; font-weight:700; color:#004884; letter-spacing: 0.5px; text-transform: uppercase;">
-                                        FECHA DE GENERACIÓN</p>
-                                    <p style="margin:0; font-size:11px; color:#666;">
-                                        {{ \Carbon\Carbon::now()->translatedFormat('d F, Y h:i A') }}</p>
+                                <div class="mb-0">
+                                    <p style="margin:0; font-size:9px; font-weight:800; color:#475569; letter-spacing: 1px; text-transform: uppercase;">CONSULTA AL TENER</p>
+                                    <p style="margin:0; font-size:12px; color:#475569; font-weight: 600;" id="pdfDateDisplay"></p>
                                 </div>
                             </div>
                         </div>
                     </div>
+                    
+                    <div class="pdf-report-metadata mb-4 d-flex gap-4 p-3" style="background: #f1f5f9; border-radius: 8px; font-size: 11px; color: #475569;">
+                        <div><strong>Filtros aplicados:</strong> <span id="pdfAppliedFilters">Ninguno</span></div>
+                        <div class="ms-auto"><strong>Fecha de Reporte:</strong> {{ \Carbon\Carbon::now()->translatedFormat('d F, Y h:i A') }}</div>
+                    </div>
                 </div>
 
-                <!-- ===== FILTERS ===== -->
-                <div class="filter-bar mb-4 no-print animate-in">
-                    <form action="{{ route('analitica') }}" method="GET" class="row g-3 align-items-end" id="filterForm">
-                        <input type="hidden" name="fecha_desde" id="fecha_desde" value="{{ request('fecha_desde') }}">
-                        <input type="hidden" name="fecha_hasta" id="fecha_hasta" value="{{ request('fecha_hasta') }}">
-                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-                            <label class="form-label">N° Contrato</label>
-                            <input type="text" name="contrato" class="form-control" placeholder="Ej: 119-2025"
-                                value="{{ request('contrato') }}">
-                        </div>
-                        <div class="col-xl-1 col-lg-3 col-md-4 col-6">
-                            <label class="form-label">N° Cuenta</label>
-                            <input type="text" name="numero_cuenta" class="form-control" placeholder="Ej: 1"
-                                value="{{ request('numero_cuenta') }}">
-                        </div>
-                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-                            <label class="form-label">Supervisor</label>
-                            <select name="supervisor" class="form-select">
-                                <option value="">Todos</option>
-                                @foreach ($supervisores as $sup)
-                                    <option value="{{ $sup->id }}"
-                                        {{ request('supervisor') == $sup->id ? 'selected' : '' }}>
-                                        {{ $sup->nombre_completo }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-                            <label class="form-label">Responsable</label>
-                            <select name="responsable" class="form-select">
-                                <option value="">Todos</option>
-                                @foreach ($responsables as $resp)
-                                    <option value="{{ $resp->id }}"
-                                        {{ request('responsable') == $resp->id ? 'selected' : '' }}>
-                                        {{ $resp->nombre_completo }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-                            <label class="form-label">Estado</label>
-                            <div class="analitica-estado-picker" id="estadoPicker">
-                                <button type="button" class="analitica-picker-btn" id="estadoPickerBtn">
-                                    <span id="selectedEstadoLabel">{{ request('estado') ?: 'Todos los estados' }}</span>
-                                    <i class="bi bi-chevron-down" id="estadoChevron"></i>
-                                </button>
-                                <input type="hidden" name="estado" id="hiddenSearchEstado" value="{{ request('estado') }}">
-                                <div class="analitica-picker-menu" id="estadoPickerMenu">
-                                    <div class="analitica-picker-item {{ !request('estado') ? 'is-active' : '' }}"
-                                        data-value="" data-label="Todos los estados">
-                                        <i class="bi bi-layers me-2"></i> Todos los estados
-                                    </div>
-                                    <hr class="my-1">
-                                    @foreach ($bloques as $bloque)
-                                        @php $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect(); @endphp
-                                        @if ($estadosDelBloque->isNotEmpty())
-                                            <div class="analitica-picker-group">
-                                                <div class="analitica-picker-group-header">
-                                                    <i class="bi bi-folder2 me-2"></i>{{ $bloque->nombre }}
-                                                    <i class="bi bi-chevron-right ms-auto picker-group-arrow"></i>
-                                                </div>
-                                                <div class="analitica-picker-submenu">
-                                                    @foreach ($estadosDelBloque as $est)
-                                                        <div class="analitica-picker-item {{ request('estado') == $est->nombre ? 'is-active' : '' }}"
-                                                            data-value="{{ $est->nombre }}"
-                                                            data-label="{{ $est->nombre }}">
-                                                            {{ $est->nombre }}
-                                                        </div>
-                                                    @endforeach
-                                                </div>
-                                            </div>
-                                        @endif
-                                    @endforeach
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-                            <label class="form-label">% Avance</label>
-                            <div class="px-1">
-                                <div id="rangeSlider" class="mt-2"></div>
-                                <input type="hidden" name="porcentaje_min" id="minVal"
-                                    value="{{ request('porcentaje_min', 0) }}">
-                                <input type="hidden" name="porcentaje_max" id="maxVal"
-                                    value="{{ request('porcentaje_max', 100) }}">
-                            </div>
-                        </div>
-                        <div class="col-xl-1 col-lg-4 col-md-4 col-12">
-                            <div class="d-flex gap-2">
-                                <button type="submit" class="btn btn-filter flex-grow-1" title="Aplicar filtros">
-                                    <i class="bi bi-funnel"></i>
-                                </button>
-                                <button type="button" id="btnReset" class="btn btn-reset" title="Limpiar filtros">
-                                    <i class="bi bi-arrow-counterclockwise"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
 
                 <!-- ===== KPI CARDS ===== -->
                 <div class="kpi-row mb-4">
@@ -366,6 +366,13 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+                <!-- PDF Footer (Visible solo en captura) -->
+                <div id="pdfFooter" class="d-none mt-5 pt-4 border-top" style="border-top: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex justify-content-between align-items-center" style="font-size: 10px; color: #94a3b8;">
+                        <div>© {{ date('Y') }} Gobernación de Cundinamarca - Sistema de Gestión de Cuentas de Cobro</div>
+                        <div class="text-end">Este documento es un reporte automático generado desde la plataforma BI institucional.</div>
                     </div>
                 </div>
             </div>

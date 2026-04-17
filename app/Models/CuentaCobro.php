@@ -56,22 +56,22 @@ class CuentaCobro extends Model
      * para cálculos precisos de tiempos de respuesta (SLAs).
      */
     protected $casts = [
-        'valor_cobro'                    => 'decimal:2',
-        'fecha_radicacion'               => 'datetime',
-        'numero_pagos_totales'           => 'integer',
-        'numero_facturas_radicadas'      => 'integer',
-        'porcentaje_cuentas'             => 'decimal:2',
-        'diferencia_cuentas'             => 'integer',
-        'finalizada'                     => 'boolean',
-        'fecha_radicacion_hacienda'      => 'datetime',
+        'valor_cobro' => 'decimal:2',
+        'fecha_radicacion' => 'datetime',
+        'numero_pagos_totales' => 'integer',
+        'numero_facturas_radicadas' => 'integer',
+        'porcentaje_cuentas' => 'decimal:2',
+        'diferencia_cuentas' => 'integer',
+        'finalizada' => 'boolean',
+        'fecha_radicacion_hacienda' => 'datetime',
         // Legacy
-        'ultimo_inicio_conteo'           => 'datetime',
-        'tiempo_total_segundos'          => 'integer',
+        'ultimo_inicio_conteo' => 'datetime',
+        'tiempo_total_segundos' => 'integer',
         // v2
-        'fecha_ultimo_cambio_estado'     => 'datetime',
-        'tiempo_total_proceso_segundos'  => 'integer',
-        'created_at'                     => 'datetime',
-        'updated_at'                     => 'datetime',
+        'fecha_ultimo_cambio_estado' => 'datetime',
+        'tiempo_total_proceso_segundos' => 'integer',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     // --- RELACIONES DE FLUJO ---
@@ -193,7 +193,8 @@ class CuentaCobro extends Model
 
         $totalSegundos = $base + $volatil;
 
-        if ($totalSegundos <= 0) return '0m';
+        if ($totalSegundos <= 0)
+            return '0m';
 
         return $businessTime->formatInterval($totalSegundos);
     }
@@ -210,10 +211,11 @@ class CuentaCobro extends Model
      */
     public function getTiempoEnEstadoActualAttribute(): string
     {
-        if (! $this->fecha_ultimo_cambio_estado) return '0m';
+        if (!$this->fecha_ultimo_cambio_estado)
+            return '0m';
 
         $businessTime = app(\App\Services\BusinessTimeService::class);
-        $segundos     = $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now());
+        $segundos = $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now());
 
         return $businessTime->formatInterval($segundos);
     }
@@ -223,7 +225,8 @@ class CuentaCobro extends Model
      */
     public function getSegundosEnEstadoActualAttribute(): int
     {
-        if (! $this->fecha_ultimo_cambio_estado) return 0;
+        if (!$this->fecha_ultimo_cambio_estado)
+            return 0;
 
         $businessTime = app(\App\Services\BusinessTimeService::class);
         return $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now());
@@ -236,7 +239,8 @@ class CuentaCobro extends Model
      */
     public function getEstaReposadoAttribute(): bool
     {
-        if (! $this->fecha_ultimo_cambio_estado || ! $this->estadoActual) return false;
+        if (!$this->fecha_ultimo_cambio_estado || !$this->estadoActual)
+            return false;
 
         // Límite específico del estado (prioridad máxima)
         $limiteHoras = $this->estadoActual->tiempo_limite_horas;

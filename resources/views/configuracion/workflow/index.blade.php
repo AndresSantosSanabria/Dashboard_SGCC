@@ -19,9 +19,6 @@
                 <p class="text-muted mb-0">Gestione el flujo de estados, transiciones y reglas de negocio del sistema.</p>
             </div>
             <div class="d-flex gap-2">
-                <button id="btnSyncTransiciones" class="btn-premium btn-premium-warning" title="Sincronizar conexiones de estados">
-                    <i class="bi bi-arrow-repeat"></i> Sincronizar Transiciones
-                </button>
                 <a href="{{ route('configuracion.index') }}" class="btn-premium btn-premium-dark">
                     <i class="bi bi-chevron-left"></i> Volver a Configuración
                 </a>
@@ -346,31 +343,6 @@
                 document.getElementById('form_color').value = e.target.value;
             });
 
-            // Botón Sincronizar Transiciones
-            const btnSync = document.getElementById('btnSyncTransiciones');
-            if (btnSync) {
-                btnSync.addEventListener('click', function () {
-                    btnSync.disabled = true;
-                    btnSync.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Procesando...';
-
-                    window.apiFetch('/configuracion/workflow-estados/sync-transiciones', { method: 'POST' })
-                        .then(r => r.json())
-                        .then(res => {
-                            if (res.success) {
-                                window.showSnackbar('✅ ' + res.message, 'success');
-                                setTimeout(() => location.reload(), 1000);
-                            } else {
-                                window.showSnackbar('❌ ' + res.message, 'error');
-                                btnSync.disabled = false;
-                                btnSync.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Sincronizar Transiciones';
-                            }
-                        })
-                        .catch(() => {
-                            window.showSnackbar('❌ Error de red', 'error');
-                            btnSync.disabled = false;
-                        });
-                });
-            }
 
             window.openCreateModal = function(bloqueId, bloqueNombre) {
                 form.reset();

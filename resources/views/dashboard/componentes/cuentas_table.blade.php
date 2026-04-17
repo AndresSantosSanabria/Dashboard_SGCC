@@ -1,6 +1,6 @@
-<div class="table-responsive" style="max-height: 75vh;">
-    <table class="table mb-0" id="cuentasTable" style="min-width: 3000px; font-size: 0.85rem;">
-        <thead class="table-dark sticky-top">
+<div class="table-responsive" style="max-height: 75vh; border-radius: 0 0 20px 20px; border: none;">
+    <table class="table mb-0 table-hover" id="cuentasTable" style="min-width: 3200px; font-size: 0.82rem;">
+        <thead class="sticky-top">
             <tr>
                 @php
                     $headers = [
@@ -51,7 +51,7 @@
                     <th class="{{ $h['class'] }}">
                         <div class="d-flex align-items-center justify-content-between gap-2 {{ !empty($h['sortable']) ? 'cursor-pointer' : '' }}" 
                              @if(!empty($h['sortable'])) onclick="toggleDashboardSort('{{ $h['id'] }}')" @endif>
-                            <span>{{ $h['label'] }}</span>
+                            <span style="white-space: nowrap;">{{ $h['label'] }}</span>
                             @if(!empty($h['sortable']))
                                 @php
                                     $currentSortBy = request('sort_by', 'numero_contrato');
@@ -63,10 +63,6 @@
                                 @endphp
                                 <i class="bi {{ $iconClass }} ms-1 opacity-75"></i>
                             @endif
-                            <button type="button" class="btn btn-sm btn-link text-white p-0 toggle-col-btn"
-                                title="Minimizar">
-                                <i class="bi bi-dash-lg"></i>
-                            </button>
                         </div>
                     </th>
                 @endforeach
@@ -111,7 +107,21 @@
                             stripos($estadoNombre, 'devuelto') !== false;
                         $badgeClass = $esDevuelta ? 'bg-danger' : 'bg-primary';
                     @endphp
-                    <td><span class="badge {{ $badgeClass }}">{{ $estadoNombre }}</span></td>
+                    @php
+                        $claseBadge = match (strtolower($estadoNombre)) {
+                            'pasa' => 'bg-pasa',
+                            'devuelta' => 'bg-devuelta',
+                            'en revision' => 'bg-revision',
+                            'en espera' => 'bg-espera',
+                            'en espera ingreso mercancia' => 'bg-espera',
+                            default => 'bg-secondary',
+                        };
+                    @endphp
+                    <td>
+                        <span class="badge-pill-custom {{ $claseBadge }}">
+                            {{ $estadoNombre }}
+                        </span>
+                    </td>
                     <td>{{ $rp->numero_rp ?? 'N/A' }}</td>
                     <td>{{ $rp && $rp->fecha_rp ? $rp->fecha_rp->format('d/m/Y') : 'N/A' }}</td>
                     <td>${{ number_format($rp->valor_rp ?? 0, 0, ',', '.') }}</td>
@@ -125,13 +135,11 @@
                     <td>{{ $cuenta->numero_facturas_radicadas ?? '0' }}</td>
                     @php
                         $pCuentas = $cuenta->porcentaje_cuentas ?? 0;
-                        // Cálculo de color (HSL): 0% = Rojo (0), 100% = Verde (120)
-                        $hue = ($pCuentas * 1.2); 
-                        $bgProgreso = "hsl($hue, 85%, 45%)";
                     @endphp
                     <td class="text-center">
-                        <div style="background-color: {{ $bgProgreso }}; color: white; padding: 4px 8px; border-radius: 12px; font-weight: bold; display: inline-block; min-width: 75px; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            {{ number_format($pCuentas, 2) }}%
+                        <div class="progress-pills" style="color: {{ $pCuentas >= 100 ? '#059669' : ($pCuentas > 50 ? '#4f46e5' : '#ef4444') }}; background: {{ $pCuentas >= 100 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(79, 70, 229, 0.1)' }};">
+                            <i class="bi {{ $pCuentas >= 100 ? 'bi-check-circle-fill' : 'bi-activity' }}"></i>
+                            {{ number_format($pCuentas, 1) }}%
                         </div>
                     </td>
 
@@ -190,15 +198,14 @@
                     <td class="text-center">
                         @if ($cuenta->finalizada)
                             @if ($cuenta->numero_cuenta < $cuenta->numero_pagos_totales)
-                                <button type="button" class="btn btn-sm btn-govco btn-outline-primary"
+                                <button type="button" class="btn btn-sm fw-bold px-3 py-1 animate-in"
                                     onclick="startNextAccount({{ $cuenta->id }}, '{{ $contrato->numero_contrato }}', {{ $cuenta->numero_cuenta + 1 }})"
                                     title="Iniciar Cuenta #{{ $cuenta->numero_cuenta + 1 }}"
-                                    style="border-radius: 20px; font-size: 0.75rem; padding: 4px 12px;">
-                                    <i class="bi bi-play-fill me-1"></i> Siguiente #{{ $cuenta->numero_cuenta + 1 }}
+                                    style="border-radius: 10px; font-size: 0.7rem; background: #4f46e5; color: white; border: none; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);">
+                                    <i class="bi bi-play-circle-fill me-1"></i> SIGUIENTE #{{ $cuenta->numero_cuenta + 1 }}
                                 </button>
                             @else
-                                <span class="badge bg-success" style="padding: 8px 12px !important;"><i
-                                        class="bi bi-check-all me-1"></i> Completado</span>
+                                <span class="badge bg-success"><i class="bi bi-check-all me-1"></i> FINALIZADO</span>
                             @endif
                         @else
                             <span class="text-muted">En proceso de flujo</span>

@@ -77,7 +77,7 @@ class EstadoBloqueCuenta extends Model
     public function getTiempoEnBloqueHorasAttribute()
     {
         // Protegemos contra fecha_ingreso_bloque nula (registros incompletos)
-        if (! $this->fecha_ingreso_bloque) {
+        if (!$this->fecha_ingreso_bloque) {
             return 0;
         }
 
@@ -90,7 +90,7 @@ class EstadoBloqueCuenta extends Model
     public function getCumpleSlaAttribute()
     {
         $slaHoras = $this->bloque->sla_horas;
-        if (! $slaHoras) {
+        if (!$slaHoras) {
             return null;
         }
 

@@ -126,42 +126,38 @@ class SeguimientoController extends Controller
 
         $contratosQuery = $this->getFilteredContratos($request);
 
-        $totalEvaluatedFields = 48; // 12 meses * 3 fuentes + 12 reqs (Aproximado para lógica de cumplimiento)
-
-        // Estadísticas Dinámicas: Calculadas sobre el set filtrado completo
-        // Usamos una subconsulta para procesar los count_ ya hidratados en getFilteredContratos
+        // Calculamos el universo de cumplimiento sobre la query filtrada (subquery atomizada para Postgres)
+        $totalEvaluatedFields = 51; // 12 meses * 3 fuentes + 15 reqs (9 checklist + 6 cierre)
+        
         $statsSub = (clone $contratosQuery);
-        $summary = DB::table(DB::raw("({$statsSub->toSql()}) as sub"))
-            ->mergeBindings($statsSub->getQuery())
+        $summary = DB::table($statsSub, 'sub')
             ->selectRaw("
-                COUNT(*) as total_rows,
-                SUM(monto_total) as val_total,
-                SUM(CASE WHEN (count_pend_mensual + count_pend_req) > 0 THEN 1 ELSE 0 END) as count_pend,
+                COUNT(*) as total,
                 SUM(CASE WHEN (count_ok_mensual + count_ok_req + count_na_mensual + count_na_req) >= $totalEvaluatedFields AND (count_pend_mensual + count_pend_req) = 0 THEN 1 ELSE 0 END) as count_ok,
-                AVG(((count_ok_mensual + count_ok_req + count_na_mensual + count_na_req)::float / $totalEvaluatedFields) * 100) as avg_perc,
-                SUM(CASE WHEN UPPER(secop_estado_contrato) IN ('CERRADO', 'TERMINADO') THEN 1 ELSE 0 END) as sec_cerrado,
-                SUM(CASE WHEN UPPER(secop_estado_contrato) = 'EN EJECUCION' THEN 1 ELSE 0 END) as sec_ejecucion,
+                SUM(CASE WHEN (count_pend_mensual + count_pend_req) > 0 THEN 1 ELSE 0 END) as count_pend,
+                AVG(((count_ok_mensual + count_ok_req + count_na_mensual + count_na_req) * 100.0) / $totalEvaluatedFields) as avg_cumplimiento,
+                SUM(CASE WHEN secop_estado_contrato ILIKE 'CERRADO' OR secop_estado_contrato ILIKE 'TERMINADO' THEN 1 ELSE 0 END) as sec_cerrado,
+                SUM(CASE WHEN secop_estado_contrato ILIKE 'EN EJECUCION' THEN 1 ELSE 0 END) as sec_ejecucion,
                 SUM(CASE WHEN secop_estado_contrato IS NULL OR secop_estado_contrato = '' THEN 1 ELSE 0 END) as sec_vacio
-            ")->first();
+            ")
+            ->first();
 
         $stats = [
-            'total' => $summary->total_rows ?? 0,
-            'val_total' => $summary->val_total ?? 0,
+            'total' => $summary->total ?? 0,
             'ok_contratos' => $summary->count_ok ?? 0,
             'pend_contratos' => $summary->count_pend ?? 0,
-            'avg_cumplimiento' => $summary->avg_perc ?? 0,
+            'avg_cumplimiento' => $summary->avg_cumplimiento ?? 0,
             'sec_cerrado' => $summary->sec_cerrado ?? 0,
             'sec_ejecucion' => $summary->sec_ejecucion ?? 0,
             'sec_vacio' => $summary->sec_vacio ?? 0,
-            'total_con_seguimiento' => $summary->total_rows ?? 0,
         ];
 
         // Paginar resultados directamente en la base de datos
         $perPage = 20;
         $paginated = $contratosQuery->paginate($perPage)->appends($request->query());
 
-        // Atributos dinámicos solo para los 20 resultados de la página (Ultra rápido)
-        $totalEvaluatedFields = 36 + 12; // 12 meses * 3 fuentes + 12 reqs (Aproximado para lógica de cumplimiento)
+        // 3. PROCESAMIENTO DINÁMICO DE ATRIBUTOS (FLAT-TO-MODEL)
+        $totalEvaluatedFields = 51;
 
         foreach ($paginated as $c) {
             foreach ($c->seguimientoMensual as $sm) {

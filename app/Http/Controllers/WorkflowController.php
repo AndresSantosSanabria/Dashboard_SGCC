@@ -268,6 +268,10 @@ class WorkflowController extends Controller
         // ──────────────────────────────────────────────────────────────────────
 
         $estadosDisponibles = $query->get()
+            ->filter(function ($transicion) use ($cuenta) {
+                // No tiene sentido transicionar al mismo estado en el que ya estamos
+                return $transicion->estado_destino_id != $cuenta->estado_actual_id;
+            })
             ->map(function ($transicion) {
                 return [
                     'id' => $transicion->estadoDestino->id,
@@ -278,7 +282,8 @@ class WorkflowController extends Controller
                     'bloque_nombre' => $transicion->estadoDestino->bloque->nombre ?? '',
                     'requiere_comentario' => $transicion->requiere_comentario,
                 ];
-            });
+            })
+            ->values(); // Resetear índices tras el filter
 
         return response()->json([
             'success' => true,
