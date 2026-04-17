@@ -124,13 +124,39 @@ class CuentaCobroController extends Controller
             'historialWorkflow.usuarioAccion',
         ])->findOrFail($cuentaId);
 
+        $historial = $cuenta->historialWorkflow->sortByDesc('fecha_transicion')->values();
+
+        // FILTRADO DINÁMICO: Omitir eventos anteriores al inicio del ciclo actual (Solo vista pública)
+        // Punto de Corte: El movimiento más reciente que sea un "Inicio manual de ciclo" 
+        // O un cambio de estado desde "Finalizada" hacia un nuevo estado inicial (como "Sin trámite" o "Radicado")
+        $marcaCorte = $historial->first(function($h) {
+            $esInicioManual = stripos($h->comentarios ?? '', 'Inicio manual del ciclo') !== false;
+            
+            $nombreOrigen = strtolower($h->estadoOrigen?->nombre ?? '');
+            $nombreDestino = strtolower($h->estadoDestino?->nombre ?? '');
+            
+            $esRetornoInicial = str_contains($nombreOrigen, 'finalizada') && 
+                                (str_contains($nombreDestino, 'sin trámite') || 
+                                 str_contains($nombreDestino, 'sin tramite') || 
+                                 str_contains($nombreDestino, 'radicado'));
+                                 
+            return $esInicioManual || $esRetornoInicial;
+        });
+
+        if ($marcaCorte) {
+            // Conservamos solo los movimientos desde el hito hacia adelante
+            $historial = $historial->filter(function($h) use ($marcaCorte) {
+                return $h->id >= $marcaCorte->id;
+            })->values();
+        }
+
         return response()->json([
             'success' => true,
             'contratista' => $cuenta->contrato?->contratista?->razon_social ?? 'Sin datos',
             'numero_contrato' => $cuenta->contrato?->numero_contrato ?? 'N/A',
             'estado_actual' => $cuenta->estadoActual?->nombre ?? 'En trámite',
             'bloque_actual' => $cuenta->bloqueActual?->nombre ?? 'N/A',
-            'historial' => $cuenta->historialWorkflow->sortByDesc('fecha_transicion')->values(),
+            'historial' => $historial,
             'tiempo_total' => $cuenta->tiempo_total_ejecucion,
         ]);
     }
@@ -248,6 +274,11 @@ class CuentaCobroController extends Controller
             $query->whereHas('contrato', fn($q) => $q->where('numero_contrato', 'like', '%' . $request->searchContrato . '%'));
         }
 
+        // Filtro exacto de contrato (desde offcanvas)
+        if ($request->filled('filterContrato')) {
+            $query->whereHas('contrato', fn($q) => $q->where('numero_contrato', $request->filterContrato));
+        }
+
         if ($request->filled('searchContratista')) {
             $query->whereHas('contrato.contratista', fn($q) => $q->where('razon_social', 'like', '%' . $request->searchContratista . '%')
                 ->orWhere('representante_legal', 'like', '%' . $request->searchContratista . '%'));
@@ -263,6 +294,37 @@ class CuentaCobroController extends Controller
 
         if ($request->filled('searchNumeroCuenta')) {
             $query->where('numero_cuenta', (int) $request->searchNumeroCuenta);
+        }
+
+        // Filtro de número de cuenta (desde offcanvas)
+        if ($request->filled('numero_cuenta')) {
+            $query->where('numero_cuenta', (int) $request->numero_cuenta);
+        }
+
+        // Filtro por Supervisor
+        if ($request->filled('filterSupervisor')) {
+            $query->whereHas('contrato', fn($q) => $q->where('supervisor_id', $request->filterSupervisor));
+        }
+
+        // Filtro por Estados de Revisión (Checkboxes)
+        if ($request->filled('filterEstadosRevision')) {
+            $query->whereIn('estado_actual_id', (array) $request->filterEstadosRevision);
+        }
+
+        // Filtro Radicada en Hacienda
+        if ($request->filled('filterRadicadaHacienda')) {
+            $valor = $request->filterRadicadaHacienda === 'SI';
+            $query->where('finalizada', $valor);
+        }
+
+        // Filtro En Facturación (Bloque FAC)
+        if ($request->filled('filterEnFacturacion')) {
+            $bloqueFac = $this->getBlockIdByCode('FAC');
+            if ($request->filterEnFacturacion === 'SI') {
+                $query->where('bloque_actual_id', $bloqueFac);
+            } else {
+                $query->where('bloque_actual_id', '!=', $bloqueFac);
+            }
         }
 
         // Aplicamos el ordenamiento por número de contrato (Natural Sort en BD)
@@ -493,6 +555,21 @@ class CuentaCobroController extends Controller
                                 $estadoActual = $bloqueActual?->estadoInicial;
                             }
 
+                            // AUTO-ADVANCE: Si el estado determinado es "final" para su bloque, 
+                            // avanzamos automáticamente al siguiente bloque en su estado inicial.
+                            // Esto resuelve el problema de contratos que se quedan "estancados" en estados de salida.
+                            if ($estadoActual && $estadoActual->es_final && $bloqueActual && $bloqueActual->codigo !== 'FIN') {
+                                $prevBloqueCodigo = $bloqueActual->codigo;
+                                $siguienteBloque = BloqueWorkflow::where('orden', '>', $bloqueActual->orden)
+                                    ->orderBy('orden')->first();
+                                
+                                if ($siguienteBloque) {
+                                    $bloqueActual = $siguienteBloque;
+                                    $estadoActual = $siguienteBloque->estadoInicial;
+                                    Log::info("  Auto-avance: El contrato estaba en estado final de {$prevBloqueCodigo}, movido a {$siguienteBloque->codigo}");
+                                }
+                            }
+
                             // Preservar estado si la cuenta ya existía y el archivo no trae avances nuevos
                             if ($cuentaExistente && $bloqueActual?->codigo === 'REV1' && $estadoActual?->codigo === 'REV1_SIN') {
                                 $bloqueActualId = $cuentaExistente->bloque_actual_id;
@@ -521,6 +598,7 @@ class CuentaCobroController extends Controller
                                 'fecha_radicacion' => $this->parseDate($this->getColumnValue($data, 'FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES')),
                                 'responsable_actual_id' => Auth::id(),
                                 'observaciones' => $this->getColumnValue($data, 'OBSERVATIONS') ?? $this->getColumnValue($data, 'OBSERVACIONES'),
+                                'ss_ultima_cuenta' => $this->getColumnValue($data, ['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA', 'PLANILLA SEGURIDAD', 'PLANILLA SEGURIDAD SOCIAL', 'SS ULTIMA CUENTA', 'PLANILLA SEG']),
                             ]
                         );
 
@@ -691,6 +769,19 @@ class CuentaCobroController extends Controller
                         ->where('bloque_id', $bloqueId)->value('id') ?? $this->getStateIdByCode('REV1_SIN');
                 }
 
+                // AUTO-ADVANCE MANUAL: Aplicar la misma lógica de avance para cargas manuales
+                $estadoObj = EstadoWorkflow::find($estadoId);
+                if ($estadoObj && $estadoObj->es_final && $bloqueId != $this->getBlockIdByCode('FIN')) {
+                    $bloqueActualObj = BloqueWorkflow::find($bloqueId);
+                    $siguienteBloque = BloqueWorkflow::where('orden', '>', $bloqueActualObj->orden)
+                        ->orderBy('orden')->first();
+                    
+                    if ($siguienteBloque) {
+                        $bloqueId = $siguienteBloque->id;
+                        $estadoId = $siguienteBloque->estadoInicial?->id ?? $estadoId;
+                    }
+                }
+
                 $estaFinalizada = ($bloqueId == $this->getBlockIdByCode('FIN') || ($bloqueId == $this->getBlockIdByCode('HAC') && ($this->getColumnValue($rawRequest, 'RADICADA EN HACIENDA') === 'SI')));
 
                 $facturasRadicadas = (int) $this->getColumnValue($rawRequest, 'N° DE FACTURAS RADICADA HACIENDA', 0);
@@ -713,11 +804,13 @@ class CuentaCobroController extends Controller
                         'responsable_actual_id' => Auth::id(),
                         'finalizada' => $estaFinalizada,
                         'observaciones' => $this->getColumnValue($rawRequest, 'OBSERVACIONES'),
+                        'ss_ultima_cuenta' => $this->getColumnValue($rawRequest, ['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA', 'PLANILLA SEGURIDAD', 'PLANILLA SEGURIDAD SOCIAL', 'SS ULTIMA CUENTA', 'PLANILLA SEG']),
+
                     ]
                 );
 
                 // 8. Planilla
-                $valPlanilla = $this->getColumnValue($rawRequest, 'PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA');
+                $valPlanilla = $this->getColumnValue($rawRequest, ['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA', 'PLANILLA SEGURIDAD', 'PLANILLA SEGURIDAD SOCIAL', 'SS ULTIMA CUENTA', 'PLANILLA SEG']);
                 if ($valPlanilla) {
                     PlanillaSeguridadSocial::updateOrCreate(
                         ['cuenta_cobro_id' => $cuenta->id, 'es_ultima' => true],
@@ -784,7 +877,7 @@ class CuentaCobroController extends Controller
                 'ENTIDAD SALUD' => $cuenta->contrato->contratista->seguridadSocialVigente?->entidadSalud?->nombre,
                 'ENTIDAD PENSIÓN' => $cuenta->contrato->contratista->seguridadSocialVigente?->entidadPension?->nombre,
                 'ENTIDAD ARL' => $cuenta->contrato->contratista->seguridadSocialVigente?->entidadArl?->nombre,
-                'PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA' => $cuenta->planillasSeguridadSocial->first()?->mes_planilla,
+                'PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA' => $cuenta->ss_ultima_cuenta ?? $cuenta->planillasSeguridadSocial->first()?->mes_planilla,
                 'RADICADO POR' => $cuenta->radicado_por,
                 'FECHA DE RADICACIÓN TANTO INICIAL COMO SUS CORRECIONES' => $cuenta->fecha_radicacion?->format('Y-m-d'),
                 'OBSERVACIONES' => $cuenta->observaciones,
@@ -903,6 +996,8 @@ class CuentaCobroController extends Controller
                     'fecha_radicacion_hacienda' => $this->parseDate($this->getColumnValue($data, 'FECHA DE RADICACIÓN')),
                     'observacion_hacienda' => $this->getColumnValue($data, 'OBSERVACIÓN DEVOLUCIÓN HACIENDA'),
                     'diferencia_cuentas' => ($pagosTotales ?? 0) - ($facturasRadicadasActual ?? 0),
+                    'ss_ultima_cuenta' => $this->getColumnValue($data, ['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA', 'PLANILLA SEGURIDAD', 'PLANILLA SEGURIDAD SOCIAL', 'SS ULTIMA CUENTA', 'PLANILLA SEG']),
+
                 ]);
 
                 // Lógica especial para actualizar ultima_factura_hacienda si cambia estado a Radicada
@@ -932,7 +1027,7 @@ class CuentaCobroController extends Controller
                 $this->procesarBloquesHistoricos($cuenta, $data);
 
                 // 8. Planilla (Si cambia)
-                $valPlanilla = $data['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA'] ?? null;
+                $valPlanilla = $this->getColumnValue($data, ['PLANILLA SEGURIDAD SOCIAL ULTIMA CUENTA', 'PLANILLA SEGURIDAD', 'PLANILLA SEGURIDAD SOCIAL', 'SS ULTIMA CUENTA', 'PLANILLA SEG']);
                 if ($valPlanilla) {
                     PlanillaSeguridadSocial::updateOrCreate(
                         ['cuenta_cobro_id' => $cuenta->id, 'es_ultima' => true],
@@ -1054,11 +1149,12 @@ class CuentaCobroController extends Controller
             $estado = EstadoWorkflow::where('nombre', 'like', "%$estadoRevNombre%")->where('bloque_id', $bloqueId)->first();
             Log::info("    Bloque ID: $bloqueId, Estado encontrado: " . ($estado ? 'SÍ (' . $estado->id . ')' : 'NO'));
 
+            $fechaIngresoBloque = $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now();
             EstadoBloqueCuenta::updateOrCreate(
                 ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $bloqueId],
                 [
                     'estado_actual_id' => $estado?->id ?? $this->getStateIdByCode('REV1_REV'),
-                    'fecha_ingreso_bloque' => $cuenta->fecha_radicacion ?? $cuenta->updated_at ?? now(),
+                    'fecha_ingreso_bloque' => $fechaIngresoBloque,
                     'fecha_completado_bloque' => $fechaRev,
                     'fecha_ultima_actualizacion' => now(),
                     'bloque_completado' => ! empty($fechaRev),
@@ -1159,18 +1255,37 @@ class CuentaCobroController extends Controller
             );
         }
 
-        // ASEGURAR QUE EL BLOQUE ACTUAL TENGA UN REGISTRO (Para el cronómetro en el Dashboard)
+        // 6. ASEGURAR QUE EL BLOQUE ACTUAL TENGA UN REGISTRO (Para el cronómetro en el Dashboard)
         if ($cuenta->bloque_actual_id) {
+            // Intentar determinar la fecha de ingreso al bloque actual basada en el fin del bloque anterior
+            $fechaIngresoActual = now();
+            if ($cuenta->bloque_actual_id > 1) {
+                $ultimoBloque = EstadoBloqueCuenta::where('cuenta_cobro_id', $cuenta->id)
+                    ->where('bloque_id', '<', $cuenta->bloque_actual_id)
+                    ->whereNotNull('fecha_completado_bloque')
+                    ->orderByDesc('bloque_id')
+                    ->first();
+                if ($ultimoBloque) {
+                    $fechaIngresoActual = $ultimoBloque->fecha_completado_bloque;
+                }
+            } else {
+                $fechaIngresoActual = $cuenta->fecha_radicacion ?? $cuenta->created_at ?? now();
+            }
+
             EstadoBloqueCuenta::updateOrCreate(
                 ['cuenta_cobro_id' => $cuenta->id, 'bloque_id' => $cuenta->bloque_actual_id],
                 [
                     'estado_actual_id' => $cuenta->estado_actual_id,
-                    'fecha_ingreso_bloque' => now(), // Empieza sumando desde 0 al momento de la creación manual
+                    'fecha_ingreso_bloque' => $fechaIngresoActual,
                     'fecha_ultima_actualizacion' => now(),
                     'bloque_completado' => $cuenta->finalizada,
                     'responsable_id' => $cuenta->responsable_actual_id,
                 ]
             );
+
+            // ACTUALIZACIÓN CRÍTICA: Ajustar el cronómetro de la cuenta al tiempo real de entrada
+            $cuenta->ultimo_inicio_conteo = $fechaIngresoActual;
+            $cuenta->saveQuietly();
         }
 
         Log::info("  ✅ Bloques históricos procesados");

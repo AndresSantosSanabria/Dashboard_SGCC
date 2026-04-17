@@ -140,7 +140,7 @@
                     <td>{{ $ssVigente?->entidadPension?->nombre ?? 'N/A' }}</td>
                     <td>{{ $ssVigente?->entidadArl?->nombre ?? 'N/A' }}</td>
 
-                    <td>{{ $ultimaSS->numero_planilla ?? 'N/A' }}</td>
+                    <td class="fw-bold">{{ $cuenta->ss_ultima_cuenta ?? 'N/A' }}</td>
                     <td>{{ $cuenta->radicado_por }}</td>
                     <td>{{ $cuenta->fecha_radicacion ? $cuenta->fecha_radicacion->format('d/m/Y H:i') : 'N/A' }}
                     </td>

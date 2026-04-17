@@ -10,286 +10,197 @@
         ];
 
         $riskClass = match ($c->global_status) {
-            'EN PROGRESO' => 'risk-med text-primary',
-            'COMPLETO' => 'risk-low',
-            'PENDIENTES' => 'risk-med',
-            'CRÍTICO' => 'risk-high',
-            default => 'text-muted',
+            'EN PROGRESO' => 'badge-ok',
+            'COMPLETO' => 'badge-ok',
+            'PENDIENTES' => 'badge-pend',
+            'CRÍTICO' => 'badge-crit',
+            default => 'badge-na',
         };
     @endphp
     <tr class="contract-row">
-        <td class="stk-gest text-center">
-            <div class="d-flex flex-column gap-1 align-items-center">
-                <button class="btn btn-sm btn-light border p-1" onclick='openEditModal({!! json_encode($c) !!})'
-                    title="Gestionar">
+        {{-- GESTIÓN --}}
+        <td class="stk-saas stk-gest text-center">
+            <div class="d-flex flex-column gap-2 align-items-center">
+                <button class="btn btn-sm btn-light border shadow-sm rounded-3 p-1" onclick='openEditModal({!! json_encode($c) !!})' title="Gestionar Ficha">
                     <i class="bi bi-pencil-square text-primary"></i>
                 </button>
-                <button class="btn btn-sm btn-outline-danger border p-1 shadow-sm"
-                    style="border-radius:6px; background: rgba(220, 38, 38, 0.05);"
-                    onclick="deleteContrato({{ $c->id }}, '{{ $c->numero_contrato }}')"
-                    title="Eliminar Contrato GLOBALMENTE">
-                    <i class="bi bi-trash-fill px-1"></i>
+                <button class="btn btn-sm btn-light border shadow-sm rounded-3 p-1" onclick="deleteContrato({{ $c->id }}, '{{ $c->numero_contrato }}')" title="Eliminar definitivamente">
+                    <i class="bi bi-trash-fill text-danger"></i>
                 </button>
             </div>
         </td>
-        <td class="stk-risk text-center">
-            <div class="badge-pill-saas {{ $riskClass }} w-100 justify-content-center" style="font-size: 0.6rem;">
+
+        {{-- SCORE --}}
+        <td class="stk-saas stk-score text-center">
+            <div class="badge-pill-saas {{ $riskClass }} w-100 justify-content-center mb-1">
                 {{ $c->global_status }}
             </div>
-            <div class="d-flex align-items-center gap-2 mt-1 mx-auto" style="width: 85%;">
-                <div class="progress flex-grow-1" style="height: 4px;">
-                    <div class="progress-bar bg-success" style="width: {{ $c->perc_cumplimiento }}%">
-                    </div>
-                </div>
-                <span class="small fw-bold text-muted"
-                    style="font-size: 0.6rem;">{{ round($c->perc_cumplimiento, 0) }}%</span>
+            <div class="progress" style="height: 4px; width: 80%; margin: 0 auto;">
+                <div class="progress-bar bg-primary" style="width: {{ $c->perc_cumplimiento }}%"></div>
             </div>
-        </td>
-        <td class="stk-saas stk-proc text-muted small text-center">{{ $c->numero_proceso ?: '-' }}
-        </td>
-        <td class="stk-saas stk-num fw-bold text-primary text-center">
-            {{ $c->numero_contrato }}</td>
-        <td class="stk-saas stk-nom" style="border-right: 2px solid #e2e8f0;">
-            <div class="fw-bold small" style="white-space:normal; min-width:180px">
-                {{ $c->contratista->nombre_completo ?? 'N/A' }}</div>
+            <span class="extra-small fw-bold text-muted">{{ round($c->perc_cumplimiento) }}%</span>
         </td>
 
+        {{-- PROCESO --}}
+        <td class="stk-saas stk-proc text-center text-muted small">
+            {{ $c->numero_proceso ?: '-' }}
+        </td>
+
+        {{-- Nº CONTRATO --}}
+        <td class="stk-saas stk-num fw-800 text-primary text-center">
+            {{ $c->numero_contrato }}
+        </td>
+
+        {{-- CONTRATISTA --}}
+        <td class="stk-saas stk-nom">
+            <div class="fw-bold small lh-sm" style="max-width: 280px; white-space: normal;">
+                {{ $c->contratista->nombre_completo ?? 'No asignado' }}
+            </div>
+        </td>
+
+        {{-- INFO BASE --}}
         <td class="text-center">
             <div class="dropdown">
-                <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown"
-                    style="font-size: 0.65rem; cursor: pointer;">
+                <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown" 
+                     data-original-val="{{ $c->tipo_contratista ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
                     {{ $c->tipo_contratista ?: 'VACÍO' }}
                 </div>
-                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'tipo_contratista', 'Natural', this)">Natural</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'tipo_contratista', 'Juridica', this)">Juridica</a>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'tipo_contratista', '', this)">VACÍO</a>
-                    </li>
+                <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn" style="font-size: 0.8rem;">
+                    <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'tipo_contratista', 'Natural', this)">Natural</a></li>
+                    <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'tipo_contratista', 'Juridica', this)">Juridica</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item py-2 text-danger" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'tipo_contratista', '', this)">Limpiar</a></li>
                 </ul>
             </div>
         </td>
-        <td class="small text-muted text-center">{{ $c->supervisor->nombre_completo ?? 'N/A' }}
+        <td class="small text-muted text-center">
+            {{ $c->supervisor->nombre_completo ?? 'S/S' }}
         </td>
         <td>
-            <div class="text-truncate small text-muted" style="max-width:120px" title="{{ $c->objeto }}">
-                {{ $c->objeto }}</div>
+            <div class="text-truncate small text-muted" style="max-width:200px" title="{{ $c->objeto }}">
+                {{ $c->objeto }}
+            </div>
         </td>
-        <td class="fw-bold text-success text-end small" style="border-right: 2px solid #e2e8f0">
-            ${{ number_format($c->monto_total, 0, ',', '.') }}</td>
+        <td class="fw-bold text-dark text-end font-monospace" style="border-right: 2px solid #E2E8F0">
+            ${{ number_format($c->monto_total, 0, ',', '.') }}
+        </td>
+
+        {{-- CHECKLIST --}}
         <td class="text-center">
-            @if ($c->link_secop)
-                <div class="d-flex align-items-center justify-content-center gap-1">
-                    <a href="{{ $c->link_secop }}" target="_blank" class="text-primary" title="Abrir Link"><i
-                            class="bi bi-link-45deg fs-5"></i></a>
-                    <button class="btn btn-link btn-sm p-0 text-muted"
-                        onclick="openLinkModal({{ $c->id }}, '{{ $c->link_secop }}')" title="Editar Link"><i
-                            class="bi bi-pencil-square"></i></button>
-                </div>
-            @else
-                <button class="btn btn-link btn-sm text-decoration-none text-muted"
-                    onclick="openLinkModal({{ $c->id }}, '')"><i class="bi bi-plus-circle me-1"></i>
-                    Link</button>
-            @endif
+            <div class="d-flex align-items-center justify-content-center gap-1">
+                @if ($c->link_secop)
+                    <a href="{{ $c->link_secop }}" target="_blank" class="text-accent fs-5" title="Ver en SECOP"><i class="bi bi-box-arrow-up-right"></i></a>
+                    <button class="btn btn-link btn-sm p-0 text-muted" onclick="openLinkModal({{ $c->id }}, '{{ $c->link_secop }}')" title="Editar Link"><i class="bi bi-pencil-square"></i></button>
+                @else
+                    <button class="btn btn-link btn-sm text-decoration-none text-muted p-0" onclick="openLinkModal({{ $c->id }}, '')" title="Agregar Link"><i class="bi bi-plus-circle-fill fs-5"></i></button>
+                @endif
+            </div>
         </td>
         <td class="text-center">
+            @php $bPlanta = $badgeMap[$c->planta_status] ?? $badgeMap['']; @endphp
             <div class="dropdown">
-                @php $bPlanta = $badgeMap[$c->planta_status] ?? $badgeMap['']; @endphp
-                <div class="badge-pill-saas {{ $bPlanta['class'] }} w-100" data-bs-toggle="dropdown">
-                    {{ $c->planta_status ?: 'VACÍO' }}
+                <div class="badge-pill-saas {{ $bPlanta['class'] }} w-100" data-bs-toggle="dropdown"
+                     data-original-val="{{ $c->planta_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                    {{ $c->planta_status ?: 'V' }}
                 </div>
-                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'planta_status', 'OK', this)">OK</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'planta_status', 'PENDIENTE', this)">PENDIENTE</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'planta_status', 'N/A', this)">N/A</a>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'planta_status', '', this)">VACÍO</a>
-                    </li>
+                <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                    @foreach(['OK','PENDIENTE','N/A'] as $st)
+                        <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'planta_status', '{{ $st }}', this)">{{ $st }}</a></li>
+                    @endforeach
                 </ul>
             </div>
         </td>
         <td class="text-center">
+            @php $bConcepto = $badgeMap[$c->concepto_status] ?? $badgeMap['']; @endphp
             <div class="dropdown">
-                @php $bConcepto = $badgeMap[$c->concepto_status] ?? $badgeMap['']; @endphp
-                <div class="badge-pill-saas {{ $bConcepto['class'] }} w-100" data-bs-toggle="dropdown">
-                    {{ $c->concepto_status ?: 'VACÍO' }}
+                <div class="badge-pill-saas {{ $bConcepto['class'] }} w-100" data-bs-toggle="dropdown"
+                     data-original-val="{{ $c->concepto_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                    {{ $c->concepto_status ?: 'V' }}
                 </div>
-                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'concepto_status', 'OK', this)">OK</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'concepto_status', 'PENDIENTE', this)">PENDIENTE</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'concepto_status', 'N/A', this)">N/A</a>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'concepto_status', '', this)">VACÍO</a>
-                    </li>
+                <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                    @foreach(['OK','PENDIENTE','N/A'] as $st)
+                        <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'concepto_status', '{{ $st }}', this)">{{ $st }}</a></li>
+                    @endforeach
                 </ul>
             </div>
         </td>
         <td class="text-center">
+            @php $bCdp = $badgeMap[$c->cdp_status] ?? $badgeMap['']; @endphp
             <div class="dropdown">
-                @php $bCdp = $badgeMap[$c->cdp_status] ?? $badgeMap['']; @endphp
-                <div class="badge-pill-saas {{ $bCdp['class'] }} w-100" data-bs-toggle="dropdown">
-                    {{ $c->cdp_status ?: 'VACÍO' }}
+                <div class="badge-pill-saas {{ $bCdp['class'] }} w-100" data-bs-toggle="dropdown"
+                     data-original-val="{{ $c->cdp_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                    {{ $c->cdp_status ?: 'V' }}
                 </div>
-                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'cdp_status', 'OK', this)">OK</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'cdp_status', 'PENDIENTE', this)">PENDIENTE</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'cdp_status', 'N/A', this)">N/A</a>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'cdp_status', '', this)">VACÍO</a>
-                    </li>
+                <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                    @foreach(['OK','PENDIENTE','N/A'] as $st)
+                        <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'cdp_status', '{{ $st }}', this)">{{ $st }}</a></li>
+                    @endforeach
                 </ul>
             </div>
         </td>
 
-        {{-- Checklist Técnico --}}
+        {{-- Checklist Técnico Iterativo --}}
         @php $checklistFields = ['estudios_previos_status', 'soportes_status', 'idoneidad_status', 'acuerdo_confidencialidad_status', 'clausulado_status', 'acta_inicio_status', 'delegacion_status', 'arl_status', 'rpc_status']; @endphp
         @foreach ($checklistFields as $field)
             @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
-            <td class="text-center" style="{{ $loop->last ? 'border-right: 2px solid #e2e8f0' : '' }}">
+            <td class="text-center" style="{{ $loop->last ? 'border-right: 2px solid #E2E8F0' : '' }}">
                 <div class="dropdown">
-                    <div class="badge-pill-saas {{ $b['class'] }} w-100" data-bs-toggle="dropdown">
+                    <div class="badge-pill-saas {{ $b['class'] }} w-100 justify-content-center" data-bs-toggle="dropdown"
+                         data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
                         <i class="bi {{ $b['icon'] }}"></i>
-                        {{ $c->$field ?: 'VACÍO' }}
                     </div>
-                    <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                        <li><a class="dropdown-item py-2" href="#"
-                                onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'OK', this)"><i
-                                    class="bi bi-check-circle-fill text-success me-2"></i> OK</a>
-                        </li>
-                        <li><a class="dropdown-item py-2" href="#"
-                                onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)"><i
-                                    class="bi bi-hourglass-split text-warning me-2"></i>
-                                PENDIENTE</a></li>
-                        <li><a class="dropdown-item py-2" href="#"
-                                onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'RECHAZADO', this)"><i
-                                    class="bi bi-x-circle-fill text-danger me-2"></i> RECHAZADO</a>
-                        </li>
-                        <li><a class="dropdown-item py-2" href="#"
-                                onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'N/A', this)"><i
-                                    class="bi bi-dash-circle text-muted me-2"></i> N/A</a></li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li><a class="dropdown-item py-2" href="#"
-                                onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', '', this)"><i
-                                    class="bi bi-circle text-light me-2"></i> VACÍO</a></li>
+                    <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                        <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'OK', this)"><i class="bi bi-check-circle-fill text-success me-2"></i> OK</a></li>
+                        <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)"><i class="bi bi-hourglass-split text-warning me-2"></i> PENDIENTE</a></li>
+                        <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'RECHAZADO', this)"><i class="bi bi-x-circle-fill text-danger me-2"></i> RECHAZADO</a></li>
+                        <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'N/A', this)"><i class="bi bi-dash-circle text-muted me-2"></i> N/A</a></li>
                     </ul>
                 </div>
             </td>
         @endforeach
 
-
         {{-- Gestión --}}
-        {{-- Estado SECOP (Especial con Colores) --}}
         @php
             $secopStatus = strtoupper($c->secop_estado_contrato);
             $secopClass = 'badge-vacio';
-            if (in_array($secopStatus, ['CERRADO', 'TERMINADO'])) {
-                $secopClass = 'badge-secop-verde';
-            } elseif ($secopStatus === 'EN EJECUCION') {
-                $secopClass = 'badge-secop-amarillo';
-            }
+            if (in_array($secopStatus, ['CERRADO', 'TERMINADO'])) $secopClass = 'badge-secop-verde';
+            elseif ($secopStatus === 'EN EJECUCION') $secopClass = 'badge-secop-amarillo';
         @endphp
         <td class="text-center">
             <div class="dropdown">
-                <div class="badge-pill-saas {{ $secopClass }} w-100" data-bs-toggle="dropdown">
+                <div class="badge-pill-saas {{ $secopClass }} w-100" data-bs-toggle="dropdown"
+                     data-original-val="{{ $c->secop_estado_contrato ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
                     {{ $c->secop_estado_contrato ?: 'VACÍO' }}
                 </div>
-                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'secop_estado_contrato', 'CERRADO', this)">CERRADO</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'secop_estado_contrato', 'TERMINADO', this)">TERMINADO</a>
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'secop_estado_contrato', 'EN EJECUCION', this)">EN
-                            EJECUCION</a></li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'secop_estado_contrato', '', this)">VACÍO</a>
-                    </li>
+                <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                    @foreach(['CERRADO','TERMINADO','EN EJECUCION'] as $st)
+                        <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'secop_estado_contrato', '{{ $st }}', this)">{{ $st }}</a></li>
+                    @endforeach
                 </ul>
             </div>
         </td>
         <td class="text-center">
             <div class="dropdown">
-                <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown" style="font-size: 0.65rem;">
+                <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown" 
+                     data-original-val="{{ $c->aprobado_y_pagado ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
                     {{ $c->aprobado_y_pagado ?: '-' }}
                 </div>
-                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'aprobado_y_pagado', 'Con supervisor', this)">Con
-                            supervisor</a></li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'aprobado_y_pagado', 'Pagado', this)">Pagado</a>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'aprobado_y_pagado', '', this)">VACÍO</a>
-                    </li>
+                <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                    <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'aprobado_y_pagado', 'Con supervisor', this)">Con supervisor</a></li>
+                    <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'aprobado_y_pagado', 'Pagado', this)">Pagado</a></li>
                 </ul>
             </div>
         </td>
-        <td class="text-center" style="border-right: 2px solid #e2e8f0">
+        <td class="text-center" style="border-right: 2px solid #E2E8F0">
             <div class="dropdown">
-                <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown" style="font-size: 0.65rem;">
+                <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown"
+                     data-original-val="{{ $c->modificaciones_y_cierre ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
                     {{ $c->modificaciones_y_cierre ?: '-' }}
                 </div>
-                <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'modificaciones_y_cierre', 'con supervisor', this)">con
-                            supervisor</a></li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'modificaciones_y_cierre', 'Cerrado por supervisor', this)">Cerrado
-                            por supervisor</a></li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'modificaciones_y_cierre', 'Secretaria', this)">Secretaria</a>
-                    </li>
-                    <li>
-                        <hr class="dropdown-divider">
-                    </li>
-                    <li><a class="dropdown-item py-2" href="#"
-                            onclick="updateBadgeStatus(event, {{ $c->id }}, 'modificaciones_y_cierre', '', this)">VACÍO</a>
-                    </li>
+                <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                    @foreach(['con supervisor','Cerrado por supervisor','Secretaria'] as $st)
+                        <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, 'modificaciones_y_cierre', '{{ $st }}', this)">{{ $st }}</a></li>
+                    @endforeach
                 </ul>
             </div>
         </td>
@@ -298,25 +209,16 @@
         @for ($i = 1; $i <= 12; $i++)
             @foreach (["cta{$i}_rep_status", "cta{$i}_secop_status", "cta{$i}_sia_status"] as $field)
                 @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
-                <td class="text-center"
-                    style="{{ $i == 12 && $field == 'cta12_sia_status' ? 'border-right: 2px solid #e2e8f0' : '' }}">
+                <td class="text-center" style="{{ $i == 12 && $field == 'cta12_sia_status' ? 'border-right: 2px solid #E2E8F0' : '' }}">
                     <div class="dropdown">
-                        <div class="badge-pill-saas {{ $b['class'] }} w-100" data-bs-toggle="dropdown">
+                        <div class="badge-pill-saas {{ $b['class'] }} w-100 justify-content-center" data-bs-toggle="dropdown"
+                             data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
                             {{ $c->$field ?: 'V' }}
                         </div>
-                        <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                            <li><a class="dropdown-item py-2" href="#"
-                                    onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'OK', this)">OK</a>
-                            </li>
-                            <li><a class="dropdown-item py-2" href="#"
-                                    onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)">PENDIENTE</a>
-                            </li>
-                            <li><a class="dropdown-item py-2" href="#"
-                                    onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'N/A', this)">N/A</a>
-                            </li>
-                            <li><a class="dropdown-item py-2" href="#"
-                                    onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', '', this)">VACÍO</a>
-                            </li>
+                        <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                            @foreach(['OK','PENDIENTE','N/A'] as $st)
+                                <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', '{{ $st }}', this)">{{ $st }}</a></li>
+                            @endforeach
                         </ul>
                     </div>
                 </td>
@@ -327,44 +229,28 @@
         @php $cierreFields = ['evaluacion_proveedor_status', 'acta_cierre_expediente_status', 'requiere_acta_liq_status', 'acta_liq_repositorio_status', 'acta_liq_secop_status', 'acta_liq_sia_status']; @endphp
         @foreach ($cierreFields as $field)
             @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
-            <td class="text-center"
-                style="{{ $field == 'acta_liq_sia_status' ? 'border-right: 2px solid #e2e8f0' : '' }}">
+            <td class="text-center" style="{{ $field == 'acta_liq_sia_status' ? 'border-right: 2px solid #E2E8F0' : '' }}">
                 <div class="dropdown">
-                    <div class="badge-pill-saas {{ $b['class'] }} w-100" data-bs-toggle="dropdown">
+                    <div class="badge-pill-saas {{ $b['class'] }} w-100 justify-content-center" data-bs-toggle="dropdown"
+                         data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
                         <i class="bi {{ $b['icon'] }}"></i>
-                        {{ $c->$field ?: 'VACÍO' }}
                     </div>
-                    <ul class="dropdown-menu shadow-lg border-0" style="font-size: 0.75rem;">
-                        <li><a class="dropdown-item py-2" href="#"
-                                onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'OK', this)">OK/SI</a>
-                        </li>
-                        <li><a class="dropdown-item py-2" href="#"
-                                onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)">NO/PEND</a>
-                        </li>
-                        <li><a class="dropdown-item py-2" href="#"
-                                onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'N/A', this)">N/A</a>
-                        </li>
+                    <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                        <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'OK', this)">OK/SI</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="updateBadgeStatus(event, {{ $c->id }}, '{{ $field }}', 'PENDIENTE', this)">NO/PEND</a></li>
                     </ul>
                 </div>
             </td>
         @endforeach
 
         {{-- Resultados --}}
-        <td class="fw-bold text-danger text-end small">
-            ${{ number_format($c->saldo, 0, ',', '.') }}</td>
-        <td class="small text-muted">
-            <div class="text-truncate" style="max-width:100px">
-                {{ $c->observacion_1_razon ?: '-' }}</div>
+        <td class="fw-bold text-danger text-end font-monospace">
+            ${{ number_format($c->saldo, 0, ',', '.') }}
         </td>
-        <td class="small text-muted">
-            <div class="text-truncate" style="max-width:100px">
-                {{ $c->observacion_2_accion ?: '-' }}</div>
-        </td>
-        <td class="small text-muted">
-            <div class="text-truncate" style="max-width:100px">
-                {{ $c->razon_no_liquidacion ?: '-' }}</div>
-        </td>
-        <td class="small text-muted text-center">{{ $c->abogado_responsable ?: '-' }}</td>
-        <td class="small text-muted text-center">{{ $c->contador_responsable ?: '-' }}</td>
+        <td class="small text-muted"><div class="text-truncate" style="max-width:120px">{{ $c->observacion_1_razon ?: '-' }}</div></td>
+        <td class="small text-muted"><div class="text-truncate" style="max-width:120px">{{ $c->observacion_2_accion ?: '-' }}</div></td>
+        <td class="small text-muted"><div class="text-truncate" style="max-width:120px">{{ $c->razon_no_liquidacion ?: '-' }}</div></td>
+        <td class="extra-small text-muted text-center">{{ $c->abogado_responsable ?: '-' }}</td>
+        <td class="extra-small text-muted text-center">{{ $c->contador_responsable ?: '-' }}</td>
     </tr>
 @endforeach

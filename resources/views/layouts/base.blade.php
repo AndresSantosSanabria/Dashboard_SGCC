@@ -81,15 +81,14 @@
          * Soporta automáticamente subcarpetas en producción (Gobernación).
          */
         window.apiFetch = async function(url, options = {}) {
-            // Sincronización inteligente de URL Base
-            // Combina lo que detecta Laravel con lo que el navegador ve realmente en la barra de direcciones.
+            // Sincronización inteligente de URL Base para ambientes con subcarpetas (Gobernación)
             let baseUrl = '{{ url('/') }}'.replace(/\/$/, '');
-            const currentPath = window.location.pathname;
             
-            // Si Laravel cree que es raíz pero el navegador muestra que estamos en una subcarpeta /public
-            if (currentPath.includes('/public/') && !baseUrl.includes('/public')) {
-                const subfolder = currentPath.substring(0, currentPath.indexOf('/public') + 7);
-                baseUrl = window.location.origin + subfolder;
+            // Si detectamos que estamos físicamente en /public/ pero baseUrl no lo tiene (error de config en .env)
+            const pathSegments = window.location.pathname.split('/');
+            const publicIndex = pathSegments.indexOf('public');
+            if (publicIndex !== -1 && !baseUrl.includes('/public')) {
+                baseUrl = window.location.origin + pathSegments.slice(0, publicIndex + 1).join('/');
             }
 
             let fullUrl;

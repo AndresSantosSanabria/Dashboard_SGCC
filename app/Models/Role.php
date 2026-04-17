@@ -48,30 +48,42 @@ class Role extends Model
 
     public function puedeSerResponsableSap(): bool
     {
-        return $this->tienePermiso('responsable_sap');
+        return $this->esResponsableBloque('SAP') || $this->tienePermiso('responsable_sap');
     }
 
     public function puedeSerResponsableFac(): bool
     {
-        return $this->tienePermiso('responsable_facturacion');
+        return $this->esResponsableBloque('FAC') || $this->tienePermiso('responsable_facturacion');
+    }
+
+    public function esResponsableBloque(string $bloqueCodigo): bool
+    {
+        return $this->tienePermiso('responsable_bloque_' . $bloqueCodigo);
     }
 
     public function getListaPermisosAttribute()
     {
         $lista = [];
         $bloques = [];
+        $responsables = [];
         foreach ($this->permisos()->pluck('slug') as $slug) {
             if ($slug === 'acceso_bloque_all') {
                 $lista['bloques_permitidos'] = true;
             } elseif (str_starts_with($slug, 'acceso_bloque_')) {
                 $bloques[] = str_replace('acceso_bloque_', '', $slug);
+            } elseif (str_starts_with($slug, 'responsable_bloque_')) {
+                $responsables[] = str_replace('responsable_bloque_', '', $slug);
             } else {
                 $lista[$slug] = true;
             }
         }
+
         if (!isset($lista['bloques_permitidos']) && !empty($bloques)) {
             $lista['bloques_permitidos'] = $bloques;
         }
+
+        $lista['responsables_bloque'] = $responsables;
+
         return $lista;
     }
 }

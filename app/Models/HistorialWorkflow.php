@@ -83,25 +83,17 @@ class HistorialWorkflow extends Model
         return $query->whereBetween('fecha_transicion', [$fechaInicio, $fechaFin]);
     }
 
-    // Accessor para tiempo formateado
+    // Accessor para tiempo formateado (en base a horas laborales configuradas)
     public function getTiempoFormateadoAttribute()
     {
         if (! $this->tiempo_en_estado_anterior_minutos) {
             return null;
         }
 
-        $minutos = $this->tiempo_en_estado_anterior_minutos;
-        $horas = floor($minutos / 60);
-        $mins = $minutos % 60;
-        $dias = floor($horas / 24);
-        $hrs = $horas % 24;
+        // El campo almacena segundos de tiempo laboral (aunque se llame _minutos por compatibilidad).
+        $segundos = $this->tiempo_en_estado_anterior_minutos;
 
-        if ($dias > 0) {
-            return "{$dias}d {$hrs}h {$mins}m";
-        } elseif ($horas > 0) {
-            return "{$horas}h {$mins}m";
-        } else {
-            return "{$minutos}m";
-        }
+        $businessTime = app(\App\Services\BusinessTimeService::class);
+        return $businessTime->formatInterval($segundos);
     }
 }

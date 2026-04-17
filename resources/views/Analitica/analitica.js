@@ -8,6 +8,9 @@
 document.addEventListener('DOMContentLoaded', function () {
     let chartData = window.chartData || {};
     let charts = {};
+    const slider = document.getElementById('rangeSlider');
+    const filterForm = document.getElementById('filterForm');
+    const captureArea = document.getElementById('captureArea');
 
     // PALETA DE COLORES INSTITUCIONAL
     // Basada en la guía GOV.CO con extensiones para semántica de BI (Green/Amber/Red).
@@ -266,16 +269,14 @@ document.addEventListener('DOMContentLoaded', function () {
      * de la tabla de forma atómica.
      */
     async function refreshDashboard() {
-        const form = document.getElementById('filterForm');
-        const formData = new FormData(form);
+        const formData = new FormData(filterForm);
         const params = new URLSearchParams(formData);
 
         // INDICADOR DE CARGA: Feedback visual inmediato al usuario
-        const captureArea = document.getElementById('captureArea');
-        captureArea.classList.add('loading');
+        if (captureArea) captureArea.classList.add('loading');
 
         try {
-            const response = await window.apiFetch(form.action + '?' + params.toString());
+            const response = await window.apiFetch(filterForm.action + '?' + params.toString());
             const data = await response.json();
 
             // ACTUALIZACIÓN DE ESTADO: 
@@ -301,7 +302,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==============================
     // INITIALIZATION
     // ==============================
-    const captureArea = document.getElementById('captureArea');
     if (captureArea) captureArea.classList.remove('loading');
 
     initCharts(chartData);
@@ -332,11 +332,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Reset button
     $('#btnReset').on('click', function () {
-        const form = document.getElementById('filterForm');
-        form.reset();
+        if (filterForm) filterForm.reset();
 
         // Clear hidden inputs manually since reset() doesn't always clear value=""
-        $(form).find('input[type="hidden"]').val('');
+        if (filterForm) $(filterForm).find('input[type="hidden"]').val('');
+
+        // Reset nuevo picker de estado
+        const pickerEl  = document.getElementById('estadoPicker');
+        const labelEl   = document.getElementById('selectedEstadoLabel');
+        const hiddenEl  = document.getElementById('hiddenSearchEstado');
+        if (pickerEl && labelEl && hiddenEl) {
+            hiddenEl.value = '';
+            labelEl.textContent = 'Todos los estados';
+            pickerEl.querySelectorAll('.analitica-picker-item').forEach(el => el.classList.remove('is-active'));
+            const allItem = pickerEl.querySelector('.analitica-picker-item[data-value=""]');
+            if (allItem) allItem.classList.add('is-active');
+            pickerEl.classList.remove('is-open');
+        }
 
         // Reset date display
         const dateDisplay = document.getElementById('dateDisplay');
@@ -360,7 +372,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Range Slider
-    const slider = document.getElementById('rangeSlider');
     if (slider) {
         const minValInput = document.getElementById('minVal');
         const maxValInput = document.getElementById('maxVal');
@@ -584,4 +595,64 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
+
+    // ==============================
+    // ANALITICA ESTADO PICKER (Custom JS - No Bootstrap)
+    // ==============================
+    const picker       = document.getElementById('estadoPicker');
+    const pickerBtn    = document.getElementById('estadoPickerBtn');
+    const pickerMenu   = document.getElementById('estadoPickerMenu');
+    const hiddenEstado = document.getElementById('hiddenSearchEstado');
+    const estadoLabel  = document.getElementById('selectedEstadoLabel');
+
+    if (picker && pickerBtn) {
+        // Abrir/Cerrar al pulsar el botón
+        pickerBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            picker.classList.toggle('is-open');
+        });
+
+        // Clic en un ítem de estado → seleccionar y cerrar
+        if (pickerMenu) {
+            pickerMenu.addEventListener('click', function (e) {
+                const item = e.target.closest('.analitica-picker-item');
+                const groupHeader = e.target.closest('.analitica-picker-group-header');
+
+                // Toggle de grupo (bloque)
+                if (groupHeader) {
+                    e.stopPropagation();
+                    const group = groupHeader.closest('.analitica-picker-group');
+                    if (group) group.classList.toggle('is-expanded');
+                    return;
+                }
+
+                // Selección de estado
+                if (item) {
+                    e.stopPropagation();
+                    const value = item.dataset.value;
+                    const label = item.dataset.label || item.textContent.trim();
+
+                    if (hiddenEstado) hiddenEstado.value = value;
+                    if (estadoLabel)  estadoLabel.textContent = label;
+
+                    // Marcar activo
+                    pickerMenu.querySelectorAll('.analitica-picker-item').forEach(el => el.classList.remove('is-active'));
+                    item.classList.add('is-active');
+
+                    // Cerrar el picker
+                    picker.classList.remove('is-open');
+
+                    // Disparar filtrado BI
+                    refreshDashboard();
+                }
+            });
+        }
+
+        // Cerrar al hacer clic fuera
+        document.addEventListener('click', function (e) {
+            if (!picker.contains(e.target)) {
+                picker.classList.remove('is-open');
+            }
+        });
+    }
 });

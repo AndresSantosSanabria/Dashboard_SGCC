@@ -86,7 +86,7 @@
                             <input type="text" name="searchCedula" value="{{ request('searchCedula') }}"
                                 class="form-control filter-input" placeholder="Identificación...">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label fw-bold">Estado</label>
                             <div class="dropdown custom-multilevel-dropdown">
                                 <button
@@ -142,13 +142,17 @@
                             <input type="number" name="searchNumeroCuenta" value="{{ request('searchNumeroCuenta') }}"
                                 class="form-control filter-input" placeholder="Ej: 3" min="1">
                         </div>
-                        <div class="col-md-2 d-flex gap-2">
-                            <button class="btn btn-primary w-100" type="submit">
+                        <div class="col-md-3 d-flex gap-2">
+                            <button class="btn btn-primary" type="submit" style="flex: 1;">
                                 <i class="bi bi-search me-1"></i> Filtrar
                             </button>
-                            <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="offcanvas"
-                                data-bs-target="#offcanvasAdvancedFilters">
-                                <i class="bi bi-funnel me-1"></i> Filtros
+                            <button class="btn btn-outline-danger" type="button" id="btnResetAllFilters"
+                                style="flex: 1;">
+                                <i class="bi bi-x-circle me-1"></i> Limpiar
+                            </button>
+                            <button class="btn btn-outline-primary" type="button" data-bs-toggle="offcanvas"
+                                data-bs-target="#offcanvasAdvancedFilters" style="flex: 1;">
+                                <i class="bi bi-funnel me-1"></i> Avanzados
                             </button>
                         </div>
                     </div>

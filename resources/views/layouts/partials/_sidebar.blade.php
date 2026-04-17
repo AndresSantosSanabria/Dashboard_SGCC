@@ -63,15 +63,17 @@
     <div class="">
         <hr>
         {{-- ── Campana de Notificaciones ── --}}
-        <div class="d-flex justify-content-center mb-2">
-            <button id="btnCampana" class="btn btn-link text-white p-1 position-relative" data-bs-toggle="modal"
-                data-bs-target="#modalNotificaciones" title="Notificaciones" style="font-size: 1.3rem;">
-                <i class="bi bi-bell-fill"></i>
-                <span id="badgeNotif"
-                    class="position-absolute top-0 start-75 translate-middle badge rounded-pill bg-danger d-none"
-                    style="font-size: 0.6rem; padding: 3px 5px; min-width: 18px;">0</span>
-            </button>
-        </div>
+        @if (auth()->user()->puedeVerNotificaciones())
+            <div class="d-flex justify-content-center mb-2">
+                <button id="btnCampana" class="btn btn-link text-white p-1 position-relative" data-bs-toggle="modal"
+                    data-bs-target="#modalNotificaciones" title="Notificaciones" style="font-size: 1.3rem;">
+                    <i class="bi bi-bell-fill"></i>
+                    <span id="badgeNotif"
+                        class="position-absolute top-0 start-75 translate-middle badge rounded-pill bg-danger d-none"
+                        style="font-size: 0.6rem; padding: 3px 5px; min-width: 18px;">0</span>
+                </button>
+            </div>
+        @endif
         <div class="user-sidebar-section d-flex align-items-center justify-content-between px-1">
             <div class="d-flex align-items-center text-white overflow-hidden user-profile-info">
                 <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-2"

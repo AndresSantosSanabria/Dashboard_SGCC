@@ -32,6 +32,11 @@
                             <div>
                                 <strong>Valor:</strong>${{ number_format($cuenta->valor_cobro, 2) }}
                             </div>
+                            <div class="mt-1 pt-1 border-top">
+                                <span class="badge bg-primary-soft text-primary" style="font-size: 0.75rem;">
+                                    <i class="fas fa-calendar-check me-1"></i> SS Mes: {{ $cuenta->ss_ultima_cuenta ?? 'N/A' }}
+                                </span>
+                            </div>
                         </div>
                     </div>
                     <div class="info-card">

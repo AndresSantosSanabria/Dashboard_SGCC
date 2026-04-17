@@ -87,13 +87,14 @@ class ConfiguracionController extends Controller
             'editar_workflow',
             'es_admin',
             'ver_solo_asignados',
-            'responsable_sap',
-            'responsable_facturacion',
             'contratos_ver',
             'contratos_editar',
             'cuentas_ver',
             'cuentas_editar',
             'reportes_exportar',
+            'ver_solo_bloques_con_asignacion',
+            'receptor_automatico_bloque_6',
+            'acceder_notificaciones',
         ];
 
         // Only save permissions that are explicitly TRUE
@@ -220,13 +221,13 @@ class ConfiguracionController extends Controller
             'editar_workflow',
             'es_admin',
             'ver_solo_asignados',
-            'responsable_sap',
-            'responsable_facturacion',
             'contratos_ver',
             'contratos_editar',
             'cuentas_ver',
             'cuentas_editar',
             'reportes_exportar',
+            'ver_solo_bloques_con_asignacion',
+            'receptor_automatico_bloque_6',
         ];
 
         // Only save permissions that are explicitly TRUE

@@ -219,24 +219,54 @@ if (filtersForm) {
         checkbox.addEventListener("change", fetchFilteredData);
     });
 
-    // Botón "Limpiar filtros" → resetear form y recargar async
-    filtersForm.querySelectorAll("a.btn-secondary, a.btn-danger, a.btn-outline-secondary").forEach((link) => {
+    // Función centralizada para limpiar todos los filtros
+    function resetAllFilters() {
+        if (!filtersForm) return;
+
+        // 1. Limpiar todos los inputs (excepto token CSRF)
+        filtersForm.querySelectorAll('input:not([name="_token"])').forEach(input => {
+            if (input.type === 'checkbox' || input.type === 'radio') {
+                input.checked = false;
+            } else {
+                input.value = '';
+            }
+        });
+
+        // 2. Limpiar todos los selects
+        filtersForm.querySelectorAll('select').forEach(select => {
+            select.selectedIndex = 0;
+        });
+
+        // 3. RESET DROPDOWN PERSONALIZADO DE ESTADOS
+        const labelSpan = document.getElementById('selectedEstadoLabel');
+        const hiddenInput = document.getElementById('hiddenSearchEstado');
+        if (labelSpan && hiddenInput) {
+            labelSpan.textContent = "Todos los estados";
+            hiddenInput.value = "";
+            document.querySelectorAll('.filter-estado-item').forEach(el => el.classList.remove('active'));
+            const allStatesItem = document.querySelector('.filter-estado-item[data-value=""]');
+            if (allStatesItem) allStatesItem.classList.add('active');
+        }
+
+        // 4. Recargar datos async
+        fetchFilteredData();
+    }
+
+    // Botón "Limpiar" principal (junto a Filtrar)
+    const btnReset = document.getElementById('btnResetAllFilters');
+    if (btnReset) {
+        btnReset.addEventListener("click", function (e) {
+            e.preventDefault();
+            resetAllFilters();
+        });
+    }
+
+    // Botones adicionales de limpiar (link "Limpiar todos" o botones en offcanvas)
+    filtersForm.querySelectorAll("a.btn-secondary, a.btn-danger, a.btn-outline-secondary, .text-danger").forEach((link) => {
+        if (link.id === 'btnResetAllFilters') return; 
         link.addEventListener("click", function (e) {
             e.preventDefault();
-            filtersForm.reset();
-            
-            // RESET DROPDOWN PERSONALIZADO
-            const labelSpan = document.getElementById('selectedEstadoLabel');
-            const hiddenInput = document.getElementById('hiddenSearchEstado');
-            if (labelSpan && hiddenInput) {
-                labelSpan.textContent = "Todos los estados";
-                hiddenInput.value = "";
-                document.querySelectorAll('.filter-estado-item').forEach(el => el.classList.remove('active'));
-                const allStatesItem = document.querySelector('.filter-estado-item[data-value=""]');
-                if (allStatesItem) allStatesItem.classList.add('active');
-            }
-            
-            fetchFilteredData();
+            resetAllFilters();
         });
     });
 }

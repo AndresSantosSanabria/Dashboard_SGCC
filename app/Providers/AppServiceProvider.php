@@ -7,6 +7,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
+use App\Models\CuentaCobro;
+use App\Observers\CuentaCobroObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,6 +38,9 @@ class AppServiceProvider extends ServiceProvider
 
         Paginator::useBootstrapFive();
         $this->ensureSchedulerRunning();
+
+        // Registro de Observer para Time Tracking
+        CuentaCobro::observe(CuentaCobroObserver::class);
     }
 
     /**

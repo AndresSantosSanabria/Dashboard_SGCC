@@ -38,9 +38,17 @@ class CuentaCobro extends Model
         'finalizada',
         'responsable_actual_id',
         'observaciones',
+        'ss_ultima_cuenta',
+        'diferencia_cuentas',
         'ultima_factura_hacienda',
         'fecha_radicacion_hacienda',
         'observacion_hacienda',
+        // --- TIMETRACKING LEGACY (se mantiene por compatibilidad) ---
+        'tiempo_total_segundos',
+        'ultimo_inicio_conteo',
+        // --- TIMETRACKING v2: Contadores duales separados ---
+        'fecha_ultimo_cambio_estado',    // VOLÁTIL: se resetea en cada cambio de estado
+        'tiempo_total_proceso_segundos', // PERSISTENTE: nunca se resetea
     ];
 
     /**
@@ -48,15 +56,22 @@ class CuentaCobro extends Model
      * para cálculos precisos de tiempos de respuesta (SLAs).
      */
     protected $casts = [
-        'valor_cobro' => 'decimal:2',
-        'fecha_radicacion' => 'datetime',
-        'numero_pagos_totales' => 'integer',
-        'numero_facturas_radicadas' => 'integer',
-        'porcentaje_cuentas' => 'decimal:2',
-        'finalizada' => 'boolean',
-        'fecha_radicacion_hacienda' => 'datetime',
-        'created_at' => 'datetime',
-        'updated_at' => 'datetime',
+        'valor_cobro'                    => 'decimal:2',
+        'fecha_radicacion'               => 'datetime',
+        'numero_pagos_totales'           => 'integer',
+        'numero_facturas_radicadas'      => 'integer',
+        'porcentaje_cuentas'             => 'decimal:2',
+        'diferencia_cuentas'             => 'integer',
+        'finalizada'                     => 'boolean',
+        'fecha_radicacion_hacienda'      => 'datetime',
+        // Legacy
+        'ultimo_inicio_conteo'           => 'datetime',
+        'tiempo_total_segundos'          => 'integer',
+        // v2
+        'fecha_ultimo_cambio_estado'     => 'datetime',
+        'tiempo_total_proceso_segundos'  => 'integer',
+        'created_at'                     => 'datetime',
+        'updated_at'                     => 'datetime',
     ];
 
     // --- RELACIONES DE FLUJO ---
@@ -140,7 +155,6 @@ class CuentaCobro extends Model
      */
     public function getDiferenciaCuentasAttribute()
     {
-        // Se calcula restando del total de pagos pactados, las facturas que ya llegaron a feliz término (finalizadas)
         return (int) ($this->numero_pagos_totales ?? 0) - (int) ($this->numero_facturas_radicadas ?? 0);
     }
 
@@ -157,68 +171,84 @@ class CuentaCobro extends Model
     }
 
     /**
-     * CÁLCULO DE TIEMPO NETO (SLA Engine):
-     * 
-     * Este es un algoritmo crítico. No solo resta fechas, sino que recorre 
-     * el historial para DESCONTAR el tiempo pasado en estados que no cuentan 
-     * tiempo (ej: cuando la cuenta fue devuelta al contratista).
+     * TIEMPO TOTAL DEL PROCESO (PERSISTENTE)
+     *
+     * Basado en tiempo_total_proceso_segundos (acumulado histórico) +
+     * el tiempo que lleva corriendo en el estado actual desde fecha_ultimo_cambio_estado.
+     *
+     * NUNCA se resetea al cambiar de estado. Mide el ciclo completo desde created_at.
      */
-    public function getTiempoTotalEjecucionAttribute()
+    public function getTiempoTotalEjecucionAttribute(): string
     {
-        // El tiempo de trámite 'limpio' en el Workflow debe empezar desde el 
-        // primer hito registrado en el historial para esta cuenta.
-        // Si no hay historial (cuenta nueva), usamos la fecha de creación en la plataforma.
-        // ESTO EVITA QUE FECHAS DE RADICACIÓN ANTIGUAS DEL EXCEL SUMEN DÍAS ILÓGICOS.
-        $primerHito = $this->historialWorkflow->sortBy('fecha_transicion')->first();
-        $inicio = $primerHito ? $primerHito->fecha_transicion : ($this->created_at ?? now());
+        $businessTime = app(\App\Services\BusinessTimeService::class);
 
-        $fin = $this->finalizada
-            ? ($this->historialWorkflow->max('fecha_transicion') ?? now())
-            : now();
+        // Base persistente: suma de todos los estados anteriores ya cerrados.
+        $base = (int) ($this->tiempo_total_proceso_segundos ?? 0);
 
-        $inicio = \Carbon\Carbon::parse($inicio);
-        $fin = \Carbon\Carbon::parse($fin);
+        // Volatil: tiempo transcurrido en el estado ACTUAL (aun no cerrado).
+        // Solo sumamos si el estado actual está configurado para contabilizar tiempo.
+        $volatil = ($this->fecha_ultimo_cambio_estado && ($this->estadoActual->contabiliza_tiempo ?? true))
+            ? $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now())
+            : 0;
 
-        // Consultamos el rastro de estados para detectar periodos de "pausa"
-        $historial = $this->historialWorkflow()
-            ->where('fecha_transicion', '>=', $inicio->copy()->subSeconds(2))
-            ->orderBy('fecha_transicion', 'asc')
-            ->get();
+        $totalSegundos = $base + $volatil;
 
-        $tiempoMuertoMinutos = 0;
-        $referenciaTemporal = $inicio;
+        if ($totalSegundos <= 0) return '0m';
 
-        foreach ($historial as $h) {
-            $fechaTransicion = \Carbon\Carbon::parse($h->fecha_transicion);
+        return $businessTime->formatInterval($totalSegundos);
+    }
 
-            // Si el estado de origen no sumaba tiempo, este tramo se resta del total
-            if ($h->estadoOrigen && ! ($h->estadoOrigen->contabiliza_tiempo ?? true)) {
-                $tiempoMuertoMinutos += max(0, $referenciaTemporal->diffInMinutes($fechaTransicion));
-            }
-            $referenciaTemporal = $fechaTransicion;
+    /**
+     * TIEMPO EN ESTADO ACTUAL (VOLÁTIL)
+     *
+     * Mide EXCLUSIVAMENTE cuánto lleva la cuenta en su estado ACTUAL.
+     * Se resetea a 0 en cada cambio de estado porque fecha_ultimo_cambio_estado
+     * se actualiza con cada transición.
+     *
+     * Esta es la métrica que alimenta las alertas de "Contrato Reposado":
+     *   (NOW() - fecha_ultimo_cambio_estado) >= tiempo_limite del estado
+     */
+    public function getTiempoEnEstadoActualAttribute(): string
+    {
+        if (! $this->fecha_ultimo_cambio_estado) return '0m';
+
+        $businessTime = app(\App\Services\BusinessTimeService::class);
+        $segundos     = $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now());
+
+        return $businessTime->formatInterval($segundos);
+    }
+
+    /**
+     * Retorna los segundos en el estado actual (para comparaciones numéricas).
+     */
+    public function getSegundosEnEstadoActualAttribute(): int
+    {
+        if (! $this->fecha_ultimo_cambio_estado) return 0;
+
+        $businessTime = app(\App\Services\BusinessTimeService::class);
+        return $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now());
+    }
+
+    /**
+     * Indica si el contrato está "reposado" en el estado actual
+     * según el límite configurado para ese estado (tiempo_limite_horas).
+     * Fallback a la config global ALERTA_ESTANCAMIENTO_MINUTOS.
+     */
+    public function getEstaReposadoAttribute(): bool
+    {
+        if (! $this->fecha_ultimo_cambio_estado || ! $this->estadoActual) return false;
+
+        // Límite específico del estado (prioridad máxima)
+        $limiteHoras = $this->estadoActual->tiempo_limite_horas;
+
+        // Fallback: config global en minutos → convertir a horas
+        if ($limiteHoras === null) {
+            $minutos = (int) \App\Models\Configuracion::getValor('ALERTA_ESTANCAMIENTO_MINUTOS', 120);
+            $limiteHoras = $minutos / 60;
         }
 
-        // Caso final: Verificar el estado actual
-        if ($this->estadoActual && ! ($this->estadoActual->contabiliza_tiempo ?? true)) {
-            $tiempoMuertoMinutos += max(0, $referenciaTemporal->diffInMinutes($fin));
-        }
-
-        $totalBrutoMinutos = $inicio->diffInMinutes($fin);
-        $minutosNetos = max(0, $totalBrutoMinutos - $tiempoMuertoMinutos);
-
-        if ($minutosNetos <= 0) return '0m';
-
-        // Formateo legible (ej: 2d 5h 30m)
-        $d = floor($minutosNetos / 1440);
-        $h = floor(($minutosNetos % 1440) / 60);
-        $m = $minutosNetos % 60;
-
-        $partes = [];
-        if ($d > 0) $partes[] = "{$d}d";
-        if ($h > 0) $partes[] = "{$h}h";
-        if ($m > 0 || empty($partes)) $partes[] = "{$m}m";
-
-        return implode(' ', $partes);
+        $segundosLimite = (int) ($limiteHoras * 3600);
+        return $this->segundos_en_estado_actual >= $segundosLimite;
     }
 
     public function setNumeroCuentaAttribute($value)

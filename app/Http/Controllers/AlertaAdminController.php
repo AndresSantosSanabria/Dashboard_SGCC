@@ -29,6 +29,8 @@ class AlertaAdminController extends Controller
             'ALERTA_ESTANCAMIENTO_ACTIVA',
             'ALERTA_ESTANCAMIENTO_MSG_WARNING',
             'ALERTA_ESTANCAMIENTO_MSG_DANGER',
+            'HORARIO_LABORAL_INICIO',
+            'HORARIO_LABORAL_FIN',
         ];
 
         $configuraciones = Configuracion::whereIn('clave', $claves)->get()->keyBy('clave');
@@ -97,6 +99,8 @@ class AlertaAdminController extends Controller
             'ALERTA_ESTANCAMIENTO_ACTIVA' => 'nullable|boolean',
             'msg_warning' => 'nullable|string|max:500',
             'msg_danger' => 'nullable|string|max:500',
+            'HORARIO_LABORAL_INICIO' => 'required|string',
+            'HORARIO_LABORAL_FIN' => 'required|string',
         ]);
 
         $totalLimit = ($request->limit_hours * 60) + $request->limit_mins;
@@ -117,6 +121,15 @@ class AlertaAdminController extends Controller
         if ($request->has('msg_danger')) {
             Configuracion::where('clave', 'ALERTA_ESTANCAMIENTO_MSG_DANGER')->update(['valor' => $request->msg_danger]);
         }
+
+        Configuracion::updateOrCreate(
+            ['clave' => 'HORARIO_LABORAL_INICIO'],
+            ['valor' => $request->HORARIO_LABORAL_INICIO, 'tipo_dato' => 'STRING']
+        );
+        Configuracion::updateOrCreate(
+            ['clave' => 'HORARIO_LABORAL_FIN'],
+            ['valor' => $request->HORARIO_LABORAL_FIN, 'tipo_dato' => 'STRING']
+        );
 
         return response()->json(['success' => true, 'message' => 'Configuración guardada correctamente.']);
     }

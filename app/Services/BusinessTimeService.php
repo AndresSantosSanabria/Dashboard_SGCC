@@ -12,100 +12,102 @@ class BusinessTimeService
 
     /**
      * Calcula los segundos laborables entre dos fechas.
-     * Versión ULTRA-OPTIMIZADA: Usa comparaciones de strings para evitar Carbon::parse.
+     * Garantiza que el tiempo se detenga al final de la jornada laboral.
      */
     public function getWorkingSecondsBetween($startInput, $endInput)
     {
-        // Forzar objetos Carbon solo para el inicio del cálculo
-        $start = ($startInput instanceof Carbon) ? $startInput : Carbon::parse($startInput);
-        $end   = ($endInput instanceof Carbon)   ? $endInput   : Carbon::parse($endInput);
+        $tz = config('app.timezone', 'America/Bogota');
+        $start = Carbon::parse($startInput)->setTimezone($tz);
+        $end = Carbon::parse($endInput)->setTimezone($tz);
 
-        if ($start->gt($end)) return 0;
+        if ($start->gt($end))
+            return 0;
 
-        // Cargar festivos pre-procesados una vez para toda la vida de la petición
+        // Cargar configuración de horarios y normalizar para asegurar que Carbon lo entienda
+        $rawStart = \App\Models\Configuracion::getValor('HORARIO_LABORAL_INICIO', '06:00');
+        $rawEnd = \App\Models\Configuracion::getValor('HORARIO_LABORAL_FIN', '18:00');
+
+        $workStartStr = Carbon::parse($rawStart)->format('H:i');
+        $workEndStr = Carbon::parse($rawEnd)->format('H:i');
+
+        // Cargar festivos una sola vez por ejecución
         if (is_null(self::$festivosConfig)) {
-            $raw = DB::table('festivos')->pluck('fecha')->toArray();
-            self::$festivosConfig = [];
-            foreach ($raw as $f) {
-                // $f ya viene como string YYYY-MM-DD del DB
-                $dateStr = substr($f, 0, 10);
-                $c = Carbon::parse($dateStr);
-                self::$festivosConfig[] = [
-                    'date' => $dateStr,
-                    'is_laborable' => ($c->dayOfWeek !== 0 && $c->dayOfWeek !== 6)
-                ];
+            self::$festivosConfig = DB::table('festivos')
+                ->pluck('fecha')
+                ->map(fn($f) => substr($f, 0, 10))
+                ->toArray();
+        }
+
+        $totalSeconds = 0;
+        $p = $start->copy()->startOfDay();
+        $endDateStr = $end->format('Y-m-d');
+
+        while ($p->format('Y-m-d') <= $endDateStr) {
+            $dateStr = $p->format('Y-m-d');
+            $isWeekend = ($p->dayOfWeek === 0 || $p->dayOfWeek === 6);
+            $isHoliday = in_array($dateStr, self::$festivosConfig);
+
+            if (!$isWeekend && !$isHoliday) {
+                // Definir los límites laborales del día actual en la iteración
+                $dayStart = $p->copy()->setTimeFromTimeString($workStartStr);
+                $dayEnd = $p->copy()->setTimeFromTimeString($workEndStr);
+
+                /**
+                 * LÓGICA DE INTERSECCIÓN:
+                 * overlapStart: Si el evento empezó después de abrir, usamos esa hora. Si no, la de apertura.
+                 * overlapEnd: Si el evento terminó después de cerrar, usamos la de cierre (TRUNCADO).
+                 */
+                $overlapStart = $start->gt($dayStart) ? $start->copy() : $dayStart->copy();
+                $overlapEnd = $end->lt($dayEnd) ? $end->copy() : $dayEnd->copy();
+
+                // Solo sumar si el inicio es menor al fin dentro de la ventana laboral
+                if ($overlapStart->lt($overlapEnd)) {
+                    $totalSeconds += $overlapStart->diffInSeconds($overlapEnd);
+                }
             }
+
+            // Avanzar al siguiente día
+            $p->addDay();
         }
-
-        $startStr = $start->format('Y-m-d');
-        $endStr   = $end->format('Y-m-d');
-
-        // Caso mismo día
-        if ($startStr === $endStr) {
-            if ($start->isWeekend()) return 0;
-            foreach (self::$festivosConfig as $f) {
-                if ($f['date'] === $startStr) return 0;
-            }
-            return (int) $start->diffInSeconds($end);
-        }
-
-        // 1. Días de calendario
-        $periodStart = $start->copy()->startOfDay();
-        $periodEnd   = $end->copy()->startOfDay();
-        $daysDiff    = $periodStart->diffInDays($periodEnd);
-
-        // 2. Fines de semana (Fórmula Matemática sin bucles)
-        $weeks = floor($daysDiff / 7);
-        $weekends = $weeks * 2;
-        $remaining = $daysDiff % 7;
-        if ($remaining > 0) {
-            $startDay = (int) $start->format('w');
-            for ($i = 1; $i <= $remaining; $i++) {
-                $day = ($startDay + $i) % 7;
-                if ($day == 0 || $day == 6) $weekends++;
-            }
-        }
-
-        // 3. Festivos (Bucle sobre ~500 registros de texto, muy rápido)
-        $holidaysCount = 0;
-        foreach (self::$festivosConfig as $f) {
-            if ($f['date'] >= $startStr && $f['date'] <= $endStr && $f['is_laborable']) {
-                $holidaysCount++;
-            }
-        }
-
-        $workingDays = max(0, $daysDiff - $weekends - $holidaysCount);
-        $totalSeconds = $workingDays * 86400;
-
-        // 4. Extremos (Inicio y Fin parciales)
-        $isStartWork = ($start->dayOfWeek !== 0 && $start->dayOfWeek !== 6);
-        $isEndWork   = ($end->dayOfWeek   !== 0 && $end->dayOfWeek   !== 6);
-        foreach (self::$festivosConfig as $f) {
-            if ($f['date'] === $startStr) $isStartWork = false;
-            if ($f['date'] === $endStr)   $isEndWork   = false;
-        }
-
-        if ($isStartWork) $totalSeconds += $start->diffInSeconds($start->copy()->endOfDay());
-        if ($isEndWork)   $totalSeconds += $end->copy()->startOfDay()->diffInSeconds($end);
 
         return (int) $totalSeconds;
     }
 
+    /**
+     * Formatea segundos en un string legible (ej: 1d 2h 30m).
+     */
     public function formatInterval(int $totalSeconds): string
     {
-        $days = floor($totalSeconds / 86400);
-        $rem  = $totalSeconds % 86400;
-        $hours   = floor($rem / 3600);
-        $rem    %= 3600;
-        $minutes = floor($rem / 60);
+        if ($totalSeconds <= 0)
+            return '0s';
+
+        // Hacer la duración de un "día" completamente dinámica según la configuración actual
+        $rawStart = \App\Models\Configuracion::getValor('HORARIO_LABORAL_INICIO', '06:00');
+        $rawEnd = \App\Models\Configuracion::getValor('HORARIO_LABORAL_FIN', '18:00');
+        
+        $t1 = Carbon::parse($rawStart);
+        $t2 = Carbon::parse($rawEnd);
+        
+        $secondsInDay = max(3600, $t1->diffInSeconds($t2));
+
+        $d = floor($totalSeconds / $secondsInDay);
+        $rem = $totalSeconds % $secondsInDay;
+        $h = floor($rem / 3600);
+        $rem %= 3600;
+        $m = floor($rem / 60);
+        $s = $rem % 60;
 
         $parts = [];
-        if ($days > 0)    $parts[] = "$days "    . ($days == 1 ? 'día' : 'días');
-        if ($hours > 0)   $parts[] = "$hours "   . ($hours == 1 ? 'hora' : 'horas');
-        if ($minutes > 0) $parts[] = "$minutes " . ($minutes == 1 ? 'minuto' : 'minutos');
-        if (empty($parts)) return ($totalSeconds % 60) . " segundos";
+        if ($d > 0)
+            $parts[] = "{$d}d";
+        if ($h > 0 || ($d > 0 && ($m > 0 || $s > 0)))
+            $parts[] = "{$h}h";
+        if ($m > 0 || (($d > 0 || $h > 0) && $s > 0))
+            $parts[] = "{$m}m";
+        if ($s > 0 || empty($parts))
+            $parts[] = "{$s}s";
 
-        return implode(', ', $parts);
+        return implode(' ', $parts);
     }
 
     /**
@@ -124,9 +126,10 @@ class BusinessTimeService
             "$year-12-08", // Inmaculada Concepción
             "$year-12-25", // Navidad
         ];
-        foreach ($fixed as $f) $holidays[] = $f;
+        foreach ($fixed as $f)
+            $holidays[] = $f;
 
-        // 2. Festivos Ley Emiliani (Se mueven al siguiente lunes si no caen lunes)
+        // 2. Festivos Ley Emiliani (Se mueven al siguiente lunes)
         $emiliani = [
             "$year-01-06", // Reyes Magos
             "$year-03-19", // San José
@@ -140,14 +143,14 @@ class BusinessTimeService
             $holidays[] = $this->moveToNextMonday($f);
         }
 
-        // 3. Festivos basados en Pascua (Domingo de Resurrección)
+        // 3. Festivos basados en Pascua
         $easter = $this->calculateEaster($year);
 
         // Jueves y Viernes Santo
         $holidays[] = $easter->copy()->subDays(3)->format('Y-m-d');
         $holidays[] = $easter->copy()->subDays(2)->format('Y-m-d');
 
-        // Movibles Emiliani (Basados en Pascua + X días, movidos a Lunes)
+        // Movibles Emiliani (Pascua + X días)
         $holidays[] = $this->moveToNextMonday($easter->copy()->addDays(39)->format('Y-m-d')); // Ascensión
         $holidays[] = $this->moveToNextMonday($easter->copy()->addDays(60)->format('Y-m-d')); // Corpus Christi
         $holidays[] = $this->moveToNextMonday($easter->copy()->addDays(67)->format('Y-m-d')); // Sagrado Corazón
@@ -165,10 +168,6 @@ class BusinessTimeService
         return $dateStr;
     }
 
-    /**
-     * Calcula el Domingo de Pascua sin depender de la extensión php-calendar (easter_days).
-     * Algoritmo de Butcher-Meeus.
-     */
     private function calculateEaster(int $year): Carbon
     {
         if (function_exists('easter_days')) {
@@ -190,6 +189,6 @@ class BusinessTimeService
         $mouth = floor(($h + $l - 7 * $m + 114) / 31);
         $day = (($h + $l - 7 * $m + 114) % 31) + 1;
 
-        return Carbon::create((int)$year, (int)$mouth, (int)$day);
+        return Carbon::create((int) $year, (int) $mouth, (int) $day);
     }
 }

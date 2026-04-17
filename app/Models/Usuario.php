@@ -73,12 +73,12 @@ class Usuario extends Authenticatable
 
     public function puedeSerResponsableSap(): bool
     {
-        return $this->tienePermiso('responsable_sap');
+        return $this->esResponsableBloque('SAP') || $this->tienePermiso('responsable_sap');
     }
 
     public function puedeSerResponsableFac(): bool
     {
-        return $this->tienePermiso('responsable_facturacion');
+        return $this->esResponsableBloque('FAC') || $this->tienePermiso('responsable_facturacion');
     }
 
     public function puedeAccederDashboard(): bool
@@ -99,6 +99,11 @@ class Usuario extends Authenticatable
     public function puedeAccederSeguimiento(): bool
     {
         return $this->tienePermiso('ver_seguimiento_secop') || $this->tienePermiso('acceder_seguimiento') || $this->isAdmin();
+    }
+
+    public function puedeVerNotificaciones(): bool
+    {
+        return $this->tienePermiso('acceder_notificaciones');
     }
 
     public function puedeAccederAnalitica(): bool
@@ -139,6 +144,14 @@ class Usuario extends Authenticatable
         return $this->tienePermiso('ver_solo_asignados');
     }
 
+    public function verSoloBloquesConAsignacion(): bool
+    {
+        if ($this->isAdmin()) {
+            return false;
+        }
+        return $this->tienePermiso('ver_solo_bloques_con_asignacion');
+    }
+
     public function bloquesPermitidos()
     {
         if ($this->isAdmin()) {
@@ -159,6 +172,11 @@ class Usuario extends Authenticatable
                 ->pluck('slug')
                 ->map(fn($s) => str_replace('acceso_bloque_', '', $s))
                 ->toArray();
+        }
+
+        // Si tiene el permiso global 'all', devolvemos true (sin restricciones)
+        if (in_array('all', $permisos)) {
+            return true;
         }
 
         return !empty($permisos) ? $permisos : true;
@@ -217,39 +235,80 @@ class Usuario extends Authenticatable
         return $query->where('es_activo', true);
     }
 
+    public function esResponsableBloque(string $bloqueCodigo): bool
+    {
+        return $this->tienePermiso('responsable_bloque_' . $bloqueCodigo);
+    }
+
+    public function scopeResponsablesBloque($query, string $bloqueCodigo)
+    {
+        return $query->where('es_activo', true)
+            ->where(function ($q) use ($bloqueCodigo) {
+                $q->whereHas('individualPermissions', function ($sq) use ($bloqueCodigo) {
+                    $sq->where('slug', 'responsable_bloque_' . $bloqueCodigo);
+                })->orWhereHas('rol.permisos', function ($sq) use ($bloqueCodigo) {
+                    $sq->where('slug', 'responsable_bloque_' . $bloqueCodigo);
+                })->orWhereHas('rol.permisos', function ($sq) {
+                    $sq->where('slug', 'es_admin');
+                });
+            });
+    }
+
+    /**
+     * Scope para los usuarios marcados como receptores automáticos del bloque 6 (Finalizado).
+     */
+    public function scopeReceptoresBloque6($query)
+    {
+        return $query->where('es_activo', true)
+            ->where(function ($q) {
+                // Revisamos si tiene el permiso específico de receptor automático
+                $q->whereHas('individualPermissions', function ($sq) {
+                    $sq->where('slug', 'receptor_automatico_bloque_6');
+                })->orWhereHas('rol.permisos', function ($sq) {
+                    $sq->where('slug', 'receptor_automatico_bloque_6');
+                });
+            });
+    }
+
+    /**
+     * Obtiene el usuario ideal para recibir un contrato en bloque 6 según carga de trabajo.
+     */
+    public static function getReceptorMenosCargadoBloque6()
+    {
+        return self::receptoresBloque6()
+            ->withCount(['cuentasCobroAsignadas' => function ($q) {
+                // Contamos solo las cuentas que están actualmente en el bloque 6
+                $q->where('bloque_actual_id', 6);
+            }])
+            ->orderBy('cuentas_cobro_asignadas_count', 'asc')
+            ->first();
+    }
+
     public function scopeResponsablesSap($query)
     {
         return $query->where('es_activo', true)
-            ->whereHas('rol', function ($q) {
-                $q->where('nombre', '!=', 'Administrador');
-            })
             ->where(function ($q) {
                 $q->whereHas('individualPermissions', function ($sq) {
-                    $sq->where('slug', 'responsable_sap');
+                    $sq->whereIn('slug', ['responsable_sap', 'responsable_bloque_SAP']);
                 })->orWhereHas('rol.permisos', function ($sq) {
-                    $sq->where('slug', 'responsable_sap');
+                    $sq->whereIn('slug', ['responsable_sap', 'responsable_bloque_SAP']);
+                })->orWhereHas('rol.permisos', function ($sq) {
+                    $sq->where('slug', 'es_admin');
                 });
-            })
-            ->whereDoesntHave('individualPermissions', function ($sq) {
-                $sq->where('slug', 'es_admin');
             });
     }
 
     public function scopeResponsablesFac($query)
     {
         return $query->where('es_activo', true)
-            ->whereHas('rol', function ($q) {
-                $q->where('nombre', '!=', 'Administrador');
-            })
             ->where(function ($q) {
                 $q->whereHas('individualPermissions', function ($sq) {
-                    $sq->where('slug', 'responsable_facturacion');
+                    $sq->whereIn('slug', ['responsable_facturacion', 'responsable_bloque_FAC']);
                 })->orWhereHas('rol.permisos', function ($sq) {
-                    $sq->where('slug', 'responsable_facturacion');
+                    $sq->whereIn('slug', ['responsable_facturacion', 'responsable_bloque_FAC']);
+                })->orWhereHas('rol.permisos', function ($sq) {
+                    $sq->where('slug', 'es_admin');
                 });
-            })
-            ->whereDoesntHave('individualPermissions', function ($sq) {
-                $sq->where('slug', 'es_admin');
             });
     }
 

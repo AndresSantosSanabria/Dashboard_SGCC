@@ -122,14 +122,40 @@
                         </div>
                         <div class="col-xl-2 col-lg-3 col-md-4 col-6">
                             <label class="form-label">Estado</label>
-                            <select name="estado" class="form-select">
-                                <option value="">Todos</option>
-                                @foreach ($estados as $est)
-                                    <option value="{{ $est->nombre }}"
-                                        {{ request('estado') == $est->nombre ? 'selected' : '' }}>
-                                        {{ $est->nombre }}</option>
-                                @endforeach
-                            </select>
+                            <div class="analitica-estado-picker" id="estadoPicker">
+                                <button type="button" class="analitica-picker-btn" id="estadoPickerBtn">
+                                    <span id="selectedEstadoLabel">{{ request('estado') ?: 'Todos los estados' }}</span>
+                                    <i class="bi bi-chevron-down" id="estadoChevron"></i>
+                                </button>
+                                <input type="hidden" name="estado" id="hiddenSearchEstado" value="{{ request('estado') }}">
+                                <div class="analitica-picker-menu" id="estadoPickerMenu">
+                                    <div class="analitica-picker-item {{ !request('estado') ? 'is-active' : '' }}"
+                                        data-value="" data-label="Todos los estados">
+                                        <i class="bi bi-layers me-2"></i> Todos los estados
+                                    </div>
+                                    <hr class="my-1">
+                                    @foreach ($bloques as $bloque)
+                                        @php $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect(); @endphp
+                                        @if ($estadosDelBloque->isNotEmpty())
+                                            <div class="analitica-picker-group">
+                                                <div class="analitica-picker-group-header">
+                                                    <i class="bi bi-folder2 me-2"></i>{{ $bloque->nombre }}
+                                                    <i class="bi bi-chevron-right ms-auto picker-group-arrow"></i>
+                                                </div>
+                                                <div class="analitica-picker-submenu">
+                                                    @foreach ($estadosDelBloque as $est)
+                                                        <div class="analitica-picker-item {{ request('estado') == $est->nombre ? 'is-active' : '' }}"
+                                                            data-value="{{ $est->nombre }}"
+                                                            data-label="{{ $est->nombre }}">
+                                                            {{ $est->nombre }}
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            </div>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
                         </div>
                         <div class="col-xl-2 col-lg-3 col-md-4 col-6">
                             <label class="form-label">% Avance</label>

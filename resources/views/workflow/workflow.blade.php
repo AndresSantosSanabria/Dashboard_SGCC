@@ -11,17 +11,26 @@
         data-can-edit="{{ $canEdit ? 'true' : 'false' }}">
         @include('layouts.partials._premium_loader', ['text' => 'Gestionando Procesos'])
 
-        <h1 class="mb-4 text-center fw-bold animate-in">Gestión de Flujo de Trabajo (Kanban)</h1>
+        <div class="d-flex justify-content-between align-items-center mb-4 animate-in">
+            <div>
+                <h1 class="fw-bold mb-1" style="color: var(--text-main); font-size: 1.75rem;">Centro de Control Operativo</h1>
+                <p class="text-muted mb-0 small">Monitoreo y gestión del flujo de cuentas en tiempo real.</p>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-white shadow-sm border" onclick="window.location.reload()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Sincronizar
+                </button>
+            </div>
+        </div>
 
         <!-- Filtros -->
         <form action="{{ route('workflow') }}" method="GET" class="filter-bar animate-in">
             <div class="d-flex flex-wrap align-items-end gap-2">
-                <div style="flex: 1 1 150px; min-width: 130px;">
-                    <label class="filter-label">Supervisor</label>
+                <div style="flex: 1 1 150px;">
+                    <label class="filter-label">Supervisor Asignado</label>
                     <div class="filter-input-group">
-                        <i class="fas fa-user-tie filter-icon"></i>
                         <select name="supervisor_id" class="form-select filter-control">
-                            <option value="">Todos</option>
+                            <option value="">Todos los supervisores</option>
                             @foreach ($supervisores as $sup)
                                 <option value="{{ $sup->id }}"
                                     {{ request('supervisor_id') == $sup->id ? 'selected' : '' }}>
@@ -31,12 +40,11 @@
                         </select>
                     </div>
                 </div>
-                <div style="flex: 1 1 150px; min-width: 130px;">
-                    <label class="filter-label">Responsable</label>
+                <div style="flex: 1 1 150px;">
+                    <label class="filter-label">Responsable Actual</label>
                     <div class="filter-input-group">
-                        <i class="fas fa-user filter-icon"></i>
                         <select name="responsable_id" class="form-select filter-control">
-                            <option value="">Todos</option>
+                            <option value="">Todos los responsables</option>
                             @foreach ($responsables as $resp)
                                 <option value="{{ $resp->id }}"
                                     {{ request('responsable_id') == $resp->id ? 'selected' : '' }}>
@@ -46,87 +54,78 @@
                         </select>
                     </div>
                 </div>
-                <div style="flex: 2 1 180px; min-width: 150px;">
-                    <label class="filter-label">Contratista</label>
+                <div style="flex: 1 1 200px;">
+                    <label class="filter-label">Contratista / Identificación</label>
                     <div class="filter-input-group">
-                        <i class="fas fa-search filter-icon"></i>
                         <input type="text" name="contratista" class="form-control filter-control"
                             placeholder="Nombre o NIT..." value="{{ request('contratista') }}">
                     </div>
                 </div>
-                <div style="flex: 2 1 160px; min-width: 140px;">
+                <div style="flex: 1 1 110px;">
                     <label class="filter-label">N° Contrato</label>
                     <div class="filter-input-group">
-                        <i class="fas fa-file-contract filter-icon"></i>
-                        <input type="text" name="numero_contrato" id="filtro_numero_contrato"
-                            class="form-control filter-control" placeholder="Ej: STIC-CPS-001..."
-                            value="{{ request('numero_contrato') }}" autocomplete="off">
+                        <input type="text" name="numero_contrato" class="form-control filter-control"
+                            placeholder="STIC-CPS..." value="{{ request('numero_contrato') }}">
                     </div>
                 </div>
-                <div style="flex: 1.5 1 150px; min-width: 130px;">
+                <div style="flex: 0.5 1 50px;">
+                    <label class="filter-label">N° Cuenta</label>
+                    <div class="filter-input-group">
+                        <input type="number" name="numero_cuenta" class="form-control filter-control"
+                            placeholder="Ej: 1" value="{{ request('numero_cuenta') }}">
+                    </div>
+                </div>
+                <div style="flex: 1 1 130px;">
                     <label class="filter-label">Estado</label>
                     <div class="dropdown custom-multilevel-dropdown">
                         <button
                             class="dropdown-toggle filter-control text-start w-100 d-flex justify-content-between align-items-center"
                             type="button" id="dropdownEstadoWorkflow" data-bs-toggle="dropdown" aria-expanded="false">
-                            <span
-                                id="selectedEstadoLabelWorkflow">{{ request('estado_nombre') ?: 'Todos los estados' }}</span>
+                            <span id="selectedEstadoLabelWorkflow" class="text-truncate" style="max-width: 120px;">
+                                {{ request('estado_nombre') ?: 'Todos los estados' }}
+                            </span>
                         </button>
                         <input type="hidden" name="estado_nombre" id="hiddenSearchEstadoWorkflow"
                             value="{{ request('estado_nombre') }}">
-                        <ul class="dropdown-menu w-100 shadow-lg" aria-labelledby="dropdownEstadoWorkflow">
-                            <li>
-                                <a class="dropdown-item filter-estado-item-workflow {{ !request('estado_nombre') ? 'active' : '' }}"
-                                    href="#" data-value="">
-                                    Todos los estados
+                        <div class="dropdown-menu shadow-lg p-0" aria-labelledby="dropdownEstadoWorkflow">
+                            <div class="wf-dropdown-header">
+                                <i class="bi bi-layers"></i> Todos los estados
+                            </div>
+                            <div class="wf-accordion-block">
+                                <a class="wf-dropdown-item filter-estado-item-workflow {{ !request('estado_nombre') ? 'active' : '' }}" href="#" data-value="">
+                                    <i class="bi bi-circle-fill me-2 small opacity-50"></i> Todos los estados
                                 </a>
-                            </li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
+                            </div>
                             @foreach ($bloques as $bloque)
-                                @php
-                                    $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect();
-                                @endphp
+                                @php $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect(); @endphp
                                 @if ($estadosDelBloque->isNotEmpty())
-                                    <li class="dropdown-submenu">
-                                        <a class="dropdown-item dropdown-toggle d-flex justify-content-between align-items-center"
-                                            href="#">
-                                            <span>{{ $bloque->nombre }}</span>
-                                            <i class="fas fa-chevron-right small opacity-50"></i>
-                                        </a>
-                                        <ul class="dropdown-menu shadow-lg">
+                                    <div class="wf-accordion-block">
+                                        <div class="wf-accordion-header">
+                                            <span><i class="bi bi-folder2 me-2"></i>{{ $bloque->nombre }}</span>
+                                            <i class="bi bi-chevron-down"></i>
+                                        </div>
+                                        <div class="wf-accordion-content">
                                             @foreach ($estadosDelBloque as $est)
-                                                <li>
-                                                    <a class="dropdown-item filter-estado-item-workflow {{ request('estado_nombre') == $est->nombre ? 'active' : '' }}"
-                                                        href="#" data-value="{{ $est->nombre }}">
-                                                        {{ $est->nombre }}
-                                                    </a>
-                                                </li>
+                                                <a class="wf-dropdown-item filter-estado-item-workflow {{ request('estado_nombre') == $est->nombre ? 'active' : '' }}" 
+                                                   href="#" 
+                                                   data-value="{{ $est->nombre }}"
+                                                   data-block-id="{{ $bloque->id }}">
+                                                    {{ $est->nombre }}
+                                                </a>
                                             @endforeach
-                                        </ul>
-                                    </li>
+                                        </div>
+                                    </div>
                                 @endif
                             @endforeach
-                        </ul>
+                        </div>
                     </div>
                 </div>
-                <div style="flex: 0.8 1 100px; min-width: 90px;">
-                    <label class="filter-label">N° Cuenta</label>
-                    <div class="filter-input-group">
-                        <i class="fas fa-list-ol filter-icon"></i>
-                        <input type="number" name="numero_cuenta" class="form-control filter-control" placeholder="Ej: 3"
-                            value="{{ request('numero_cuenta') }}">
-                    </div>
-                </div>
-                <div class="d-flex gap-2 align-items-end" style="flex: 0 0 auto;">
-                    <button type="submit" class="btn btn-primary shadow-sm"
-                        style="border-radius: 8px; white-space: nowrap;">
-                        <i class="fas fa-filter me-1"></i>Filtrar
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary px-3" style="height: 38px; border-radius: 10px; font-weight: 600;">
+                        <i class="bi bi-search me-1"></i> Filtrar
                     </button>
-                    <a href="{{ route('workflow') }}" class="btn btn-outline-secondary"
-                        style="border-radius: 8px; white-space: nowrap;">
-                        <i class="fas fa-undo me-1"></i>Limpiar
+                    <a href="{{ route('workflow') }}" class="btn btn-light border px-2" style="height: 38px; border-radius: 10px; font-weight: 600;">
+                        <i class="bi bi-x-lg"></i>
                     </a>
                 </div>
             </div>
@@ -140,13 +139,17 @@
     @include('workflow.componentes.responsible_modal')
 
     @push('scripts')
+        <script>
+            window.WORK_START_TIME = "{{ \Carbon\Carbon::parse(\App\Models\Configuracion::getValor('HORARIO_LABORAL_INICIO', '06:00'))->format('H:i') }}";
+            window.WORK_END_TIME = "{{ \Carbon\Carbon::parse(\App\Models\Configuracion::getValor('HORARIO_LABORAL_FIN', '18:00'))->format('H:i') }}";
+        </script>
         @vite(['resources/views/workflow/workflow.js'])
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const filterForm = document.querySelector('.filter-bar');
                 let debounceTimer = null;
 
-                window.recargarKanban = function() {
+                window.recargarKanban = function(forcedBlockId = null) {
                     const formData = new FormData(filterForm);
                     const params = new URLSearchParams(formData).toString();
                     const url = `{{ route('workflow') }}?${params}`;
@@ -169,6 +172,35 @@
                             document.body.style.overflow = '';
 
                             kanbanContainer.innerHTML = html;
+                            
+                            // Lógica para auto-seleccionar bloque con resultados si hay filtros activos
+                            const filterContratista = document.querySelector('input[name="contratista"]')?.value.trim();
+                            const filterNumero = document.querySelector('input[name="numero_contrato"]')?.value.trim();
+                            const filterCuenta = document.querySelector('input[name="numero_cuenta"]')?.value.trim();
+                            const filterEstado = document.querySelector('input[name="estado_nombre"]')?.value.trim();
+
+                            if (forcedBlockId) {
+                                if (typeof window.selectWorkflowBlock === 'function') {
+                                    window.selectWorkflowBlock(forcedBlockId);
+                                }
+                            } else if (filterContratista || filterNumero || filterCuenta || filterEstado) {
+                                // Buscar el primer selector que tenga más de 0 casos
+                                const firstBlockWithResults = Array.from(document.querySelectorAll('.workflow-selector')).find(s => {
+                                    const countText = s.querySelector('.selector-count')?.textContent || '0';
+                                    const count = parseInt(countText);
+                                    return count > 0;
+                                });
+
+                                if (firstBlockWithResults) {
+                                    const blockId = firstBlockWithResults.dataset.blockId;
+                                    window.selectWorkflowBlock(blockId);
+                                } else {
+                                    if (typeof window.restoreSelectedBlock === 'function') window.restoreSelectedBlock();
+                                }
+                            } else {
+                                if (typeof window.restoreSelectedBlock === 'function') window.restoreSelectedBlock();
+                            }
+
                             kanbanContainer.style.opacity = '1';
                             kanbanContainer.style.pointerEvents = 'auto';
                             window.scrollTo(scrollX, scrollY);
@@ -223,8 +255,20 @@
                     });
                 }
 
-                // Manejo de dropdown personalizado de estados (Workflow)
+                // Manejo de dropdown personalizado de estados (Workflow - Acordeón)
                 document.body.addEventListener('click', function(e) {
+                    // 1. Cabecera del acordeón
+                    const accordionHeader = e.target.closest('.wf-accordion-header');
+                    if (accordionHeader) {
+                        e.stopPropagation();
+                        const block = accordionHeader.closest('.wf-accordion-block');
+                        const isOpen = block.classList.contains('open');
+                        document.querySelectorAll('.wf-accordion-block').forEach(b => b.classList.remove('open'));
+                        if (!isOpen) block.classList.add('open');
+                        return;
+                    }
+
+                    // 2. Item de estado seleccionado
                     const item = e.target.closest('.filter-estado-item-workflow');
                     if (item) {
                         e.preventDefault();
@@ -236,24 +280,22 @@
 
                         if (hiddenInput && labelSpan) {
                             hiddenInput.value = value;
-                            labelSpan.textContent = label;
+                            labelSpan.textContent = label || 'Todos los estados';
 
                             document.querySelectorAll('.filter-estado-item-workflow').forEach(el => el.classList.remove('active'));
                             item.classList.add('active');
 
+                            // Redireccionar al bloque correspondiente si existe el ID
+                            const targetBlockId = item.dataset.blockId;
+                            
                             const dropdownBtn = document.getElementById('dropdownEstadoWorkflow');
                             if (dropdownBtn) {
                                 const bsDropdown = bootstrap.Dropdown.getInstance(dropdownBtn) || new bootstrap.Dropdown(dropdownBtn);
                                 if (bsDropdown) bsDropdown.hide();
                             }
 
-                            recargarKanban();
+                            recargarKanban(targetBlockId);
                         }
-                    }
-
-                    if (e.target.closest('.dropdown-submenu > .dropdown-toggle')) {
-                        e.stopPropagation();
-                        e.preventDefault();
                     }
                 });
             });

@@ -43,10 +43,15 @@ return new class extends Migration
             $table->foreignId('responsable_actual_id')->nullable()->constrained('usuarios');
             $table->text('observaciones')->nullable();
 
+            // SS: Mes de la última cuenta de Seguridad Social finalizada.
+            // Se actualiza OBLIGATORIAMENTE cada vez que la cuenta pasa de "Sin Tramite" → "En Revision".
+            $table->string('ss_ultima_cuenta', 20)->nullable()->default(null);
+
             // Campos de integración con el área de Hacienda (Post-radicación interna)
             $table->string('ultima_factura_hacienda', 50)->nullable();
             $table->dateTime('fecha_radicacion_hacienda')->nullable();
             $table->text('observacion_hacienda')->nullable();
+
 
             $table->softDeletes(); // Integridad: No borramos realmente, marcamos como eliminado.
             $table->timestamps();
@@ -57,6 +62,8 @@ return new class extends Migration
             $table->index('contrato_id');
             $table->index(['bloque_actual_id', 'estado_actual_id']);
             $table->index('finalizada');
+            $table->index('responsable_actual_id');
+            $table->index('updated_at');
         });
     }
 

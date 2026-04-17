@@ -1,115 +1,146 @@
 @extends('layouts.app')
 
-@section('title', 'Editar Rol Personalizado')
+@section('title', 'Editar Rol — ' . $role->nombre)
+
+@push('styles')
+    @vite(['resources/views/configuracion/configuracion.css'])
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+@endpush
 
 @section('page-content')
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-user-tag me-2"></i>Editar Rol Personalizado
-            </h1>
-            <a href="{{ route('configuracion.roles.index') }}" class="btn btn-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Volver
-            </a>
-        </div>
+    <div class="config-container">
+        {{-- HEADER PREMIUM --}}
+        <header class="config-header">
+            <div>
+                <h1>
+                    <i class="bi bi-shield-check"></i>
+                    Editar Perfil de Seguridad
+                </h1>
+                <p class="text-muted mb-0">Modificando privilegios para: <span class="fw-bold text-main">{{ $role->nombre }}</span></p>
+            </div>
+            <div>
+                <a href="{{ route('configuracion.roles.index') }}" class="btn-premium btn-premium-dark">
+                    <i class="bi bi-arrow-left"></i> Volver al Listado
+                </a>
+            </div>
+        </header>
 
         @if ($errors->any())
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <strong><i class="fas fa-exclamation-triangle me-2"></i>Por favor corrige los siguientes errores:</strong>
-                <ul class="mb-0 mt-2">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <div class="alert alert-danger border-0 shadow-sm mb-4 animate-fadeIn" style="border-radius: 12px; border-left: 5px solid #ef4444 !important; background: white;">
+                <div class="d-flex">
+                    <i class="bi bi-exclamation-triangle-fill text-danger fs-4 me-3"></i>
+                    <div>
+                        <strong class="d-block text-danger">Revise los siguientes errores:</strong>
+                        <ul class="mb-0 small text-muted ps-3 mt-1">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
             </div>
         @endif
 
-        <div class="card shadow mb-4">
-            <div class="card-body">
+        <div class="premium-card">
+            <div class="card-body p-4 p-md-5">
                 <form action="{{ route('configuracion.roles.update', $role->id) }}" method="POST">
                     @csrf
                     @method('PUT')
 
-                    <!-- Basic Info -->
-                    <div class="row mb-4">
-                        <div class="col-md-6 mb-3">
-                            <label for="nombre" class="form-label">Nombre del Rol <span
-                                    class="text-danger">*</span></label>
-                            <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombre"
-                                name="nombre" value="{{ old('nombre', $role->nombre) }}" required
-                                placeholder="Ej: Auditor Financiero">
+                    <!-- 1. INFORMACIÓN BÁSICA -->
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-5">
+                            <label for="nombre" class="premium-label">Nombre del Rol <span class="text-danger">*</span></label>
+                            <input type="text" class="premium-input @error('nombre') is-invalid @enderror" id="nombre"
+                                name="nombre" value="{{ old('nombre', $role->nombre) }}" required placeholder="Ej: Auditor de Cuentas">
                             @error('nombre')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="descripcion" name="descripcion" rows="1"
-                                placeholder="Breve descripción del propósito del rol">{{ old('descripcion', $role->descripcion) }}</textarea>
+                        <div class="col-md-7">
+                            <label for="descripcion" class="premium-label">Descripción del Perfil</label>
+                            <textarea class="premium-input" id="descripcion" name="descripcion" rows="1"
+                                placeholder="Describa brevemente las responsabilidades de este rol" style="height: 46px;">{{ old('descripcion', $role->descripcion) }}</textarea>
                         </div>
                     </div>
 
-                    <!-- Data Restrictions -->
-                    <div class="card bg-light border-0 mb-4">
-                        <div class="card-body">
-                            <h6 class="fw-bold text-primary mb-3"><i class="fas fa-filter me-2"></i>Restricciones de Datos y
-                                Workflow</h6>
+                    <!-- 2. RESTRICCIONES Y WORKFLOW -->
+                    <div class="mb-5">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="rounded-circle bg-primary text-white p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                <i class="bi bi-filter-circle-fill"></i>
+                            </div>
+                            <h5 class="mb-0 fw-bold">Restricciones de Datos y Workflow</h5>
+                        </div>
 
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <div class="form-check mb-3">
+                        <div class="row g-4">
+                            <div class="col-lg-6">
+                                <div class="bg-light p-4 rounded-4 h-100">
+                                    <h6 class="fw-bold mb-3 text-main">Visibilidad de Información</h6>
+                                    
+                                    <div class="form-check mb-4 custom-check">
                                         <input class="form-check-input" type="checkbox" name="ver_solo_asignados"
-                                            id="ver_solo_asignados" value="1"
+                                            id="ver_solo_asignados" value="1" 
                                             {{ old('ver_solo_asignados', $role->lista_permisos['ver_solo_asignados'] ?? false) ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-bold" for="ver_solo_asignados">
-                                            Ver solo mis asignaciones
-                                        </label>
-                                        <small class="d-block text-muted">
-                                            Si se activa, el usuario solo verá las cuentas donde es responsable actual.
-                                        </small>
-                                    </div>
-
-                                    <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" name="es_responsable_sap"
-                                            id="es_responsable_sap" value="1"
-                                            {{ old('es_responsable_sap', $role->lista_permisos['responsable_sap'] ?? false) ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-bold" for="es_responsable_sap">
-                                            Es Responsable SAP
+                                        <label class="form-check-label fw-bold d-block" for="ver_solo_asignados">
+                                            Privacidad Estricta (Solo Asignados)
+                                            <span class="d-block text-muted fw-normal extra-small">El usuario solo verá las cuentas donde es el responsable actual.</span>
                                         </label>
                                     </div>
 
-                                    <div class="form-check mb-2">
-                                        <input class="form-check-input" type="checkbox" name="es_responsable_facturacion"
-                                            id="es_responsable_facturacion" value="1"
-                                            {{ old('es_responsable_facturacion', $role->lista_permisos['responsable_facturacion'] ?? false) ? 'checked' : '' }}>
-                                        <label class="form-check-label fw-bold" for="es_responsable_facturacion">
-                                            Es Responsable Facturación
+                                    <div class="form-check mb-4 custom-check">
+                                        <input class="form-check-input" type="checkbox" name="ver_solo_bloques_con_asignacion"
+                                            id="ver_solo_bloques_con_asignacion" value="1"
+                                            {{ old('ver_solo_bloques_con_asignacion', $role->lista_permisos['ver_solo_bloques_con_asignacion'] ?? false) ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold d-block" for="ver_solo_bloques_con_asignacion">
+                                            Filtrado Automático de Columnas
+                                            <span class="d-block text-muted fw-normal extra-small">Solo se mostrarán los bloques en los que el usuario tenga carga activa.</span>
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check mb-4 custom-check">
+                                        <input class="form-check-input" type="checkbox" name="receptor_automatico_bloque_6"
+                                            id="receptor_automatico_bloque_6" value="1"
+                                            {{ old('receptor_automatico_bloque_6', $role->lista_permisos['receptor_automatico_bloque_6'] ?? false) ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold d-block" for="receptor_automatico_bloque_6">
+                                            Balanceo Automático (Bloque 6)
+                                            <span class="d-block text-muted fw-normal extra-small">Incluir a este perfil en la distribución automática de cuentas.</span>
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check custom-check">
+                                        <input class="form-check-input" type="checkbox" name="acceder_notificaciones"
+                                            id="acceder_notificaciones" value="1"
+                                            {{ old('acceder_notificaciones', $role->lista_permisos['acceder_notificaciones'] ?? true) ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold d-block" for="acceder_notificaciones">
+                                            Panel de Notificaciones Activo
+                                            <span class="d-block text-muted fw-normal extra-small">Habilita la campana de alertas y el centro de mensajes.</span>
                                         </label>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold mb-2">Bloques del Workflow permitidos</label>
-                                    <div class="form-check mb-2">
+                            <div class="col-lg-6">
+                                <div class="bg-light p-4 rounded-4 h-100">
+                                    <h6 class="fw-bold mb-3 text-main">Acceso a Bloques del Workflow</h6>
+                                    
+                                    <div class="form-check mb-3 custom-check">
                                         <input class="form-check-input" type="checkbox" name="bloques_all" id="bloques_all"
-                                            value="1"
-                                            {{ (is_array($role->lista_permisos['bloques_permitidos'] ?? null) && count($role->lista_permisos['bloques_permitidos']) == 0) || $role->lista_permisos['bloques_permitidos'] === true ? 'checked' : '' }}
+                                            value="1" 
+                                            {{ (($role->lista_permisos['bloques_permitidos'] ?? true) === true) ? 'checked' : '' }}
                                             onchange="toggleBloquesSelection()">
-                                        <label class="form-check-label" for="bloques_all">Todos los bloques (Sin
-                                            restricción)</label>
+                                        <label class="form-check-label fw-bold" for="bloques_all">Acceso Total (Todos los Bloques)</label>
                                     </div>
 
-                                    <div id="bloques_selection" class="card card-body p-2"
-                                        style="max-height: 150px; overflow-y: auto;"
-                                        {{ (is_array($role->lista_permisos['bloques_permitidos'] ?? null) && count($role->lista_permisos['bloques_permitidos']) == 0) || $role->lista_permisos['bloques_permitidos'] === true ? 'style=display:none;' : '' }}>
+                                    <div id="bloques_selection" class="mt-3 ps-4 border-start border-2 border-primary-subtle vstack gap-2" 
+                                         style="max-height: 200px; overflow-y: auto; {{ (($role->lista_permisos['bloques_permitidos'] ?? true) === true) ? 'opacity: 0.3; pointer-events: none;' : '' }}">
                                         @foreach ($bloques as $bloque)
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="bloques_permitidos[]"
                                                     value="{{ $bloque->codigo }}" id="bloque_{{ $bloque->codigo }}"
                                                     {{ in_array($bloque->codigo, is_array($role->lista_permisos['bloques_permitidos'] ?? null) ? $role->lista_permisos['bloques_permitidos'] : []) ? 'checked' : '' }}>
                                                 <label class="form-check-label small" for="bloque_{{ $bloque->codigo }}">
-                                                    {{ $bloque->nombre }}
+                                                    {{ $bloque->nombre }} <span class="text-muted extra-small">({{ $bloque->codigo }})</span>
                                                 </label>
                                             </div>
                                         @endforeach
@@ -119,255 +150,205 @@
                         </div>
                     </div>
 
-                    <!-- Permissions Matrix -->
-                    <h5 class="mb-3 text-primary"><i class="fas fa-shield-alt me-2"></i>Matriz de Permisos</h5>
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover">
-                            <thead class="table-light text-center">
-                                <tr>
-                                    <th class="text-start" style="width: 30%">Módulo / Vista</th>
-                                    <th style="width: 15%">Ver <br><small class="text-muted">(Lectura)</small></th>
-                                    <th style="width: 15%">Crear <br><small class="text-muted">(Insertar)</small></th>
-                                    <th style="width: 15%">Editar <br><small class="text-muted">(Actualizar)</small></th>
-                                    <th style="width: 15%">Eliminar <br><small class="text-muted">(Borrar)</small></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Dashboard -->
-                                <tr data-module="dashboard">
-                                    <td class="fw-bold">
-                                        <i class="fas fa-tachometer-alt me-2 text-info"></i>Panel de Control (Dashboard)
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[dashboard][view]" value="1"
-                                                {{ $role->lista_permisos['acceder_dashboard'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                        <small class="d-block text-muted mt-1">Gestión</small>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[dashboard][edit]" value="1"
-                                                {{ $role->lista_permisos['editar_dashboard'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                </tr>
-                                <!-- Consolidated View Extra Row -->
-                                <tr data-module="dashboard_consolidado">
-                                    <td class="ps-4 text-muted">
-                                        <i class="fas fa-eye me-2"></i>Vista Consolidada (Solo Lectura)
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input" type="checkbox"
-                                                name="permisos_matrix[dashboard][readonly]" value="1"
-                                                {{ $role->lista_permisos['acceder_consolidado'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td colspan="3" class="bg-light"></td>
-                                </tr>
+                    <!-- 3. RESPONSABLE DE BLOQUES -->
+                    <div class="mb-5">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="rounded-circle bg-primary text-white p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                <i class="bi bi-person-badge-fill"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-0 fw-bold">Responsabilidades de Procesamiento</h5>
+                                <p class="text-muted extra-small mb-0">Seleccione los bloques donde este rol actuará como operador directo</p>
+                            </div>
+                        </div>
 
-
-                                <!-- Users -->
-                                <tr data-module="users">
-                                    <td class="fw-bold">
-                                        <i class="fas fa-users me-2 text-info"></i>Usuarios y Roles
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[users][view]" value="1"
-                                                {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
+                        <div class="row g-3">
+                            @foreach ($bloques->where('orden', '<', 6) as $bloque)
+                                <div class="col-md-4 col-xl-3">
+                                    <div class="card border-0 shadow-sm rounded-4 h-100 p-2 role-block-card {{ in_array($bloque->codigo, $role->lista_permisos['responsables_bloque'] ?? []) ? 'border-primary-subtle bg-primary-subtle' : '' }}">
+                                        <div class="card-body py-2">
+                                            <div class="form-check custom-check m-0">
+                                                <input class="form-check-input" type="checkbox" name="responsables_bloque[]"
+                                                    value="{{ $bloque->codigo }}" id="resp_bloque_{{ $bloque->codigo }}"
+                                                    {{ in_array($bloque->codigo, $role->lista_permisos['responsables_bloque'] ?? []) ? 'checked' : '' }}>
+                                                <label class="form-check-label fw-bold small ms-2" for="resp_bloque_{{ $bloque->codigo }}">
+                                                    {{ $bloque->nombre }}
+                                                </label>
+                                            </div>
                                         </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[users][create]" value="1"
-                                                {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[users][edit]" value="1"
-                                                {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[users][delete]" value="1"
-                                                {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <!-- Workflow -->
-                                <tr data-module="workflow">
-                                    <td class="fw-bold">
-                                        <i class="fas fa-project-diagram me-2 text-info"></i>Workflow
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[workflow][view]" value="1"
-                                                {{ $role->lista_permisos['acceder_workflow'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[workflow][edit]" value="1"
-                                                {{ $role->lista_permisos['editar_workflow'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                </tr>
-
-                                <!-- Contracts / Expedientes -->
-                                <tr data-module="seguimiento">
-                                    <td class="fw-bold">
-                                         <i class="fas fa-file-contract me-2 text-info"></i>Gestión de Expedientes y Cuentas de Cobro
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[seguimiento][view]" value="1"
-                                                {{ ($role->lista_permisos['contratos_ver'] ?? false) || ($role->lista_permisos['cuentas_ver'] ?? false) ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[seguimiento][edit]" value="1"
-                                                {{ ($role->lista_permisos['contratos_editar'] ?? false) || ($role->lista_permisos['cuentas_editar'] ?? false) ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                </tr>
-
-                                <!-- Seguimiento SECOP (SIA OBSERVA) -->
-                                <tr data-module="seguimiento_secop">
-                                    <td class="fw-bold">
-                                        Seguimiento SECOP (SIA OBSERVA)
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[seguimiento_secop][view]" value="1"
-                                                {{ $role->lista_permisos['ver_seguimiento_secop'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[seguimiento_secop][edit]" value="1"
-                                                {{ $role->lista_permisos['editar_seguimiento_secop'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                </tr>
-
-                                <!-- Reports -->
-                                <tr data-module="reports">
-                                    <td class="fw-bold">
-                                        <i class="fas fa-chart-line me-2 text-info"></i>Reportes
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input" type="checkbox"
-                                                name="permisos_matrix[reports][view]" value="1" disabled checked>
-                                        </div>
-                                        <small class="text-muted">Visualizar</small>
-                                    </td>
-                                    <td colspan="3" class="text-start ps-5">
-                                        <div class="form-check mb-0">
-                                            <input class="form-check-input" type="checkbox"
-                                                name="permisos_matrix[reports][export]" value="1"
-                                                id="export_reports"
-                                                {{ $role->lista_permisos['reportes_exportar'] ?? false ? 'checked' : '' }}>
-                                            <label class="form-check-label" for="export_reports">Puede Exportar
-                                                Excel</label>
-                                        </div>
-                                    </td>
-                                </tr>
-
-                                <!-- Analitica -->
-                                <tr data-module="analitica">
-                                    <td class="fw-bold">
-                                        <i class="fas fa-chart-bar me-2 text-info"></i>Analítica / Estadísticas
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[analitica][view]" value="1"
-                                                {{ $role->lista_permisos['ver_analitica'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td colspan="3" class="bg-light"></td>
-                                </tr>
-
-                                <!-- Configuración -->
-                                <tr data-module="config">
-                                    <td class="fw-bold">
-                                        <i class="fas fa-cogs me-2 text-info"></i>Configuración del Sistema
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-view" type="checkbox"
-                                                name="permisos_matrix[config][view]" value="1"
-                                                {{ $role->lista_permisos['ver_configuracion'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="form-check d-flex justify-content-center">
-                                            <input class="form-check-input perm-action" type="checkbox"
-                                                name="permisos_matrix[config][edit]" value="1"
-                                                {{ $role->lista_permisos['editar_configuracion'] ?? false ? 'checked' : '' }}>
-                                        </div>
-                                    </td>
-                                    <td class="text-center bg-light">
-                                        <small class="text-muted">N/A</small>
-                                    </td>
-                                </tr>
-
-                            </tbody>
-                        </table>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
                     </div>
 
-                    <div class="d-flex justify-content-end gap-2 mt-4">
-                        <a href="{{ route('configuracion.roles.index') }}" class="btn btn-secondary">
-                            <i class="fas fa-times me-2"></i>Cancelar
+                    <!-- 4. PERMISSIONS MATRIX -->
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <div class="rounded-circle bg-primary text-white p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                                <i class="bi bi-grid-3x3-gap-fill"></i>
+                            </div>
+                            <h5 class="mb-0 fw-bold">Matriz de Privilegios del Sistema</h5>
+                        </div>
+
+                        <div class="matrix-table shadow-sm">
+                            <table class="premium-table mb-0">
+                                <thead>
+                                    <tr class="text-center">
+                                        <th class="text-start ps-4" style="width: 35%">Módulo / Funcionalidad</th>
+                                        <th style="width: 16%">Visualizar</th>
+                                        <th style="width: 16%">Crear</th>
+                                        <th style="width: 16%">Editar</th>
+                                        <th style="width: 17%">Especiales</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dashboard -->
+                                    <tr data-module="dashboard">
+                                        <td class="ps-4 fw-bold"><i class="bi bi-speedometer2 me-2 text-primary"></i>Panel de Control (Dashboard)</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-view" type="checkbox" name="permisos_matrix[dashboard][view]" value="1"
+                                                    {{ $role->lista_permisos['acceder_dashboard'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center bg-light-subtle small text-muted">N/A</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[dashboard][edit]" value="1"
+                                                    {{ $role->lista_permisos['editar_dashboard'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center align-items-center gap-2">
+                                                <input class="form-check-input" type="checkbox" name="permisos_matrix[dashboard][readonly]" id="cons_readonly" value="1"
+                                                    {{ $role->lista_permisos['acceder_consolidado'] ?? false ? 'checked' : '' }}>
+                                                <label class="small extra-small m-0 text-muted" for="cons_readonly">Solo Consolidado</label>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Users -->
+                                    <tr data-module="users">
+                                        <td class="ps-4 fw-bold"><i class="bi bi-people me-2 text-primary"></i>Usuarios y Seguridad</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-view" type="checkbox" name="permisos_matrix[users][view]" value="1"
+                                                    {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[users][create]" value="1"
+                                                    {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[users][edit]" value="1"
+                                                    {{ $role->lista_permisos['usuarios_gestionar'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center align-items-center gap-2">
+                                                <input class="form-check-input" type="checkbox" name="permisos_matrix[users][admin]" id="full_admin" value="1"
+                                                    {{ $role->lista_permisos['es_admin'] ?? false ? 'checked' : '' }}>
+                                                <label class="small extra-small m-0 text-danger fw-bold" for="full_admin">Acceso Admin</label>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Workflow -->
+                                    <tr data-module="workflow">
+                                        <td class="ps-4 fw-bold"><i class="bi bi-diagram-3 me-2 text-primary"></i>Flujo de Trabajo (Workflow)</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-view" type="checkbox" name="permisos_matrix[workflow][view]" value="1"
+                                                    {{ $role->lista_permisos['acceder_workflow'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center bg-light-subtle small text-muted">N/A</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[workflow][edit]" value="1"
+                                                    {{ $role->lista_permisos['editar_workflow'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center small text-muted">-</td>
+                                    </tr>
+
+                                    <!-- Seguimiento -->
+                                    <tr data-module="seguimiento">
+                                        <td class="ps-4 fw-bold"><i class="bi bi-file-earmark-spreadsheet me-2 text-primary"></i>Expedientes y Cuentas</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-view" type="checkbox" name="permisos_matrix[seguimiento][view]" value="1"
+                                                    {{ ($role->lista_permisos['contratos_ver'] ?? false) || ($role->lista_permisos['cuentas_ver'] ?? false) ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center bg-light-subtle small text-muted">N/A</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[seguimiento][edit]" value="1"
+                                                    {{ ($role->lista_permisos['contratos_editar'] ?? false) || ($role->lista_permisos['cuentas_editar'] ?? false) ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center small text-muted">-</td>
+                                    </tr>
+
+                                    <!-- Reports -->
+                                    <tr data-module="reports">
+                                        <td class="ps-4 fw-bold"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Reportes y Estadísticas</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input" type="checkbox" name="permisos_matrix[reports][view]" value="1" disabled checked>
+                                            </div>
+                                        </td>
+                                        <td colspan="2" class="text-center border-start border-end">
+                                            <div class="form-check d-inline-block">
+                                                <input class="form-check-input" type="checkbox" name="permisos_matrix[reports][export]" id="e_reports" value="1"
+                                                    {{ $role->lista_permisos['reportes_exportar'] ?? false ? 'checked' : '' }}>
+                                                <label class="small m-0 text-muted" for="e_reports">Exportar Data (Excel/PDF)</label>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-inline-block">
+                                                <input class="form-check-input perm-view" type="checkbox" name="permisos_matrix[analitica][view]" id="v_analitica" value="1"
+                                                    {{ $role->lista_permisos['ver_analitica'] ?? false ? 'checked' : '' }}>
+                                                <label class="small m-0 text-muted" for="v_analitica">Analítica</label>
+                                            </div>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Config -->
+                                    <tr data-module="config">
+                                        <td class="ps-4 fw-bold"><i class="bi bi-gear-wide-connected me-2 text-primary"></i>Configuración Global</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-view" type="checkbox" name="permisos_matrix[config][view]" value="1"
+                                                    {{ $role->lista_permisos['ver_configuracion'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center bg-light-subtle small text-muted">N/A</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[config][edit]" value="1"
+                                                    {{ $role->lista_permisos['editar_configuracion'] ?? false ? 'checked' : '' }}>
+                                            </div>
+                                        </td>
+                                        <td class="text-center small text-muted">-</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-3 mt-5 border-top pt-4">
+                        <a href="{{ route('configuracion.roles.index') }}" class="btn btn-outline-secondary px-4 py-2" style="border-radius: 12px;">
+                            Cancelar
                         </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save me-2"></i>Actualizar Rol
+                        <button type="submit" class="btn-premium btn-premium-primary px-5">
+                            <i class="bi bi-check-circle"></i> Actualizar Perfil
                         </button>
                     </div>
                 </form>
@@ -380,11 +361,8 @@
             const allCheckbox = document.getElementById('bloques_all');
             const selectionDiv = document.getElementById('bloques_selection');
             if (allCheckbox && selectionDiv) {
-                if (allCheckbox.checked) {
-                    selectionDiv.style.display = 'none';
-                } else {
-                    selectionDiv.style.display = 'block';
-                }
+                selectionDiv.style.opacity = allCheckbox.checked ? '0.3' : '1';
+                selectionDiv.style.pointerEvents = allCheckbox.checked ? 'none' : 'auto';
             }
         }
 
@@ -396,24 +374,18 @@
                 const actionCheckboxes = row.querySelectorAll('.perm-action');
 
                 if (viewCheckbox && actionCheckboxes.length > 0) {
-
-                    // Initial State: Disable actions if view is unchecked
                     updateState(viewCheckbox, actionCheckboxes);
 
-                    // Change on View Click
                     viewCheckbox.addEventListener('change', function() {
                         updateState(this, actionCheckboxes);
                         if (!this.checked) {
-                            // Uncheck all actions if view is disabled
                             actionCheckboxes.forEach(cb => cb.checked = false);
                         }
                     });
 
-                    // Change on Action Click
                     actionCheckboxes.forEach(actionCb => {
                         actionCb.addEventListener('change', function() {
                             if (this.checked) {
-                                // If action checked, force view checked
                                 viewCheckbox.checked = true;
                                 updateState(viewCheckbox, actionCheckboxes);
                             }
@@ -423,30 +395,39 @@
             });
 
             function updateState(viewCb, actionCbs) {
+                const row = viewCb.closest('tr');
                 if (!viewCb.checked) {
                     actionCbs.forEach(cb => {
-                        cb.closest('.form-check').style.opacity = '0.5';
+                        cb.closest('.form-check').style.opacity = '0.3';
                     });
-                    viewCb.closest('tr').classList.add('table-light');
+                    row.style.background = '#F8FAFC';
                 } else {
                     actionCbs.forEach(cb => {
                         cb.closest('.form-check').style.opacity = '1';
                     });
-                    viewCb.closest('tr').classList.remove('table-light');
+                    row.style.background = 'white';
                 }
             }
-        });
-
-        // Trigger Snackbar for server-side messages
-        document.addEventListener('DOMContentLoaded', function() {
-            @if (session('success'))
-                window.showSnackbar("{{ session('success') }}", 'success');
-            @endif
-
-            @if ($errors->any())
-                let errorMsg = "Por favor corrija los errores en el formulario.";
-                window.showSnackbar(errorMsg, 'error');
-            @endif
+            
+            toggleBloquesSelection();
         });
     </script>
+    
+    <style>
+        .role-block-card {
+            transition: all 0.2s;
+            border: 1px solid transparent !important;
+        }
+        .role-block-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary) !important;
+        }
+        .custom-check .form-check-input {
+            width: 1.25em;
+            height: 1.25em;
+            margin-top: 0.15em;
+            cursor: pointer;
+        }
+    </style>
 @endsection
+

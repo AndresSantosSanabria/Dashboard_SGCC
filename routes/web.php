@@ -60,6 +60,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/seguimiento', [\App\Http\Controllers\SeguimientoController::class, 'index'])->name('seguimiento.index');
     Route::get('/seguimiento/export', [\App\Http\Controllers\SeguimientoController::class, 'export'])->name('seguimiento.export');
     Route::post('/seguimiento/status', [\App\Http\Controllers\SeguimientoController::class, 'updateStatus'])->name('seguimiento.update-status');
+    Route::post('/seguimiento/batch-update', [\App\Http\Controllers\SeguimientoController::class, 'batchUpdate'])->name('seguimiento.batch-update');
     Route::post('/seguimiento/store', [\App\Http\Controllers\SeguimientoController::class, 'store'])->name('seguimiento.store');
     Route::put('/seguimiento/{id}', [\App\Http\Controllers\SeguimientoController::class, 'update'])->name('seguimiento.update');
     Route::delete('/seguimiento/{contrato}', [\App\Http\Controllers\SeguimientoController::class, 'destroy'])->name('seguimiento.destroy');
@@ -77,7 +78,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/workflow/cambiar-estado/{cuenta}', [WorkflowController::class, 'cambiarEstado'])->name('workflow.cambiar-estado');
     Route::post('/workflow/asignar-responsable/{cuenta}', [WorkflowController::class, 'assignResponsible'])->name('workflow.asignar-responsable');
     Route::get('/workflow/historial/{cuenta}', [WorkflowController::class, 'getHistorial'])->name('workflow.historial');
-    Route::get('/workflow/usuarios-responsables/{estadoCodigo}', [WorkflowController::class, 'getUsuariosResponsables'])->name('workflow.usuarios-responsables');
+    Route::get('/workflow/usuarios-responsables', [WorkflowController::class, 'getUsuariosResponsables'])->name('workflow.usuarios-responsables');
+    Route::post('/workflow/sync-timer', [WorkflowController::class, 'syncTimer'])->name('workflow.sync-timer');
     Route::post('/workflow/iniciar-siguiente-cuenta/{cuenta}', [WorkflowController::class, 'iniciarSiguienteCuenta'])->name('workflow.iniciar-siguiente-cuenta');
 });
 

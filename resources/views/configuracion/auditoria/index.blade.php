@@ -1,274 +1,282 @@
 @extends('layouts.app')
 
-@section('title', 'Historial de Auditoría')
+@section('title', 'Trazabilidad y Auditoría — SGCC')
+
+@push('styles')
+    @vite(['resources/views/configuracion/configuracion.css'])
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        .filter-glass {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+        .audit-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: 800;
+            background: #F1F5F9;
+            color: #475569;
+            border: 1px solid #E2E8F0;
+        }
+        .json-viewer {
+            padding: 1rem;
+            background: #1E293B;
+            color: #94A3B8;
+            font-family: 'JetBrains Mono', 'Fira Code', monospace;
+            font-size: 0.75rem;
+            border-radius: 12px;
+            overflow: auto;
+            max-height: 400px;
+        }
+        .json-viewer .key { color: #818CF8; }
+        .json-viewer .string { color: #34D399; }
+        .json-viewer .number { color: #FBBF24; }
+    </style>
+@endpush
 
 @section('page-content')
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-history me-2"></i>Historial de Auditoría
-            </h1>
-            <a href="{{ route('configuracion.index') }}" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left me-2"></i>Volver a Usuarios
-            </a>
-        </div>
-
-        @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <div class="config-container">
+        {{-- HEADER --}}
+        <header class="config-header">
+            <div>
+                <h1>
+                    <i class="bi bi-shield-check-fill text-primary"></i>
+                    Bitácora de Auditoría
+                </h1>
+                <p class="text-muted mb-0">Seguimiento detallado de operaciones, cambios de estado y registros técnicos.</p>
             </div>
-        @endif
+            <div>
+                <a href="{{ route('configuracion.index') }}" class="btn-premium btn-premium-dark">
+                    <i class="bi bi-chevron-left"></i> Volver
+                </a>
+            </div>
+        </header>
 
-        {{-- Filtros --}}
-        <div class="card shadow mb-4">
-            <div class="card-body">
-                <form action="{{ route('configuracion.auditoria.index') }}" method="GET" class="row g-3 align-items-end">
-                    <div class="col-md-3">
-                        <label class="form-label small fw-bold">Tabla</label>
-                        <select name="tabla" class="form-select">
-                            <option value="">Todas las tablas</option>
-                            @foreach($tablas as $tabla)
-                                <option value="{{ $tabla }}" {{ request('tabla') == $tabla ? 'selected' : '' }}>
-                                    {{ ucfirst($tabla) }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label small fw-bold">Acción</label>
-                        <select name="accion" class="form-select">
-                            <option value="">Todas las acciones</option>
-                            <optgroup label="💾 Operaciones de Datos">
-                                <option value="INSERT" {{ request('accion') == 'INSERT' ? 'selected' : '' }}>INSERT</option>
-                                <option value="UPDATE" {{ request('accion') == 'UPDATE' ? 'selected' : '' }}>UPDATE</option>
-                                <option value="DELETE" {{ request('accion') == 'DELETE' ? 'selected' : '' }}>DELETE</option>
-                                <option value="READ" {{ request('accion') == 'READ' ? 'selected' : '' }}>READ</option>
-                            </optgroup>
-                            <optgroup label="⚙️ Eventos de Workflow">
-                                <option value="WORKFLOW_TRANSICION" {{ request('accion') == 'WORKFLOW_TRANSICION' ? 'selected' : '' }}>&#x1F504; Transición</option>
-                                <option value="WORKFLOW_DEVOLUCION" {{ request('accion') == 'WORKFLOW_DEVOLUCION' ? 'selected' : '' }}>&#x21B5; Devolución</option>
-                                <option value="WORKFLOW_AUTO" {{ request('accion') == 'WORKFLOW_AUTO' ? 'selected' : '' }}>&#x26A1; Paso Automático</option>
-                                <option value="WORKFLOW_NUEVO_CICLO" {{ request('accion') == 'WORKFLOW_NUEVO_CICLO' ? 'selected' : '' }}>&#x25B6; Nuevo Ciclo</option>
-                                <option value="WORKFLOW_TRANSITION_REJECTED" {{ request('accion') == 'WORKFLOW_TRANSITION_REJECTED' ? 'selected' : '' }}>&#x274C; Transición Rechazada</option>
-                                <option value="WORKFLOW_ERROR" {{ request('accion') == 'WORKFLOW_ERROR' ? 'selected' : '' }}>&#x1F534; Error Workflow</option>
-                            </optgroup>
-                            <optgroup label="&#x26A0; Fallos del Sistema">
-                                <option value="FAILURE" {{ request('accion') == 'FAILURE' ? 'selected' : '' }}>&#x26A0;&#xFE0F; TODOS LOS FALLOS</option>
-                                <option value="FAILURE_DATABASE" {{ request('accion') == 'FAILURE_DATABASE' ? 'selected' : '' }}>&#x1F534; FALLOS BD (QueryException)</option>
-                                <option value="FAILURE_SERVER" {{ request('accion') == 'FAILURE_SERVER' ? 'selected' : '' }}>&#x1F7E0; FALLOS SERVIDOR (500)</option>
-                            </optgroup>
-                        </select>
-                    </div>
-                    <div class="col-md-4 d-flex gap-2">
-                        <button type="submit" class="btn btn-primary flex-grow-1">
-                            <i class="fas fa-filter me-2"></i>Filtrar
+        {{-- FILTROS PREMIUM --}}
+        <div class="filter-glass animate-fadeInDown">
+            <form action="{{ route('configuracion.auditoria.index') }}" method="GET" class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="premium-label small">Entidad / Tabla Afectada</label>
+                    <select name="tabla" class="premium-select">
+                        <option value="">Todas las entidades</option>
+                        @foreach($tablas as $tabla)
+                            <option value="{{ $tabla }}" {{ request('tabla') == $tabla ? 'selected' : '' }}>
+                                {{ strtoupper($tabla) }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="premium-label small">Tipo de Acción o Evento</label>
+                    <select name="accion" class="premium-select">
+                        <option value="">Cualquier tipo de acción</option>
+                        <optgroup label="💾 Operaciones de Persistencia">
+                            <option value="INSERT" {{ request('accion') == 'INSERT' ? 'selected' : '' }}>📥 INSERT</option>
+                            <option value="UPDATE" {{ request('accion') == 'UPDATE' ? 'selected' : '' }}>📝 UPDATE</option>
+                            <option value="DELETE" {{ request('accion') == 'DELETE' ? 'selected' : '' }}>🗑️ DELETE</option>
+                        </optgroup>
+                        <optgroup label="⚙️ Lógica de Workflow">
+                            <option value="WORKFLOW_TRANSICION" {{ request('accion') == 'WORKFLOW_TRANSICION' ? 'selected' : '' }}>🔄 Transición</option>
+                            <option value="WORKFLOW_DEVOLUCION" {{ request('accion') == 'WORKFLOW_DEVOLUCION' ? 'selected' : '' }}>↩️ Devolución</option>
+                            <option value="WORKFLOW_AUTO" {{ request('accion') == 'WORKFLOW_AUTO' ? 'selected' : '' }}>⚡ Paso Automático</option>
+                        </optgroup>
+                        <optgroup label="⚠️ Diagnóstico de Fallos">
+                            <option value="FAILURE" {{ request('accion') == 'FAILURE' ? 'selected' : '' }}>🆘 TODOS LOS FALLOS</option>
+                            <option value="FAILURE_DATABASE" {{ request('FAILURE_DATABASE') == 'FAILURE_DATABASE' ? 'selected' : '' }}>🗄️ FALLOS BD</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn-premium btn-premium-primary flex-grow-1">
+                            <i class="bi bi-funnel-fill"></i> Aplicar Filtros
                         </button>
-                        <a href="{{ route('configuracion.auditoria.index') }}" class="btn btn-light">
-                            <i class="fas fa-undo"></i>
+                        <a href="{{ route('configuracion.auditoria.index') }}" class="btn-premium btn-premium-secondary" title="Limpiar Filtros">
+                            <i class="bi bi-arrow-counterclockwise"></i>
                         </a>
                     </div>
-                </form>
-            </div>
+                </div>
+            </form>
         </div>
 
-        {{-- Tabla de Auditoría --}}
-        <div class="card shadow mb-4">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="bg-light">
+        {{-- TABLA DE AUDITORÍA --}}
+        <div class="premium-card animate-fadeIn">
+            <div class="table-responsive">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th class="ps-4" style="width: 180px">Timestamp</th>
+                            <th>Agente Ejecutor</th>
+                            <th>Contexto Operativo</th>
+                            <th>Registro</th>
+                            <th>Acción</th>
+                            <th class="text-center">IP</th>
+                            <th class="text-end pe-4">Detalles</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($auditorias as $auditoria)
                             <tr>
-                                <th class="ps-4">Fecha / Hora</th>
-                                <th>Usuario</th>
-                                <th>Tabla</th>
-                                <th>ID Registro</th>
-                                <th>Acción</th>
-                                <th>IP</th>
-                                <th class="text-end pe-4">Detalles</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($auditorias as $auditoria)
-                                <tr>
-                                    <td class="ps-4">
-                                        <div class="fw-bold">{{ $auditoria->created_at->format('d/m/Y') }}</div>
-                                        <div class="small text-muted">{{ $auditoria->created_at->format('H:i:s') }}</div>
-                                    </td>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px; font-size: 0.8rem;">
-                                                {{ strtoupper(substr($auditoria->usuario->primer_nombre ?? 'S', 0, 1)) }}{{ strtoupper(substr($auditoria->usuario->primer_apellido ?? 'I', 0, 1)) }}
-                                            </div>
-                                            <div>
-                                                <div class="fw-semibold small">{{ $auditoria->usuario->nombre_completo ?? 'Sistema' }}</div>
-                                                <div class="text-muted tiny" style="font-size: 0.7rem;">{{ $auditoria->usuario->user ?? 'cron' }}</div>
-                                            </div>
+                                <td class="ps-4">
+                                    <div class="d-flex flex-column">
+                                        <span class="fw-bold text-main" style="font-size: 0.85rem;">{{ $auditoria->created_at->format('d/m/Y') }}</span>
+                                        <span class="text-muted extra-small">{{ $auditoria->created_at->format('H:i:s') }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="audit-avatar">
+                                            {{ strtoupper(substr($auditoria->usuario->primer_nombre ?? 'S', 0, 1)) }}{{ strtoupper(substr($auditoria->usuario->primer_apellido ?? 'I', 0, 1)) }}
                                         </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark border">{{ $auditoria->tabla_afectada }}</span>
-                                    </td>
-                                    <td>
-                                        <code>#{{ $auditoria->registro_id }}</code>
-                                    </td>
-                                    <td>
-                                        @php
-                                            $badgeClass = match(true) {
-                                                $auditoria->accion === 'INSERT'                          => 'bg-success',
-                                                $auditoria->accion === 'UPDATE'                          => 'bg-info',
-                                                $auditoria->accion === 'DELETE'                          => 'bg-danger',
-                                                $auditoria->accion === 'READ'                            => 'bg-secondary',
-                                                $auditoria->accion === 'WORKFLOW_TRANSICION'             => 'bg-primary',
-                                                $auditoria->accion === 'WORKFLOW_DEVOLUCION'             => 'bg-warning text-dark',
-                                                $auditoria->accion === 'WORKFLOW_AUTO'                   => 'bg-info text-dark',
-                                                $auditoria->accion === 'WORKFLOW_NUEVO_CICLO'            => 'bg-success',
-                                                $auditoria->accion === 'WORKFLOW_TRANSITION_REJECTED'    => 'bg-danger',
-                                                $auditoria->accion === 'WORKFLOW_ERROR'                  => 'bg-danger',
-                                                $auditoria->accion === 'FAILURE_DATABASE'                => 'bg-danger',
-                                                $auditoria->accion === 'FAILURE_SERVER'                  => 'bg-warning text-dark',
-                                                str_contains($auditoria->accion, 'FAILURE')              => 'bg-danger',
-                                                str_contains($auditoria->accion, 'IMPORT')               => 'bg-primary',
-                                                str_contains($auditoria->accion, 'WORKFLOW')             => 'bg-primary',
-                                                default                                                   => 'bg-secondary'
-                                            };
-                                            $iconClass = match(true) {
-                                                $auditoria->accion === 'WORKFLOW_TRANSICION'             => 'fas fa-exchange-alt',
-                                                $auditoria->accion === 'WORKFLOW_DEVOLUCION'             => 'fas fa-undo-alt',
-                                                $auditoria->accion === 'WORKFLOW_AUTO'                   => 'fas fa-bolt',
-                                                $auditoria->accion === 'WORKFLOW_NUEVO_CICLO'            => 'fas fa-play-circle',
-                                                $auditoria->accion === 'WORKFLOW_TRANSITION_REJECTED'    => 'fas fa-ban',
-                                                $auditoria->accion === 'WORKFLOW_ERROR'                  => 'fas fa-exclamation-circle',
-                                                $auditoria->accion === 'FAILURE_DATABASE'                => 'fas fa-database',
-                                                $auditoria->accion === 'FAILURE_SERVER'                  => 'fas fa-server',
-                                                str_contains($auditoria->accion, 'FAILURE')              => 'fas fa-exclamation-triangle',
-                                                default                                                   => ''
-                                            };
-                                        @endphp
-                                        <span class="badge {{ $badgeClass }}">
-                                            @if($iconClass)<i class="{{ $iconClass }} me-1"></i>@endif
-                                            {{ $auditoria->accion }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="small text-muted">{{ $auditoria->ip_origen }}</span>
-                                    </td>
-                                    <td class="text-end pe-4">
-                                        <button class="btn btn-sm btn-outline-primary" onclick="verDetalles({{ $auditoria->id }})">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center py-5 text-muted">
-                                        @if(request('accion') === 'FAILURE')
-                                            <i class="fas fa-check-circle text-success mb-2 d-block" style="font-size: 2rem;"></i>
-                                            No se encontró fallo
-                                        @else
-                                            No se encontraron registros de auditoría
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                                        <div class="d-flex flex-column">
+                                            <span class="fw-bold text-main small">{{ $auditoria->usuario->nombre_completo ?? 'SYSTEM ENGINE' }}</span>
+                                            <span class="text-muted extra-small">{{ $auditoria->usuario->user ?? 'kernel-task' }}</span>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-muted border extra-small px-2 py-1">
+                                        {{ strtoupper($auditoria->tabla_afectada) }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <code class="text-primary font-monospace extra-small">ID #{{ $auditoria->registro_id }}</code>
+                                </td>
+                                <td>
+                                    @php
+                                        $labelClass = match($auditoria->accion) {
+                                            'INSERT' => 'wf-badge-final',
+                                            'UPDATE' => 'wf-badge-proceso',
+                                            'DELETE' => 'bg-danger text-white',
+                                            'WORKFLOW_TRANSICION' => 'wf-badge-aprobado',
+                                            'WORKFLOW_DEVOLUCION' => 'bg-warning text-dark',
+                                            default => str_contains($auditoria->accion, 'FAILURE') ? 'bg-danger text-white' : 'bg-light text-muted'
+                                        };
+                                        $icon = match(true) {
+                                            $auditoria->accion === 'INSERT' => 'bi-plus-circle',
+                                            $auditoria->accion === 'UPDATE' => 'bi-pencil-square',
+                                            $auditoria->accion === 'DELETE' => 'bi-trash3',
+                                            str_contains($auditoria->accion, 'WORKFLOW') => 'bi-diagram-2',
+                                            str_contains($auditoria->accion, 'FAILURE') => 'bi-exclamation-octagon-fill',
+                                            default => 'bi-info-circle'
+                                        };
+                                    @endphp
+                                    <span class="premium-badge {{ $labelClass }} extra-small" style="font-size: 0.65rem;">
+                                        <i class="bi {{ $icon }}"></i>
+                                        {{ $auditoria->accion }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="text-muted extra-small font-monospace">{{ $auditoria->ip_origen ?? '0.0.0.0' }}</span>
+                                </td>
+                                <td class="text-end pe-4">
+                                    <button class="action-btn" onclick="verDetalles({{ $auditoria->id }})">
+                                        <i class="bi bi-eye-fill"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="bi bi-search fs-1 d-block mb-3 opacity-25"></i>
+                                        No se encontraron registros de auditoría bajo estos filtros.
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
             @if($auditorias->hasPages())
-                <div class="card-footer bg-white border-top-0">
+                <div class="p-3 border-top">
                     {{ $auditorias->appends(request()->query())->links() }}
                 </div>
             @endif
         </div>
     </div>
 
-    {{-- Modal de Detalles --}}
-    <div class="modal fade" id="modalDetalle" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header bg-dark text-white">
-                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles de la Transacción</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+    {{-- MODAL DETALLE PREMIUM --}}
+    <div class="modal fade premium-modal" id="modalDetalle" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content overflow-hidden">
+                <div class="modal-header">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-white p-2 rounded-3 text-primary">
+                            <i class="bi bi-search fs-4"></i>
+                        </div>
+                        <div>
+                            <h5 class="modal-title fw-bold" id="modalTitle">Detalle de Transacción</h5>
+                            <p class="mb-0 extra-small opacity-75" id="det_timestamp"></p>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body bg-light">
-                    <div class="row g-3 mb-4">
+                <div class="modal-body p-4 p-md-5 bg-white">
+                    <div class="row g-4 mb-5">
                         <div class="col-md-3">
-                            <label class="small text-muted mb-1 d-block">IP Origen</label>
-                            <div class="fw-bold" id="det_ip"></div>
+                            <label class="premium-label small">Origen IP</label>
+                            <div class="fw-bold text-main" id="det_ip"></div>
                         </div>
                         <div class="col-md-3">
-                            <label class="small text-muted mb-1 d-block">Acción</label>
-                            <div id="det_accion"></div>
+                            <label class="premium-label small">Acción Ejecutada</label>
+                            <div id="det_accion_badge"></div>
                         </div>
                         <div class="col-md-6">
-                            <label class="small text-muted mb-1 d-block">User Agent</label>
-                            <div class="small fw-bold text-truncate" id="det_ua"></div>
+                            <label class="premium-label small">User Agent (Browser Info)</label>
+                            <div class="extra-small text-muted text-truncate" id="det_ua" title=""></div>
                         </div>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="small text-muted mb-1 d-block">Estado de la Operación</label>
-                        <div id="det_status_badge"></div>
-                    </div>
-
-                    {{-- Panel de Error (solo visible para fallos) --}}
-                    <div id="det_error_panel" class="mb-4" style="display:none;">
-                        <div class="card border-danger">
-                            <div class="card-header bg-danger text-white fw-bold small">
-                                <i class="fas fa-exclamation-triangle me-2"></i>Descripción del Fallo
+                    {{-- PANEL DE ERROR --}}
+                    <div id="det_error_panel" class="mb-5 animate-fadeIn" style="display:none;">
+                        <div class="card border-danger shadow-sm rounded-4 overflow-hidden">
+                            <div class="card-header bg-danger text-white py-3 border-0">
+                                <h6 class="mb-0 fw-bold"><i class="bi bi-bug-fill me-2"></i>Excepción de Sistema Detectada</h6>
                             </div>
-                            <div class="card-body p-3">
-                                <div class="mb-3">
-                                    <label class="small text-muted d-block mb-1">Mensaje de Error</label>
-                                    <div class="alert alert-danger mb-0 small" id="det_error_msg" style="word-break: break-all;"></div>
-                                </div>
-                                <div class="row g-2 mb-3">
+                            <div class="card-body p-4">
+                                <div class="alert alert-danger bg-danger-subtle border-0 mb-4 fw-bold small" id="det_error_msg"></div>
+                                <div class="row g-3 mb-4">
                                     <div class="col-md-4">
-                                        <label class="small text-muted d-block mb-1">Tipo de Excepción</label>
-                                        <code class="small" id="det_error_clase"></code>
+                                        <label class="premium-label extra-small text-danger">Clase Exception</label>
+                                        <code id="det_error_clase" class="extra-small d-block py-1"></code>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="small text-muted d-block mb-1">Código SQL</label>
-                                        <code class="small" id="det_error_codigo"></code>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="small text-muted d-block mb-1">URL Afectada</label>
-                                        <code class="small text-truncate d-block" id="det_error_url"></code>
+                                    <div class="col-md-8">
+                                        <label class="premium-label extra-small text-danger">Ruta/Fichero de origen</label>
+                                        <code id="det_error_ubicacion" class="extra-small d-block py-1"></code>
                                     </div>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="small text-muted d-block mb-1">Ubicación en Código</label>
-                                    <code class="small" id="det_error_ubicacion"></code>
-                                </div>
-                                <div id="det_error_contexto_wrap" style="display:none;">
-                                    <label class="small text-muted d-block mb-1">Datos de Contexto</label>
-                                    <pre class="bg-white border rounded p-2 small mb-3" id="det_error_contexto" style="max-height: 150px; overflow-y: auto;"></pre>
-                                </div>
-                                <div>
-                                    <label class="small text-muted d-block mb-1">Stack Trace</label>
-                                    <pre class="bg-dark text-success rounded p-2 small" id="det_error_trace" style="max-height: 200px; overflow-y: auto; font-size: 0.65rem;"></pre>
-                                </div>
+                                <label class="premium-label extra-small">Stack Trace Técnico</label>
+                                <pre class="json-viewer bg-dark p-3 rounded-4 extra-small" id="det_error_trace" style="height: 250px; color: #FDA4AF;"></pre>
                             </div>
                         </div>
                     </div>
 
-                    {{-- Paneles de datos (para operaciones normales) --}}
-                    <div class="row g-4" id="det_data_panels">
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-header bg-white fw-bold small text-danger">Estado Anterior</div>
-                                <div class="card-body p-0">
-                                    <pre class="m-0 p-3 bg-white" id="det_anterior" style="font-size: 0.75rem; max-height: 400px; overflow-y: auto;"></pre>
+                    {{-- COMPARATIVA DE DATOS --}}
+                    <div id="det_data_panels">
+                        <div class="row g-4">
+                            <div class="col-lg-6">
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <i class="bi bi-skip-backward-fill text-muted"></i>
+                                    <h6 class="fw-bold mb-0 text-main">Estado Previo</h6>
                                 </div>
+                                <pre class="json-viewer" id="det_anterior"></pre>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card h-100 border-0 shadow-sm">
-                                <div class="card-header bg-white fw-bold small text-success">Estado Nuevo</div>
-                                <div class="card-body p-0">
-                                    <pre class="m-0 p-3 bg-white" id="det_nuevo" style="font-size: 0.75rem; max-height: 400px; overflow-y: auto;"></pre>
+                            <div class="col-lg-6">
+                                <div class="d-flex align-items-center gap-2 mb-3">
+                                    <i class="bi bi-play-fill text-success"></i>
+                                    <h6 class="fw-bold mb-0 text-main">Estado Posterior</h6>
                                 </div>
+                                <pre class="json-viewer" id="det_nuevo" style="background: #0F172A; border-left: 4px solid #10B981;"></pre>
                             </div>
                         </div>
                     </div>
@@ -285,58 +293,31 @@
                 .then(data => {
                     document.getElementById('det_ip').textContent = data.ip_origen || 'N/A';
                     document.getElementById('det_ua').textContent = data.user_agent || 'N/A';
-                    document.getElementById('det_accion').innerHTML = `<span class="badge ${data.accion.includes('FAILURE') ? 'bg-danger' : 'bg-primary'}">${data.accion}</span>`;
+                    document.getElementById('det_ua').title = data.user_agent || '';
+                    document.getElementById('det_timestamp').textContent = `Iniciado: ${new Date(data.created_at).toLocaleString()}`;
+                    
+                    const isFailure = data.accion.includes('FAILURE');
+                    const badgeClass = isFailure ? 'bg-danger text-white' : 'bg-primary text-white';
+                    document.getElementById('det_accion_badge').innerHTML = `<span class="premium-badge ${badgeClass} extra-small">${data.accion}</span>`;
 
-                    const statusBadge = document.getElementById('det_status_badge');
                     const errorPanel = document.getElementById('det_error_panel');
                     const dataPanels = document.getElementById('det_data_panels');
                     const payload = data.payload_nuevo;
-                    const isFailure = data.accion.includes('FAILURE');
 
                     if (isFailure) {
-                        statusBadge.innerHTML = '<span class="badge bg-danger"><i class="fas fa-exclamation-triangle me-1"></i> Fallo Detectado</span>';
-                        
-                        // Mostrar panel de error y ocultar datos normales
                         errorPanel.style.display = 'block';
                         dataPanels.style.display = 'none';
-
                         if (payload) {
-                            // Llenar campos del error
-                            document.getElementById('det_error_msg').textContent = payload.error || payload.detalle || 'Error desconocido';
+                            document.getElementById('det_error_msg').textContent = payload.error || payload.detalle || 'Fallo de ejecución sin descripción.';
                             document.getElementById('det_error_clase').textContent = payload.clase || 'N/A';
-                            document.getElementById('det_error_codigo').textContent = payload.codigo_sql || 'N/A';
-                            document.getElementById('det_error_url').textContent = payload.url || 'N/A';
-                            document.getElementById('det_error_ubicacion').textContent = payload.ubicacion || 'N/A';
-                            document.getElementById('det_error_trace').textContent = payload.trace || 'No disponible';
-
-                            // Contexto (datos intentados)
-                            const contextoWrap = document.getElementById('det_error_contexto_wrap');
-                            if (payload.contexto && Object.keys(payload.contexto).length > 0) {
-                                contextoWrap.style.display = 'block';
-                                document.getElementById('det_error_contexto').textContent = JSON.stringify(payload.contexto, null, 2);
-                            } else if (payload.intentado) {
-                                contextoWrap.style.display = 'block';
-                                document.getElementById('det_error_contexto').textContent = JSON.stringify(payload.intentado, null, 2);
-                            } else {
-                                contextoWrap.style.display = 'none';
-                            }
-                        } else {
-                            document.getElementById('det_error_msg').textContent = 'Sin información de error disponible';
-                            document.getElementById('det_error_clase').textContent = 'N/A';
-                            document.getElementById('det_error_codigo').textContent = 'N/A';
-                            document.getElementById('det_error_url').textContent = 'N/A';
-                            document.getElementById('det_error_ubicacion').textContent = 'N/A';
-                            document.getElementById('det_error_trace').textContent = 'N/A';
+                            document.getElementById('det_error_ubicacion').textContent = payload.ubicacion || 'Fichero desconocido';
+                            document.getElementById('det_error_trace').textContent = payload.trace || 'Trace no disponible';
                         }
                     } else {
-                        statusBadge.innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i> Operación Correcta (Sin fallos)</span>';
-                        
-                        // Ocultar panel de error y mostrar datos normales
                         errorPanel.style.display = 'none';
-                        dataPanels.style.display = '';
-
-                        document.getElementById('det_anterior').textContent = data.payload_anterior ? JSON.stringify(data.payload_anterior, null, 4) : 'Ninguno';
-                        document.getElementById('det_nuevo').textContent = payload ? JSON.stringify(payload, null, 4) : 'Ninguno';
+                        dataPanels.style.display = 'block';
+                        document.getElementById('det_anterior').textContent = data.payload_anterior ? JSON.stringify(data.payload_anterior, null, 4) : '// Sin datos previos';
+                        document.getElementById('det_nuevo').textContent = payload ? JSON.stringify(payload, null, 4) : '// Sin cambios registrados';
                     }
                     
                     const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
@@ -344,13 +325,5 @@
                 });
         }
     </script>
-    @endpush
-
-    @push('styles')
-    <style>
-        .tiny { font-size: 0.7rem; }
-        pre { white-space: pre-wrap; word-wrap: break-word; }
-        .bg-light { background-color: #f8f9fc !important; }
-    </style>
     @endpush
 @endsection

@@ -1,102 +1,141 @@
 @extends('layouts.app')
 
-@section('title', 'Configuración de Usuarios')
+@section('title', 'Gestión de Usuarios — Sistema de Control')
+
+@push('styles')
+    @vite(['resources/views/configuracion/configuracion.css'])
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+@endpush
 
 @section('page-content')
-    <div class="container-fluid">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1 class="h3 mb-0 text-gray-800">
-                <i class="fas fa-users-cog me-2"></i>Gestión de Usuarios
-            </h1>
+    <div class="config-container">
+        {{-- HEADER PREMIUM --}}
+        <header class="config-header">
+            <div>
+                <h1>
+                    <i class="bi bi-people-fill"></i> Gestión de Usuarios
+                </h1>
+                <p class="text-muted mb-0">Control de acceso, roles y estados del personal del sistema</p>
+            </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('configuracion.alertas.index') }}" class="btn btn-warning">
-                    <i class="bi bi-bell-fill me-2"></i>Alertas
+                <a href="{{ route('configuracion.alertas.index') }}" class="btn-premium btn-premium-warning">
+                    <i class="bi bi-bell-fill"></i> Alertas
                 </a>
-                <a href="{{ route('configuracion.auditoria.index') }}" class="btn btn-dark">
-                    <i class="fas fa-history me-2"></i>Historial de Auditoría
+                <a href="{{ route('configuracion.auditoria.index') }}" class="btn-premium btn-premium-dark">
+                    <i class="bi bi-shield-check"></i> Auditoría
                 </a>
-                <a href="{{ route('configuracion.roles.index') }}" class="btn btn-secondary">
-                    <i class="fas fa-user-shield me-2"></i>Gestionar Roles
+                <a href="{{ route('configuracion.roles.index') }}" class="btn-premium btn-premium-secondary">
+                    <i class="bi bi-person-badge"></i> Roles
                 </a>
-                <a href="{{ route('configuracion.workflow.index') }}" class="btn btn-info text-white">
-                    <i class="bi bi-diagram-3-fill me-2"></i>Gestionar Workflow
+                <a href="{{ route('configuracion.workflow.index') }}" class="btn-premium btn-premium-info">
+                    <i class="bi bi-diagram-3-fill"></i> Workflow
                 </a>
-                <a href="{{ route('configuracion.create') }}" class="btn btn-primary">
-                    <i class="fas fa-user-plus me-2"></i>Crear Usuario
+                <a href="{{ route('configuracion.create') }}" class="btn-premium btn-premium-primary">
+                    <i class="bi bi-person-plus-fill"></i> Crear Usuario
                 </a>
             </div>
-        </div>
+        </header>
 
         @if (session('success'))
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="fas fa-check-circle me-2"></i>{{ session('success') }}
+            <div class="alert alert-success alert-dismissible bg-white border-0 shadow-sm rounded-4 fade show" role="alert">
+                <div class="d-flex align-items-center">
+                    <div class="rounded-circle bg-success text-white p-2 me-3 d-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <div>{{ session('success') }}</div>
+                </div>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
         @endif
 
-        <div class="card shadow mb-4">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+        {{-- TABLA MAESTRA --}}
+        <div class="premium-card">
+            <div class="table-responsive">
+                <table class="premium-table">
+                    <thead>
+                        <tr>
+                            <th class="text-center">ID</th>
+                            <th>Nombre Completo</th>
+                            <th>Usuario (@)</th>
+                            <th>Rol</th>
+                            <th class="text-center">Estado</th>
+                            <th>Último Acceso</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($usuarios as $usuario)
                             <tr>
-                                <th>ID</th>
-                                <th>Nombre Completo</th>
-                                <th>Usuario</th>
-                                <th>Rol</th>
-                                <th>Estado</th>
-                                <th>Último Login</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($usuarios as $usuario)
-                                <tr>
-                                    <td>{{ $usuario->id }}</td>
-                                    <td>{{ $usuario->nombre_completo }}</td>
-                                    <td>{{ $usuario->user }}</td>
-                                    <td>
-                                        <span class="badge bg-info">{{ $usuario->rol->nombre }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge {{ $usuario->es_activo ? 'bg-success' : 'bg-danger' }}"
-                                            id="status-badge-{{ $usuario->id }}">
-                                            {{ $usuario->es_activo ? 'Activo' : 'Inactivo' }}
-                                        </span>
-                                    </td>
-                                    <td>{{ $usuario->ultimo_login ? $usuario->ultimo_login->format('d/m/Y H:i') : 'Nunca' }}
-                                    </td>
-                                    <td>
-                                        <a href="{{ route('configuracion.edit', $usuario->id) }}" class="btn btn-sm"
-                                            title="Editar">
-                                            <span class="govco-svg govco-edit"></span>
+                                <td class="text-center fw-bold text-muted" style="font-size: 0.8rem;">#{{ $usuario->id }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-light d-flex align-items-center justify-content-center me-3 text-primary fw-bold" style="width: 38px; height: 38px; border: 1px solid #e2e8f0;">
+                                            {{ strtoupper(substr($usuario->nombre_completo, 0, 1)) }}
+                                        </div>
+                                        <span class="fw-semibold">{{ $usuario->nombre_completo }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="text-muted font-monospace">@</span>{{ $usuario->user }}
+                                </td>
+                                <td>
+                                    <span class="premium-badge badge-role">
+                                        {{ $usuario->rol->nombre }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="premium-badge {{ $usuario->es_activo ? 'badge-active' : 'badge-inactive' }}"
+                                        id="status-badge-{{ $usuario->id }}">
+                                        <i class="bi bi-{{ $usuario->es_activo ? 'check-circle' : 'x-circle' }}-fill me-1"></i>
+                                        {{ $usuario->es_activo ? 'Activo' : 'Inactivo' }}
+                                    </span>
+                                </td>
+                                <td class="text-muted" style="font-size: 0.85rem;">
+                                    <i class="bi bi-clock me-1"></i>
+                                    {{ $usuario->ultimo_login ? $usuario->ultimo_login->format('d/m/Y H:i') : 'Sin registros' }}
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <a href="{{ route('configuracion.edit', $usuario->id) }}" class="action-btn"
+                                            title="Editar Perfil">
+                                            <i class="bi bi-pencil-square"></i>
                                         </a>
                                         @if ($usuario->id !== auth()->id())
                                             <button onclick="toggleStatus({{ $usuario->id }})"
-                                                class="btn btn-sm {{ $usuario->es_activo ? 'btn-danger' : 'btn-success' }}"
+                                                class="action-btn {{ $usuario->es_activo ? 'btn-toggle-on' : 'btn-toggle-off' }}"
                                                 id="toggle-btn-{{ $usuario->id }}"
-                                                title="{{ $usuario->es_activo ? 'Desactivar' : 'Activar' }}">
-                                                <span
-                                                    class="govco-svg govco-toggle-{{ $usuario->es_activo ? 'on' : 'off' }}">
-                                                </span>
+                                                title="{{ $usuario->es_activo ? 'Desactivar Usuario' : 'Activar Usuario' }}">
+                                                <i class="bi bi-toggle-{{ $usuario->es_activo ? 'on' : 'off' }} fs-5" id="toggle-icon-{{ $usuario->id }}"></i>
                                             </button>
                                         @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="7" class="text-center text-muted">No hay usuarios registrados</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="bi bi-people fs-1 d-block mb-3 opacity-25"></i>
+                                        No se encontraron usuarios registrados
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
     <script>
         function toggleStatus(userId) {
+            const btn = document.getElementById(`toggle-btn-${userId}`);
+            const originalIconClass = btn.querySelector('i').className;
+            
+            // Loading state
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+            btn.disabled = true;
+
             window.apiFetch(`/configuracion/toggle-status/${userId}`, {
                     method: 'POST'
                 })
@@ -104,31 +143,36 @@
                 .then(data => {
                     if (data.success) {
                         const badge = document.getElementById(`status-badge-${userId}`);
-                        const btn = document.getElementById(`toggle-btn-${userId}`);
-                        const icon = document.getElementById(`toggle-icon-${userId}`);
-
+                        const icon = document.createElement('i');
+                        
                         if (data.es_activo) {
-                            badge.className = 'badge bg-success';
-                            badge.textContent = 'Activo';
-                            btn.className = 'btn btn-sm btn-danger';
-                            btn.title = 'Desactivar';
-                            icon.className = 'fas fa-ban';
+                            badge.className = 'premium-badge badge-active';
+                            badge.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Activo';
+                            btn.className = 'action-btn btn-toggle-on';
+                            btn.title = 'Desactivar Usuario';
+                            btn.innerHTML = '<i class="bi bi-toggle-on fs-5"></i>';
                         } else {
-                            badge.className = 'badge bg-danger';
-                            badge.textContent = 'Inactivo';
-                            btn.className = 'btn btn-sm btn-success';
-                            btn.title = 'Activar';
-                            icon.className = 'fas fa-check';
+                            badge.className = 'premium-badge badge-inactive';
+                            badge.innerHTML = '<i class="bi bi-x-circle-fill me-1"></i> Inactivo';
+                            btn.className = 'action-btn btn-toggle-off';
+                            btn.title = 'Activar Usuario';
+                            btn.innerHTML = '<i class="bi bi-toggle-off fs-5"></i>';
                         }
 
-                        window.showSnackbar('✅ ' + data.message, 'success');
+                        window.showSnackbar('✨ ' + data.message, 'success');
                     } else {
+                        btn.innerHTML = `<i class="${originalIconClass}"></i>`;
                         window.showSnackbar('❌ ' + data.message, 'error');
                     }
                 })
                 .catch(error => {
-                    window.showSnackbar('❌ Error al cambiar estado', 'error');
+                    btn.innerHTML = `<i class="${originalIconClass}"></i>`;
+                    window.showSnackbar('❌ Error de conexión al servidor', 'error');
+                })
+                .finally(() => {
+                    btn.disabled = false;
                 });
         }
     </script>
 @endsection
+

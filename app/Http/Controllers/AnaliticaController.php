@@ -162,7 +162,13 @@ class AnaliticaController extends Controller
         // Carga inicial de catálogos para los selects de filtro
         $supervisores = Supervisor::where('es_activo', true)->limit(50)->get();
         $responsables = Usuario::where('es_activo', true)->limit(50)->get();
-        $estados = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->get();
+        
+        // Datos para el selector premium multinivel
+        $bloques = BloqueWorkflow::orderBy('orden')->get();
+        $todosLosEstados = EstadoWorkflow::where('es_activo', true)
+            ->with('bloque')
+            ->get()
+            ->groupBy(fn($est) => $est->bloque->codigo ?? 'SIN_BLOQUE');
 
         return view('Analitica.analitica', [
             'cuentas' => $cuentas,
@@ -176,7 +182,8 @@ class AnaliticaController extends Controller
             'montoTotal' => $montoTotalResult ?? 0,
             'supervisores' => $supervisores,
             'responsables' => $responsables,
-            'estados' => $estados,
+            'bloques' => $bloques,
+            'todosLosEstados' => $todosLosEstados,
             'chartData' => $chartData
         ]);
     }

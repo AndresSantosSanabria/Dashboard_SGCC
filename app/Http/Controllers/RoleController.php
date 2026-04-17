@@ -52,7 +52,10 @@ class RoleController extends Controller
             'descripcion' => 'nullable|string|max:255',
             'permisos_matrix' => 'required|array',
             'ver_solo_asignados' => 'nullable|boolean',
+            'ver_solo_bloques_con_asignacion' => 'nullable|boolean',
+            'receptor_automatico_bloque_6' => 'nullable|boolean',
             'bloques_permitidos' => 'nullable|array',
+            'responsables_bloque' => 'nullable|array',
         ]);
 
         // Logic to Map Matrix -> System Permissions
@@ -63,6 +66,15 @@ class RoleController extends Controller
         if ($request->boolean('ver_solo_asignados')) {
             $systemPermissions['ver_solo_asignados'] = true;
         }
+        if ($request->boolean('ver_solo_bloques_con_asignacion')) {
+            $systemPermissions['ver_solo_bloques_con_asignacion'] = true;
+        }
+        if ($request->boolean('receptor_automatico_bloque_6')) {
+            $systemPermissions['receptor_automatico_bloque_6'] = true;
+        }
+        if ($request->has('acceder_notificaciones')) {
+            $systemPermissions['acceder_notificaciones'] = $request->boolean('acceder_notificaciones');
+        }
 
         // Handle Blocks
         if ($request->has('bloques_all')) {
@@ -71,13 +83,10 @@ class RoleController extends Controller
             $systemPermissions['bloques_permitidos'] = $request->input('bloques_permitidos', []);
         }
 
-        // Handle Responsibilities
-        if ($request->boolean('es_responsable_sap')) {
-            $systemPermissions['responsable_sap'] = true;
-        }
-        if ($request->boolean('es_responsable_facturacion')) {
-            $systemPermissions['responsable_facturacion'] = true;
-        }
+        // Handle Responsibles por Bloque
+        $systemPermissions['responsables_bloque'] = $request->input('responsables_bloque', []);
+
+        // Handle Responsibilities (Legacy removed, using dynamic blocks)
 
         $role = Role::create([
             'nombre' => $validated['nombre'],
@@ -109,8 +118,6 @@ class RoleController extends Controller
             'acceder_consolidado' => false,
             'acceder_workflow' => false,
             'editar_workflow' => false,
-            'responsable_sap' => false,
-            'responsable_facturacion' => false,
             'editar_dashboard' => false,
             'reportes_exportar' => false,
             'logs_ver' => false,
@@ -119,6 +126,10 @@ class RoleController extends Controller
             'ver_analitica' => false,
             'ver_seguimiento_secop' => false,
             'editar_seguimiento_secop' => false,
+            'ver_solo_asignados' => false,
+            'ver_solo_bloques_con_asignacion' => false,
+            'receptor_automatico_bloque_6' => false,
+            'acceder_notificaciones' => true,
         ];
 
         // 1. Dashboard Module
@@ -141,6 +152,9 @@ class RoleController extends Controller
             // For now, if they check 'edit/create/delete', we give them manage.
             if (! empty($matrix['users']['create']) || ! empty($matrix['users']['edit']) || ! empty($matrix['users']['delete'])) {
                 $permissions['usuarios_gestionar'] = true;
+            }
+            if (! empty($matrix['users']['admin'])) {
+                $permissions['es_admin'] = true;
             }
         }
 
@@ -229,7 +243,10 @@ class RoleController extends Controller
                 'descripcion' => 'nullable|string|max:255',
                 'permisos_matrix' => 'required|array',
                 'ver_solo_asignados' => 'nullable|boolean',
+                'ver_solo_bloques_con_asignacion' => 'nullable|boolean',
+                'receptor_automatico_bloque_6' => 'nullable|boolean',
                 'bloques_permitidos' => 'nullable|array',
+                'responsables_bloque' => 'nullable|array',
             ]);
 
             // Logic to Map Matrix -> System Permissions
@@ -241,6 +258,16 @@ class RoleController extends Controller
                 $systemPermissions['ver_solo_asignados'] = true;
             }
 
+            if ($request->boolean('ver_solo_bloques_con_asignacion')) {
+                $systemPermissions['ver_solo_bloques_con_asignacion'] = true;
+            }
+            if ($request->boolean('receptor_automatico_bloque_6')) {
+                $systemPermissions['receptor_automatico_bloque_6'] = true;
+            }
+            if ($request->has('acceder_notificaciones')) {
+                $systemPermissions['acceder_notificaciones'] = $request->boolean('acceder_notificaciones');
+            }
+
             // Handle Blocks
             if ($request->has('bloques_all')) {
                 $systemPermissions['bloques_permitidos'] = true;
@@ -249,13 +276,10 @@ class RoleController extends Controller
                 $systemPermissions['bloques_permitidos'] = $bloquesArray;
             }
 
-            // Handle Responsibilities
-            if ($request->boolean('es_responsable_sap')) {
-                $systemPermissions['responsable_sap'] = true;
-            }
-            if ($request->boolean('es_responsable_facturacion')) {
-                $systemPermissions['responsable_facturacion'] = true;
-            }
+            // Handle Responsibles por Bloque
+            $systemPermissions['responsables_bloque'] = $request->input('responsables_bloque', []);
+
+            // Handle Responsibilities (Legacy removed, using dynamic blocks)
 
             $role->update([
                 'nombre' => $validated['nombre'],
@@ -329,6 +353,14 @@ class RoleController extends Controller
                     foreach ($value as $bloqueCod) {
                         $slugName = 'acceso_bloque_' . $bloqueCod;
                         $permiso = Permiso::firstOrCreate(['slug' => $slugName], ['nombre' => 'Bloque ' . $bloqueCod, 'modulo' => 'Bloques']);
+                        $permisoIds[] = $permiso->id;
+                    }
+                }
+            } elseif ($slug === 'responsables_bloque') {
+                if (is_array($value)) {
+                    foreach ($value as $bloqueCod) {
+                        $slugName = 'responsable_bloque_' . $bloqueCod;
+                        $permiso = Permiso::firstOrCreate(['slug' => $slugName], ['nombre' => 'Responsable Bloque ' . $bloqueCod, 'modulo' => 'Responsabilidades']);
                         $permisoIds[] = $permiso->id;
                     }
                 }

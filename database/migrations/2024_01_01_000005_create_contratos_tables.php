@@ -62,6 +62,12 @@ return new class extends Migration
             $table->text('observacion_2_accion')->nullable();
             $table->text('razon_no_liquidacion')->nullable();
 
+            // Campos de Compatibilidad Excel/BI (Strings para facilitar importación)
+            $table->string('tipo_contratista')->nullable();
+            $table->string('secop_estado_contrato')->nullable();
+            $table->string('abogado_responsable')->nullable();
+            $table->string('contador_responsable')->nullable();
+
             // RESPONSABLES (Normalización a Usuarios del sistema)
             // Permitimos auditoría de quién debe gestionar cada contrato en el flujo interno.
             $table->foreignId('abogado_user_id')->nullable()->constrained('usuarios');
@@ -71,10 +77,15 @@ return new class extends Migration
             $table->boolean('es_activo')->default(true);
             $table->timestamps();
 
-            // ÍNDICES ESTRATÉGICOS: Optimizamos las búsquedas frecuentes por Número de Proceso
-            // y Contratista, que son los filtros más usados en el dashboard.
+            // ÍNDICES ESTRATÉGICOS: Optimizamos las búsquedas frecuentes.
             $table->index('numero_proceso');
             $table->index('contratista_id');
+            $table->index('supervisor_id');
+            $table->index('modalidad_id');
+            $table->index('planta_id');
+            $table->index('concepto_id');
+            $table->index('secop_estado_contrato');
+            $table->index('es_activo');
         });
 
         // TABLA: Registros Presupuestales (RP)

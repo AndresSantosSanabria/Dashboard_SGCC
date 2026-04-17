@@ -15,6 +15,7 @@ class SeguimientoMensual extends Model
     protected $fillable = [
         'contrato_id',
         'mes',
+        'anio',
         'fuente',
         'estado',
     ];

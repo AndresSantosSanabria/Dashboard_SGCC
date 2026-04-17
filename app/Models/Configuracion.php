@@ -43,4 +43,13 @@ class Configuracion extends Model
                 return $this->valor;
         }
     }
+
+    /**
+     * Obtiene el valor de una configuración por su clave
+     */
+    public static function getValor($clave, $default = null)
+    {
+        $config = self::where('clave', $clave)->first();
+        return $config ? $config->valor_tipado : $default;
+    }
 }

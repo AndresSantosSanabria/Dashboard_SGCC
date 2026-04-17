@@ -58,147 +58,55 @@ class SeguimientoController extends Controller
             $query->where('supervisor_id', $request->supervisor_id);
         }
 
-        // 2. HIDRATACIÓN DINÁMICA (The Magic Layer)
-        // Obtenemos los contratos con sus seguimientos hijos.
-        $allContratos = $query->with(['seguimientoMensual', 'seguimientoRequisitos'])->latest()->get();
+        // 2. HIDRATACIÓN DINÁMICA OPTIMIZADA (Database-Driven Calculation)
+        // Usamos withCount para obtener los totales directamente desde Postgres, evitando cargar miles de filas en memoria.
+        $query->withCount([
+            'seguimientoMensual as count_ok_mensual' => fn($q) => $q->where('estado', 'OK'),
+            'seguimientoMensual as count_na_mensual' => fn($q) => $q->where('estado', 'N/A'),
+            'seguimientoMensual as count_pend_mensual' => fn($q) => $q->whereIn('estado', ['PENDIENTE', 'RECHAZADO', 'FALTA', 'CRÍTICO']),
+            'seguimientoRequisitos as count_ok_req' => fn($q) => $q->where('estado', 'OK'),
+            'seguimientoRequisitos as count_na_req' => fn($q) => $q->where('estado', 'N/A'),
+            'seguimientoRequisitos as count_pend_req' => fn($q) => $q->whereIn('estado', ['PENDIENTE', 'RECHAZADO', 'FALTA', 'CRÍTICO']),
+        ]);
 
-        // Mapeamos los campos esperados por la vista (12 meses x 3 fuentes + checklist)
-        $ctaFields = [];
-        for ($i = 1; $i <= 12; $i++) {
-            $ctaFields[] = "cta{$i}_rep_status";
-            $ctaFields[] = "cta{$i}_secop_status";
-            $ctaFields[] = "cta{$i}_sia_status";
-        }
-
-        $checklistFields = [
-            'planta_status',
-            'concepto_status',
-            'cdp_status',
-            'estudios_previos_status',
-            'soportes_status',
-            'idoneidad_status',
-            'acuerdo_confidencialidad_status',
-            'clausulado_status',
-            'acta_inicio_status',
-            'delegacion_status',
-            'arl_status',
-            'rpc_status',
-        ];
-
-        $totalEvaluatedFields = count($ctaFields) + count($checklistFields);
-
-        foreach ($allContratos as $c) {
-            // Transformamos filas de BD en atributos dinámicos del objeto
-            foreach ($c->seguimientoMensual as $sm) {
-                $attr = "cta{$sm->mes}_" . strtolower($sm->fuente) . '_status';
-                $c->$attr = $sm->estado;
-            }
-            foreach ($c->seguimientoRequisitos as $sr) {
-                $c->{$sr->nombre} = $sr->estado;
-            }
-
-            // 3. MOTOR DE CÁLCULO DE CUMPLIMIENTO (SLA/Compliance Engine)
-            // Evaluamos el "Peso" de cada estado para determinar si el contrato está en riesgo.
-            $ok = 0;
-            $na = 0;
-            $pend = 0;
-            $crit = 0;
-
-            $allStatusFields = array_merge($ctaFields, $checklistFields);
-            foreach ($allStatusFields as $field) {
-                $val = $c->$field;
-                if ($val === 'OK') $ok++;
-                elseif ($val === 'N/A') $na++;
-                elseif ($val === 'PENDIENTE') $pend++;
-                elseif (in_array($val, ['RECHAZADO', 'FALTA', 'CRÍTICO'])) $crit++;
-            }
-
-            $c->total_ok = $ok;
-            $c->total_na = $na;
-            $c->total_pend = $pend;
-            $c->total_crit = $crit;
-
-            // Determinación del Semáforo Global
-            if ($crit > 0) $c->global_status = 'CRÍTICO';
-            elseif ($pend > 0) $c->global_status = 'PENDIENTES';
-            elseif (($ok + $na) === $totalEvaluatedFields) $c->global_status = 'COMPLETO';
-            elseif (($ok + $na) > 0) $c->global_status = 'EN PROGRESO';
-            else $c->global_status = 'VACÍO';
-
-            $c->perc_cumplimiento = $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0;
-        }
-
-        // 4. ORDENAMIENTO POR NÚMERO (Natural Sort)
+        // 3. ORDENAMIENTO POR NÚMERO (Usando el índice funcional natural)
         $order = $request->input('sort_order', 'asc');
-        $isDesc = ($order === 'desc');
+        $query->orderByRaw("CAST(NULLIF(regexp_replace(numero_contrato, '[^0-9]', '', 'g'), '') AS NUMERIC) " . ($order === 'desc' ? 'DESC' : 'ASC'));
 
-        $contratos = $allContratos->sortBy(function ($c) {
-            preg_match('/\d+/', $c->numero_contrato, $matches);
-            return (int) ($matches[0] ?? 0);
-        }, SORT_REGULAR, $isDesc);
-
-        // Filtros de colección (Filtro Compuesto: Estado Interno Y/O Mes)
-        if ($request->filled('estado_filtro') || $request->filled('mes_filtro')) {
-            $estadoReq = strtoupper($request->estado_filtro ?? '');
-            $mesReq = $request->mes_filtro;
-
-            $contratos = $contratos->filter(function ($c) use ($estadoReq, $mesReq) {
-                // 1. Si hay mes seleccionado, la evaluación se limita estrictamente a ese mes
-                if ($mesReq) {
-                    $rep = $c->{"cta{$mesReq}_rep_status"} ?? '';
-                    $sec = $c->{"cta{$mesReq}_secop_status"} ?? '';
-                    $sia = $c->{"cta{$mesReq}_sia_status"} ?? '';
-                    $mFields = [$rep, $sec, $sia];
-                    $vals = array_filter($mFields, fn($v) => ! empty($v));
-
-                    if (empty($estadoReq)) {
-                        return count($vals) > 0;
-                    }
-
-                    if ($estadoReq === 'OK') {
-                        return in_array('OK', $mFields);
-                    }
-                    if ($estadoReq === 'PENDIENTE') {
-                        return in_array('PENDIENTE', $mFields) || in_array('RECHAZADO', $mFields) || in_array('CRÍTICO', $mFields);
-                    }
-                    if ($estadoReq === 'N/A') {
-                        return in_array('N/A', $mFields);
-                    }
-                    if ($estadoReq === 'VACÍO') {
-                        return count($vals) === 0;
-                    }
-                    if ($estadoReq === 'EN PROGRESO') {
-                        $hasSomething = count($vals) > 0;
-                        $allDone = collect($vals)->every(fn($v) => in_array($v, ['OK', 'N/A']));
-
-                        return $hasSomething && ! $allDone;
-                    }
-
-                    return true;
+        // 4. FILTROS DE ESTADO (Integración con Workflow)
+        if ($request->filled('estado_filtro')) {
+            $estadoReq = $request->estado_filtro;
+            
+            // Si es un estado del workflow (viene del nuevo dropdown)
+            if (!in_array(strtoupper($estadoReq), ['OK', 'PENDIENTE', 'N/A'])) {
+                $query->whereHas('cuentasCobro', function($q) use ($estadoReq) {
+                    // Buscamos en la cuenta más reciente del contrato
+                    $q->whereIn('id', function($sub) {
+                        $sub->select(DB::raw('MAX(id)'))
+                            ->from('cuentas_cobro')
+                            ->groupBy('contrato_id');
+                    })->whereHas('estadoActual', function($sq) use ($estadoReq) {
+                        $sq->where('nombre', $estadoReq);
+                    });
+                });
+            } else {
+                // Lógica antigua de cumplimiento (OK, PENDIENTE, N/A)
+                $estadoReq = strtoupper($estadoReq);
+                if ($estadoReq === 'OK') {
+                    $query->whereRaw('(count_ok_mensual + count_ok_req) > 0');
+                } elseif ($estadoReq === 'PENDIENTE') {
+                    $query->whereRaw('(count_pend_mensual + count_pend_req) > 0');
+                } elseif ($estadoReq === 'N/A') {
+                    $query->whereRaw('(count_na_mensual + count_na_req) > 0');
                 }
-
-                // 2. Si NO hay mes, la evaluación es sobre cualquier coincidencia en el contrato
-                if ($estadoReq) {
-                    return match ($estadoReq) {
-                        'OK' => $c->total_ok > 0,
-                        'PENDIENTE' => $c->total_pend > 0 || $c->total_crit > 0,
-                        'EN PROGRESO' => $c->global_status === 'EN PROGRESO',
-                        'VACÍO' => $c->global_status === 'VACÍO',
-                        'N/A' => $c->total_na > 0,
-                        default => true,
-                    };
-                }
-
-                return true;
-            });
+            }
         }
 
         if ($request->filled('secop_filtro')) {
-            $secopReq = strtoupper($request->secop_filtro);
-            $contratos = $contratos->filter(fn($c) => strtoupper($c->secop_estado_contrato ?? '') === $secopReq);
+            $query->where('secop_estado_contrato', 'ilike', $request->secop_filtro);
         }
 
-        return $contratos;
+        return $query;
     }
 
     /**
@@ -216,39 +124,73 @@ class SeguimientoController extends Controller
 
         Contrato::logManualAudit(null, 'READ', 'El usuario cargó la vista de seguimiento/dashboard', 'contratos');
 
-        $contratos = $this->getFilteredContratos($request);
+        $contratosQuery = $this->getFilteredContratos($request);
 
-        // Estadísticas
-        $fOk = $contratos->where('global_status', 'COMPLETO')->count();
-        $fPend = $contratos->whereIn('global_status', ['PENDIENTES', 'EN PROGRESO', 'CRÍTICO'])->count();
-        $fAvg = $contratos->avg('perc_cumplimiento') ?? 0;
+        $totalEvaluatedFields = 48; // 12 meses * 3 fuentes + 12 reqs (Aproximado para lógica de cumplimiento)
+
+        // Estadísticas Dinámicas: Calculadas sobre el set filtrado completo
+        // Usamos una subconsulta para procesar los count_ ya hidratados en getFilteredContratos
+        $statsSub = (clone $contratosQuery);
+        $summary = DB::table(DB::raw("({$statsSub->toSql()}) as sub"))
+            ->mergeBindings($statsSub->getQuery())
+            ->selectRaw("
+                COUNT(*) as total_rows,
+                SUM(monto_total) as val_total,
+                SUM(CASE WHEN (count_pend_mensual + count_pend_req) > 0 THEN 1 ELSE 0 END) as count_pend,
+                SUM(CASE WHEN (count_ok_mensual + count_ok_req + count_na_mensual + count_na_req) >= $totalEvaluatedFields AND (count_pend_mensual + count_pend_req) = 0 THEN 1 ELSE 0 END) as count_ok,
+                AVG(((count_ok_mensual + count_ok_req + count_na_mensual + count_na_req)::float / $totalEvaluatedFields) * 100) as avg_perc,
+                SUM(CASE WHEN UPPER(secop_estado_contrato) IN ('CERRADO', 'TERMINADO') THEN 1 ELSE 0 END) as sec_cerrado,
+                SUM(CASE WHEN UPPER(secop_estado_contrato) = 'EN EJECUCION' THEN 1 ELSE 0 END) as sec_ejecucion,
+                SUM(CASE WHEN secop_estado_contrato IS NULL OR secop_estado_contrato = '' THEN 1 ELSE 0 END) as sec_vacio
+            ")->first();
 
         $stats = [
-            'total' => $contratos->count(),
-            'val_total' => $contratos->sum('monto_total'),
-            'ok_contratos' => $fOk,
-            'pend_contratos' => $fPend,
-            'avg_cumplimiento' => $fAvg,
-            'sec_cerrado' => $contratos->filter(fn($c) => in_array(strtoupper($c->secop_estado_contrato ?? ''), ['CERRADO', 'TERMINADO']))->count(),
-            'sec_ejecucion' => $contratos->filter(fn($c) => strtoupper($c->secop_estado_contrato ?? '') === 'EN EJECUCION')->count(),
-            'sec_vacio' => $contratos->filter(fn($c) => empty($c->secop_estado_contrato))->count(),
-            'total_con_seguimiento' => $contratos->where('global_status', '!=', 'VACÍO')->count(),
+            'total' => $summary->total_rows ?? 0,
+            'val_total' => $summary->val_total ?? 0,
+            'ok_contratos' => $summary->count_ok ?? 0,
+            'pend_contratos' => $summary->count_pend ?? 0,
+            'avg_cumplimiento' => $summary->avg_perc ?? 0,
+            'sec_cerrado' => $summary->sec_cerrado ?? 0,
+            'sec_ejecucion' => $summary->sec_ejecucion ?? 0,
+            'sec_vacio' => $summary->sec_vacio ?? 0,
+            'total_con_seguimiento' => $summary->total_rows ?? 0,
         ];
 
-        // Paginar resultados
+        // Paginar resultados directamente en la base de datos
         $perPage = 20;
-        $page = Paginator::resolveCurrentPage() ?: 1;
-        $paginated = new LengthAwarePaginator(
-            $contratos->forPage($page, $perPage),
-            $contratos->count(),
-            $perPage,
-            $page,
-            ['path' => Paginator::resolveCurrentPath(), 'query' => $request->query()]
-        );
+        $paginated = $contratosQuery->paginate($perPage)->appends($request->query());
+
+        // Atributos dinámicos solo para los 20 resultados de la página (Ultra rápido)
+        $totalEvaluatedFields = 36 + 12; // 12 meses * 3 fuentes + 12 reqs (Aproximado para lógica de cumplimiento)
+
+        foreach ($paginated as $c) {
+            foreach ($c->seguimientoMensual as $sm) {
+                $attr = "cta{$sm->mes}_" . strtolower($sm->fuente) . '_status';
+                $c->$attr = $sm->estado;
+            }
+            foreach ($c->seguimientoRequisitos as $sr) {
+                $c->{$sr->nombre} = $sr->estado;
+            }
+
+            $ok = ($c->count_ok_mensual ?? 0) + ($c->count_ok_req ?? 0);
+            $na = ($c->count_na_mensual ?? 0) + ($c->count_na_req ?? 0);
+            $pend = ($c->count_pend_mensual ?? 0) + ($c->count_pend_req ?? 0);
+
+            if ($pend > 0) $c->global_status = 'CRÍTICO';
+            elseif (($ok + $na) === $totalEvaluatedFields) $c->global_status = 'COMPLETO';
+            elseif (($ok + $na) > 0) $c->global_status = 'EN PROGRESO';
+            else $c->global_status = 'VACÍO';
+
+            $c->perc_cumplimiento = $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0;
+        }
 
         $supervisores = Supervisor::all();
         $modalidades = Modalidad::all();
         $contratistas = Contratista::all();
+
+        // Obtener estados para el filtro agrupado
+        $bloques = \App\Models\BloqueWorkflow::ordenados()->get();
+        $todosLosEstados = \App\Models\EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
 
         if ($request->ajax()) {
             return response()->json([
@@ -264,6 +206,8 @@ class SeguimientoController extends Controller
             'modalidades' => $modalidades,
             'contratistas' => $contratistas,
             'stats' => $stats,
+            'todosLosEstados' => $todosLosEstados,
+            'bloques' => $bloques
         ]);
     }
 
@@ -395,6 +339,77 @@ class SeguimientoController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
+
+    /**
+     * ACTUALIZACIÓN EN LOTE (Batch Processor)
+     * Procesa múltiples cambios en una sola transacción para eficiencia y atomicidad.
+     */
+    public function batchUpdate(Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'changes' => 'required|array',
+                'changes.*.id' => 'required|exists:contratos,id',
+                'changes.*.field' => 'required|string',
+                'changes.*.newValue' => 'nullable|string',
+            ]);
+
+            DB::beginTransaction();
+
+            foreach ($validated['changes'] as $change) {
+                $id = $change['id'];
+                $field = $change['field'];
+                $status = $change['newValue'];
+
+                // CASO A: Seguimiento Mensual (Cta1, Cta2...)
+                if (preg_match('/^cta(\d+)_(secop|sia|rep)_status$/', $field, $matches)) {
+                    SeguimientoMensual::updateOrCreate(
+                        [
+                            'contrato_id' => $id,
+                            'mes' => $matches[1],
+                            'fuente' => strtoupper($matches[2]),
+                            'anio' => date('Y')
+                        ],
+                        ['estado' => $status]
+                    );
+                }
+                // CASO B: Atributos Maestros
+                elseif (in_array($field, ['secop_estado_contrato', 'aprobado_y_pagado', 'modificaciones_y_cierre', 'link_secop', 'tipo_contratista'])) {
+                    $contrato = Contrato::findOrFail($id);
+                    $contrato->$field = $status;
+                    $contrato->save();
+                }
+                // CASO C: Requisitos
+                else {
+                    $requisito = SeguimientoRequisito::where('contrato_id', $id)
+                        ->where('nombre', (string)$field)
+                        ->first();
+
+                    if ($requisito) {
+                        $requisito->update(['estado' => $status]);
+                    } else {
+                        SeguimientoRequisito::create([
+                            'contrato_id' => $id,
+                            'nombre' => (string)$field,
+                            'estado' => $status
+                        ]);
+                    }
+                }
+            }
+
+            DB::commit();
+            
+            $count = count($validated['changes']);
+            Contrato::logManualAudit(null, 'UPDATE', "Actualización en lote de $count campos en seguimiento", 'contratos');
+
+            return response()->json(['success' => true, 'message' => "Se guardaron $count cambios correctamente."]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Contrato::logException($e, 'contratos', $request->all());
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
 
 
     /**

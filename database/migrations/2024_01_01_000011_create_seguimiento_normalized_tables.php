@@ -37,6 +37,7 @@ return new class extends Migration
 
             // Garantizamos que no se repita el seguimiento para la misma fuente/mes/año
             $table->unique(['contrato_id', 'mes', 'anio', 'fuente'], 'uk_seguimiento_mensual_unico');
+            $table->index(['contrato_id', 'estado']);
         });
 
         // Seguimiento de Requisitos (Checklist Documental)
@@ -54,6 +55,7 @@ return new class extends Migration
 
             // Un contrato solo tiene un estado por cada requisito.
             $table->unique(['contrato_id', 'nombre'], 'uk_seguimiento_requisito_contrato');
+            $table->index(['contrato_id', 'estado']);
         });
     }
 
