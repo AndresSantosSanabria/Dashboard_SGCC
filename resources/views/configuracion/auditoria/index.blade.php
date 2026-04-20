@@ -288,7 +288,7 @@
     @push('scripts')
     <script>
         function verDetalles(id) {
-            window.apiFetch(`{{ route('configuracion.auditoria.show') }}/${id}`)
+            window.apiFetch(`{{ route('configuracion.auditoria.show', ['id' => ':id']) }}`.replace(':id', id))
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('det_ip').textContent = data.ip_origen || 'N/A';

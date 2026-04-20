@@ -448,7 +448,7 @@
             };
 
             window.toggleEstadoStatus = function(id) {
-                window.apiFetch(`{{ route('configuracion.workflow.toggle-status') }}/${id}`, {
+                window.apiFetch(`{{ route('configuracion.workflow.toggle-status', ['id' => ':id']) }}`.replace(':id', id), {
                         method: 'POST'
                     })
                     .then(res => res.json())

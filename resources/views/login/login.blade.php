@@ -218,7 +218,7 @@
 
             historyModalInstance.show();
 
-            window.apiFetch(`{{ route('public.historial', '') }}/${cuentaId}`)
+            window.apiFetch(`{{ route('public.historial', ['cuenta' => ':id']) }}`.replace(':id', cuentaId))
                 .then(response => response.json())
                 .then(data => {
                     spinner.style.display = "none";
