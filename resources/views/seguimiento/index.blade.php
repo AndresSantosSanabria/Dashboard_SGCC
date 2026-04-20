@@ -733,15 +733,73 @@
             applyAdvancedFilters();
         }
 
-        function exportToExcel() {
+        async function exportToExcel() {
+            const btn = document.querySelector('button[onclick="exportToExcel()"]');
+            const originalHTML = btn ? btn.innerHTML : '';
+            if (btn) {
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Descargando...';
+                btn.disabled = true;
+            }
+
             const params = new URLSearchParams({
                 numero_contrato: document.getElementById('filterContrato').value,
                 tipo_contratista: document.getElementById('filterTipo').value,
                 estado_filtro: document.getElementById('filterEstado').value,
                 secop_filtro: document.getElementById('filterSecop').value,
-                supervisor_id: document.getElementById('filterSup').value
+                supervisor_id: document.getElementById('filterSup').value,
+                sort_order: document.getElementById('sortOrder') ? document.getElementById('sortOrder').value : 'desc'
             });
-            window.location.href = "{{ route('seguimiento.export') }}?" + params.toString();
+
+            try {
+                // apiFetch o fetch con los headers correctos
+                const response = await fetch("{{ route('seguimiento.export') }}?" + params.toString(), {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    let errMsg = 'Error en el servidor al generar el Excel';
+                    try { 
+                        const errObj = await response.json(); 
+                        errMsg = errObj.message || errMsg; 
+                    } catch(e) { }
+                    window.showSnackbar(errMsg, 'error');
+                    return;
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                let filename = 'reporte_secop.xlsx';
+                const disposition = response.headers.get('content-disposition');
+                if (disposition && disposition.indexOf('filename=') !== -1) {
+                    const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+                    if (matches != null && matches[1]) {
+                        filename = matches[1].replace(/['"]/g, '');
+                    }
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                window.showSnackbar('Descarga completada con éxito', 'success');
+            } catch (error) {
+                console.error('Error al exportar a Excel:', error);
+                window.showSnackbar('Ocurrió un problema de red o permisos.', 'error');
+            } finally {
+                if (btn) {
+                    btn.innerHTML = originalHTML;
+                    btn.disabled = false;
+                }
+            }
         }
 
         function openLinkModal(id, currentLink) {

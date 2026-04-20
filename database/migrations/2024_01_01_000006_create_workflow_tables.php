@@ -36,6 +36,7 @@ return new class extends Migration
             $table->boolean('es_final')->default(false);
             $table->boolean('permite_devolucion')->default(false);
             $table->boolean('contabiliza_tiempo')->default(true)->comment('Indica si el tiempo en este estado cuenta para SLA/Estancamiento');
+            $table->decimal('tiempo_limite_horas', 8, 2)->nullable()->comment('Horas máximas permitidas en este estado antes de generar alerta. NULL = usar config global.');
             $table->boolean('afecta_indicadores')->default(true)->comment('Indica si las cuentas en este estado aparecen en gráficas de producción');
             $table->string('color_hex', 7)->nullable();
             $table->text('descripcion')->nullable();

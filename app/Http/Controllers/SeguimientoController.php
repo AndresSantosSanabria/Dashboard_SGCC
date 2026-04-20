@@ -130,7 +130,9 @@ class SeguimientoController extends Controller
         $totalEvaluatedFields = 51; // 12 meses * 3 fuentes + 15 reqs (9 checklist + 6 cierre)
         
         $statsSub = (clone $contratosQuery);
-        $summary = DB::table($statsSub, 'sub')
+        // Estadísticas Dinámicas: Calculadas sobre el set filtrado completo
+        // Usamos fromSub() que es el método oficial y más robusto para manejar subconsultas con bindings en Laravel
+        $summary = DB::query()->fromSub($statsSub->toBase(), 'sub')
             ->selectRaw("
                 COUNT(*) as total,
                 SUM(CASE WHEN (count_ok_mensual + count_ok_req + count_na_mensual + count_na_req) >= $totalEvaluatedFields AND (count_pend_mensual + count_pend_req) = 0 THEN 1 ELSE 0 END) as count_ok,
@@ -157,27 +159,8 @@ class SeguimientoController extends Controller
         $paginated = $contratosQuery->paginate($perPage)->appends($request->query());
 
         // 3. PROCESAMIENTO DINÁMICO DE ATRIBUTOS (FLAT-TO-MODEL)
-        $totalEvaluatedFields = 51;
-
         foreach ($paginated as $c) {
-            foreach ($c->seguimientoMensual as $sm) {
-                $attr = "cta{$sm->mes}_" . strtolower($sm->fuente) . '_status';
-                $c->$attr = $sm->estado;
-            }
-            foreach ($c->seguimientoRequisitos as $sr) {
-                $c->{$sr->nombre} = $sr->estado;
-            }
-
-            $ok = ($c->count_ok_mensual ?? 0) + ($c->count_ok_req ?? 0);
-            $na = ($c->count_na_mensual ?? 0) + ($c->count_na_req ?? 0);
-            $pend = ($c->count_pend_mensual ?? 0) + ($c->count_pend_req ?? 0);
-
-            if ($pend > 0) $c->global_status = 'CRÍTICO';
-            elseif (($ok + $na) === $totalEvaluatedFields) $c->global_status = 'COMPLETO';
-            elseif (($ok + $na) > 0) $c->global_status = 'EN PROGRESO';
-            else $c->global_status = 'VACÍO';
-
-            $c->perc_cumplimiento = $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0;
+            $this->hydrateContratoData($c);
         }
 
         $supervisores = Supervisor::all();
@@ -217,11 +200,17 @@ class SeguimientoController extends Controller
                 ob_end_clean();
             }
 
-            $contratos = $this->getFilteredContratos($request);
+            // Usando cursor() resolvemos el problema de la sobrecarga de memoria
+            // y permitimos que la DB nos entregue los registros 1 a 1 de forma óptima
+            $contratos = $this->getFilteredContratos($request)->cursor();
+            
             $tempFile = tempnam(sys_get_temp_dir(), 'export_') . '.xlsx';
             $writer = SimpleExcelWriter::create($tempFile);
 
             foreach ($contratos as $c) {
+                // Generar los agregados temporales por fila
+                $this->hydrateContratoData($c);
+                
                 $row = [
                     'PROCESO' => $c->numero_proceso,
                     'Nº CONTRATO' => $c->numero_contrato,
@@ -266,11 +255,21 @@ class SeguimientoController extends Controller
 
             $writer->close();
 
-            return response()->download($tempFile, 'seguimiento_' . date('Ymd') . '.xlsx')->deleteFileAfterSend(true);
+            $filename = 'reporte_' . date('Ymd_His') . '.xlsx';
+            
+            return response()->download($tempFile, $filename, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Access-Control-Expose-Headers' => 'Content-Disposition'
+            ])->deleteFileAfterSend(true);
+            
         } catch (\Exception $e) {
             Contrato::logException($e, 'contratos', $request->all());
 
-            return redirect()->back()->with('error', 'Error al exportar: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno al generar el archivo: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -527,5 +526,29 @@ class SeguimientoController extends Controller
             Contrato::logException($e, 'contratos', ['operacion' => 'destroy', 'id' => $id]);
             return response()->json(['success' => false, 'message' => 'Error: ' . $e->getMessage()], 500);
         }
+    }
+
+    private function hydrateContratoData($c)
+    {
+        $totalEvaluatedFields = 51;
+
+        foreach ($c->seguimientoMensual as $sm) {
+            $attr = "cta{$sm->mes}_" . strtolower($sm->fuente) . '_status';
+            $c->$attr = $sm->estado;
+        }
+        foreach ($c->seguimientoRequisitos as $sr) {
+            $c->{$sr->nombre} = $sr->estado;
+        }
+
+        $ok = ($c->count_ok_mensual ?? 0) + ($c->count_ok_req ?? 0);
+        $na = ($c->count_na_mensual ?? 0) + ($c->count_na_req ?? 0);
+        $pend = ($c->count_pend_mensual ?? 0) + ($c->count_pend_req ?? 0);
+
+        if ($pend > 0) $c->global_status = 'CRÍTICO';
+        elseif (($ok + $na) === $totalEvaluatedFields) $c->global_status = 'COMPLETO';
+        elseif (($ok + $na) > 0) $c->global_status = 'EN PROGRESO';
+        else $c->global_status = 'VACÍO';
+
+        $c->perc_cumplimiento = $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0;
     }
 }

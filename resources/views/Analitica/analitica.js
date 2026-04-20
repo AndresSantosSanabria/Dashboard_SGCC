@@ -1,56 +1,56 @@
 /**
  * MOTOR DE VISUALIZACIÓN BI (ApexCharts)
- * 
+ *
  * Este script gestiona la interactividad del tablero analítico.
- * Sigue un patrón de "Data-Driven UI", donde los gráficos se destruyen y 
+ * Sigue un patrón de "Data-Driven UI", donde los gráficos se destruyen y
  * recrean dinámicamente según la respuesta del servidor (AJAX).
  */
 document.addEventListener('DOMContentLoaded', function () {
     let chartData = window.chartData || {};
     let charts = {};
-    const slider = document.getElementById('rangeSlider');
-    const filterForm = document.getElementById('filterForm');
+    const slider      = document.getElementById('rangeSlider');
+    const filterForm  = document.getElementById('filterForm');
     const captureArea = document.getElementById('captureArea');
 
     // PALETA DE COLORES INSTITUCIONAL
-    // Basada en la guía GOV.CO con extensiones para semántica de BI (Green/Amber/Red).
     const P = {
-        primary: '#0f172a',
-        accent: '#3b82f6',
-        success: '#10b981',
-        warning: '#f59e0b',
-        danger: '#ef4444',
-        info: '#6366f1',
-        slate: '#475569',
-        slateLt: '#94a3b8',
-        muted: '#f1f5f9',
-        blue: '#0f172a',
-        blueLt: '#3b82f6',
-        indigo: '#6366f1',
-        teal: '#14b8a6',
-        green: '#10b981',
-        greenLt: '#34d399',
-        amber: '#f59e0b',
-        orange: '#f97316',
-        red: '#ef4444',
-        redLt: '#f87171',
-        gray: '#475569',
-        grayLt: '#94a3b8'
+        primary:  '#0f172a',
+        accent:   '#3b82f6',
+        success:  '#10b981',
+        warning:  '#f59e0b',
+        danger:   '#ef4444',
+        info:     '#6366f1',
+        slate:    '#475569',
+        slateLt:  '#94a3b8',
+        muted:    '#f1f5f9',
+        blue:     '#0f172a',
+        blueLt:   '#3b82f6',
+        indigo:   '#6366f1',
+        teal:     '#14b8a6',
+        green:    '#10b981',
+        greenLt:  '#34d399',
+        amber:    '#f59e0b',
+        orange:   '#f97316',
+        red:      '#ef4444',
+        redLt:    '#f87171',
+        gray:     '#475569',
+        grayLt:   '#94a3b8'
     };
 
-    const baseFont = { fontFamily: 'Inter, sans-serif' };
+    const baseFont  = { fontFamily: 'Inter, sans-serif' };
     const noToolbar = { show: false };
 
-    /**
-     * Inicialización Dinámica de Gráficos
-     * Esta función separa la lógica de configuración de la lógica de datos.
-     */
+
+
+    // ==============================
+    // CHARTS
+    // ==============================
     function initCharts(data) {
+
         // 1. DISTRIBUCIÓN POR ESTADO (Donut)
-        // Permite ver rápidamente la proporción de cuentas devueltas vs proceso.
         if (data.estado_anillos) {
             if (charts.donut) charts.donut.destroy();
-            charts.donut = new ApexCharts(document.querySelector("#donutChart"), {
+            charts.donut = new ApexCharts(document.querySelector('#donutChart'), {
                 series: data.estado_anillos.series,
                 chart: { type: 'donut', height: 320, ...baseFont },
                 labels: data.estado_anillos.labels,
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 },
                 dataLabels: { enabled: false },
-                stroke: { width: 5, colors: ['#fff'] },
+                stroke: { width: 5, colors: ['#fff'] }
             });
             charts.donut.render();
         }
@@ -96,9 +96,9 @@ document.addEventListener('DOMContentLoaded', function () {
         // 1.5 DELAY – Demora por Etapa
         if (data.demora_bloques && data.demora_bloques.length > 0) {
             const promedios = data.demora_bloques.map(d => d.promedio_horas);
-            const maxTime = Math.max(...promedios);
-            const minTime = Math.min(...promedios);
-            const range = maxTime - minTime;
+            const maxTime   = Math.max(...promedios);
+            const minTime   = Math.min(...promedios);
+            const range     = maxTime - minTime;
 
             const delayColors = data.demora_bloques.map(d => {
                 const h = d.promedio_horas;
@@ -111,15 +111,10 @@ document.addEventListener('DOMContentLoaded', function () {
             });
 
             if (charts.delay) charts.delay.destroy();
-            charts.delay = new ApexCharts(document.querySelector("#delayChart"), {
-                series: [{
-                    name: 'Promedio (Horas)',
-                    data: data.demora_bloques.map(d => d.promedio_horas)
-                }],
+            charts.delay = new ApexCharts(document.querySelector('#delayChart'), {
+                series: [{ name: 'Promedio (Horas)', data: data.demora_bloques.map(d => d.promedio_horas) }],
                 chart: { type: 'bar', height: 280, toolbar: noToolbar, ...baseFont, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
-                plotOptions: {
-                    bar: { horizontal: true, borderRadius: 8, barHeight: '45%', distributed: true }
-                },
+                plotOptions: { bar: { horizontal: true, borderRadius: 8, barHeight: '45%', distributed: true } },
                 colors: delayColors,
                 xaxis: {
                     categories: data.demora_bloques.map(d => d.bloque),
@@ -151,18 +146,17 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             charts.delay.render();
         } else {
-            document.querySelector("#delayChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-clock"></i>Sin datos de demora históricos</div>';
+            const el = document.querySelector('#delayChart');
+            if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-clock"></i>Sin datos de demora históricos</div>';
         }
 
         // 2. PIPELINE – Carga por Etapa
         if (data.gap_chart && data.gap_chart.labels.length > 0) {
             if (charts.gap) charts.gap.destroy();
-            charts.gap = new ApexCharts(document.querySelector("#gapChart"), {
+            charts.gap = new ApexCharts(document.querySelector('#gapChart'), {
                 series: [{ name: 'Contratos', data: data.gap_chart.series }],
                 chart: { type: 'bar', height: 320, toolbar: noToolbar, ...baseFont, animations: { enabled: true, speed: 800 } },
-                plotOptions: {
-                    bar: { horizontal: true, borderRadius: 10, barHeight: '55%', distributed: true },
-                },
+                plotOptions: { bar: { horizontal: true, borderRadius: 10, barHeight: '55%', distributed: true } },
                 colors: [P.blue, P.indigo, P.teal, P.green, P.amber, P.red],
                 xaxis: {
                     categories: data.gap_chart.labels,
@@ -170,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 },
                 yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.slate } } },
                 legend: { show: false },
-                tooltip: { theme: 'dark', y: { formatter: val => val + " contratos" } },
+                tooltip: { theme: 'dark', y: { formatter: val => val + ' contratos' } },
                 dataLabels: {
                     enabled: true,
                     textAnchor: 'start',
@@ -181,15 +175,16 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             charts.gap.render();
         } else {
-            document.querySelector("#gapChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-bar-chart"></i>Sin datos en el pipeline</div>';
+            const el = document.querySelector('#gapChart');
+            if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-bar-chart"></i>Sin datos en el pipeline</div>';
         }
 
         // 3. TIMELINE – Actividad últimos 30 días
         if (data.timeline && data.timeline.labels.length > 0) {
             if (charts.timeline) charts.timeline.destroy();
-            charts.timeline = new ApexCharts(document.querySelector("#timelineChart"), {
+            charts.timeline = new ApexCharts(document.querySelector('#timelineChart'), {
                 series: [{ name: 'Transiciones', data: data.timeline.series }],
-                chart: { type: 'area', height: 280, toolbar: noToolbar, ...baseFont, sparkline: { enabled: false } },
+                chart: { type: 'area', height: 280, toolbar: noToolbar, ...baseFont },
                 colors: [P.accent],
                 fill: {
                     type: 'gradient',
@@ -202,17 +197,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     axisBorder: { show: false },
                     axisTicks: { show: false }
                 },
-                yaxis: {
-                    labels: { formatter: val => Math.round(val), style: { colors: P.slateLt } }
-                },
+                yaxis: { labels: { formatter: val => Math.round(val), style: { colors: P.slateLt } } },
                 dataLabels: { enabled: false },
                 grid: { borderColor: '#f8fafc', strokeDashArray: 4 },
                 markers: { size: 5, colors: ['#fff'], strokeColors: P.accent, strokeWidth: 3, hover: { size: 7 } },
-                tooltip: { theme: 'dark', y: { formatter: val => val + " transiciones" } }
+                tooltip: { theme: 'dark', y: { formatter: val => val + ' transiciones' } }
             });
             charts.timeline.render();
         } else {
-            document.querySelector("#timelineChart").innerHTML = '<div class="empty-chart-state"><i class="bi bi-activity"></i>Sin actividad reciente (30 días)</div>';
+            const el = document.querySelector('#timelineChart');
+            if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-activity"></i>Sin actividad reciente (30 días)</div>';
         }
     }
 
@@ -220,10 +214,9 @@ document.addEventListener('DOMContentLoaded', function () {
     // UI UPDATES
     // ==============================
     function updateKPIs(data) {
-        const fmt = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+        const fmt    = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
         const fmtDec = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-        // Hero indicator
         const miniValue = document.querySelector('.mini-value');
         if (miniValue) {
             miniValue.style.opacity = '0';
@@ -234,35 +227,26 @@ document.addEventListener('DOMContentLoaded', function () {
             }, 300);
         }
 
-        // KPI Cards dynamic update
         const cards = document.querySelectorAll('.kpi-card');
         cards.forEach(card => {
             const val = card.querySelector('.kpi-value');
             if (!val) return;
             val.style.opacity = '0';
-
             setTimeout(() => {
-                if (card.classList.contains('kpi-blue')) val.textContent = fmt.format(data.contratistasUnicos);
-                else if (card.classList.contains('kpi-amber')) val.textContent = fmt.format(data.cuentasTramite);
-                else if (card.classList.contains('kpi-green')) val.textContent = fmt.format(data.cuentasRadicadas);
-                else if (card.classList.contains('kpi-red')) val.textContent = fmt.format(Math.max(0, data.pagosTotales - data.cuentasRadicadas));
+                if (card.classList.contains('kpi-blue'))   val.textContent = fmt.format(data.contratistasUnicos);
+                else if (card.classList.contains('kpi-amber'))  val.textContent = fmt.format(data.cuentasTramite);
+                else if (card.classList.contains('kpi-green'))  val.textContent = fmt.format(data.cuentasRadicadas);
+                else if (card.classList.contains('kpi-red'))    val.textContent = fmt.format(Math.max(0, data.pagosTotales - data.cuentasRadicadas));
                 else if (card.classList.contains('kpi-indigo')) val.textContent = fmt.format(data.pagosTotales);
-                else if (card.classList.contains('kpi-teal')) val.textContent = fmtDec.format(data.avanceGlobal) + '%';
-
-
+                else if (card.classList.contains('kpi-teal'))   val.textContent = fmtDec.format(data.avanceGlobal) + '%';
                 val.style.transition = 'opacity 0.5s ease';
                 val.style.opacity = '1';
             }, 300);
         });
 
-        // Global progress bar
         const globalProgress = document.querySelector('.kpi-teal .progress-bar');
-        if (globalProgress) {
-            globalProgress.style.width = Math.min(data.avanceGlobal, 100) + '%';
-        }
+        if (globalProgress) globalProgress.style.width = Math.min(data.avanceGlobal, 100) + '%';
     }
-
-
 
     function updateTable(html) {
         const table = $('#alertTable').DataTable();
@@ -272,42 +256,30 @@ document.addEventListener('DOMContentLoaded', function () {
         applyMinimizedColumns();
     }
 
-    /**
-     * ESTRATEGIA DE REFRESCO AJAX (Seamless BI)
-     * 
-     * Implementa un patrón de "Single Page Component" dentro de la vista de analítica.
-     * En lugar de recargar la página, solicitamos los datos al controlador, 
-     * actualizamos los KPIs, redibujamos los gráficos y reemplazamos el HTML 
-     * de la tabla de forma atómica.
-     */
+    // ==============================
+    // AJAX REFRESH
+    // ==============================
     async function refreshDashboard() {
         const formData = new FormData(filterForm);
-        const params = new URLSearchParams(formData);
+        const params   = new URLSearchParams(formData);
 
-        // INDICADOR DE CARGA: Feedback visual inmediato al usuario
         if (captureArea) captureArea.classList.add('loading');
 
         try {
             const response = await window.apiFetch(filterForm.action + '?' + params.toString());
-            const data = await response.json();
+            const data     = await response.json();
 
-            // ACTUALIZACIÓN DE ESTADO: 
-            // Sincronizamos KPIs, Gráficos y Tabla sin perder el scroll del usuario.
             updateKPIs(data);
             initCharts(data.chartData);
             updateTable(data.tableHtml);
 
-            // MANEJO DE HISTORIAL (Browser History API): 
-            // Permite que el usuario pueda usar el botón "Atrás" o compartir 
-            // la URL con los filtros actuales aplicados.
             const newUrl = window.location.pathname + '?' + params.toString();
             window.history.pushState({ path: newUrl }, '', newUrl);
-
         } catch (error) {
             console.error('Error refreshing dashboard:', error);
-            window.showSnackbar("Error al actualizar los datos. Intente de nuevo.", "error");
+            window.showSnackbar('Error al actualizar los datos. Intente de nuevo.', 'error');
         } finally {
-            captureArea.classList.remove('loading');
+            if (captureArea) captureArea.classList.remove('loading');
         }
     }
 
@@ -315,7 +287,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // INITIALIZATION
     // ==============================
     if (captureArea) captureArea.classList.remove('loading');
-
     initCharts(chartData);
     initDataTable();
 
@@ -325,7 +296,13 @@ document.addEventListener('DOMContentLoaded', function () {
             language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json' },
             dom: 'Bfrtip',
             buttons: [
-                { extend: 'excelHtml5', text: 'Excel', className: 'd-none', filename: 'BI_Report_2026' }
+                {
+                    extend: 'excelHtml5',
+                    text: 'Excel',
+                    className: 'd-none',
+                    filename: 'BI_Report_SGCC',
+                    exportOptions: { columns: ':visible' }
+                }
             ],
             order: [[6, 'desc']]
         });
@@ -335,21 +312,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==============================
     // EVENT LISTENERS
     // ==============================
-
-    // Intercept form submit
     document.getElementById('filterForm').addEventListener('submit', function (e) {
         e.preventDefault();
         refreshDashboard();
     });
 
-    // Reset button
     $('#btnReset').on('click', function () {
         if (filterForm) filterForm.reset();
-
-        // Clear hidden inputs manually since reset() doesn't always clear value=""
         if (filterForm) $(filterForm).find('input[type="hidden"]').val('');
 
-        // Reset nuevo picker de estado
         const pickerEl  = document.getElementById('estadoPicker');
         const labelEl   = document.getElementById('selectedEstadoLabel');
         const hiddenEl  = document.getElementById('hiddenSearchEstado');
@@ -362,23 +333,19 @@ document.addEventListener('DOMContentLoaded', function () {
             pickerEl.classList.remove('is-open');
         }
 
-        // Reset date display
         const dateDisplay = document.getElementById('dateDisplay');
         if (dateDisplay) {
             dateDisplay.textContent = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         }
 
-        // Reset flatpickr if exists
         const fp = document.getElementById('dateRangePicker')?._flatpickr;
         if (fp) fp.clear();
 
-        // Specific resets for third party plugins
         if (slider && slider.noUiSlider) slider.noUiSlider.set([0, 100]);
 
         refreshDashboard();
     });
 
-    // Auto-refresh on select change
     $('#filterForm select').on('change', function () {
         refreshDashboard();
     });
@@ -398,10 +365,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 format: { to: val => Math.round(val), from: val => val }
             });
 
-            slider.noUiSlider.on('change', function () {
-                refreshDashboard();
-            });
-
+            slider.noUiSlider.on('change', function () { refreshDashboard(); });
             slider.noUiSlider.on('update', function (values) {
                 minValInput.value = values[0];
                 maxValInput.value = values[1];
@@ -413,23 +377,23 @@ document.addEventListener('DOMContentLoaded', function () {
     const dateRangePicker = document.getElementById('dateRangePicker');
     if (dateRangePicker) {
         flatpickr(dateRangePicker, {
-            mode: "range",
-            dateFormat: "Y-m-d",
-            locale: "es",
+            mode: 'range',
+            dateFormat: 'Y-m-d',
+            locale: 'es',
             defaultDate: [
                 document.getElementById('fecha_desde').value,
                 document.getElementById('fecha_hasta').value
             ],
             onChange: function (selectedDates, dateStr, instance) {
                 if (selectedDates.length === 2) {
-                    const start = instance.formatDate(selectedDates[0], "Y-m-d");
-                    const end = instance.formatDate(selectedDates[1], "Y-m-d");
+                    const start = instance.formatDate(selectedDates[0], 'Y-m-d');
+                    const end   = instance.formatDate(selectedDates[1], 'Y-m-d');
 
                     document.getElementById('fecha_desde').value = start;
                     document.getElementById('fecha_hasta').value = end;
 
-                    const displayStart = instance.formatDate(selectedDates[0], "d F, Y");
-                    const displayEnd = instance.formatDate(selectedDates[1], "d F, Y");
+                    const displayStart = instance.formatDate(selectedDates[0], 'd F, Y');
+                    const displayEnd   = instance.formatDate(selectedDates[1], 'd F, Y');
                     document.getElementById('dateDisplay').textContent = `${displayStart} - ${displayEnd}`;
 
                     refreshDashboard();
@@ -438,165 +402,410 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // PDF Export mapping
-    $('#btnExportPDF').on('click', function () {
-        const btn = $(this);
+    // ===================================================================
+    // PDF EXPORT — Generación programática limpia con jsPDF + AutoTable
+    //
+    // Estrategia: construir el PDF directamente con jsPDF en lugar de
+    // capturar el DOM con html2canvas (que no soporta oklch ni temas oscuros).
+    // El resultado es un documento de impresión profesional con fondo blanco.
+    // ===================================================================
+    $('#btnExportPDF').on('click', async function () {
+        const btn             = $(this);
         const originalContent = btn.html();
-        const table = $('#alertTable').DataTable();
 
-        if (!window.jspdf) {
-            alert('Error: La librería de PDF no está lista.');
-            return;
-        }
+        try {
+            const jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+            if (!jsPDFConstructor) {
+                Swal.fire('Error', 'Librería jsPDF no cargada. Verifique la conexión a internet.', 'error');
+                return;
+            }
 
-        btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando reporte...');
-        btn.prop('disabled', true);
+            btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando PDF...');
+            btn.prop('disabled', true);
 
-        const originalLength = table.page.len();
-        table.page.len(-1).draw();
+            // ── Paleta institucional ──
+            const C = {
+                navy:      [15, 23, 42],
+                blue:      [59, 130, 246],
+                green:     [16, 185, 129],
+                amber:     [245, 158, 11],
+                red:       [239, 68, 68],
+                indigo:    [99, 102, 241],
+                teal:      [20, 184, 166],
+                slate:     [71, 85, 105],
+                slateLt:   [148, 163, 184],
+                border:    [226, 232, 240],
+                bg:        [248, 250, 252],
+                white:     [255, 255, 255],
+            };
 
-        const element = document.getElementById('captureArea');
-        element.classList.add('is-exporting');
-        window.scrollTo(0, 0);
+            const pdf = new jsPDFConstructor({ orientation: 'l', unit: 'mm', format: 'a4' });
+            const W   = pdf.internal.pageSize.getWidth();   // 297mm
+            const H   = pdf.internal.pageSize.getHeight();  // 210mm
+            const M   = 14; // margen horizontal
+            let   y   = M;
 
-        setTimeout(() => {
-            html2canvas(element, {
-                scale: 2,
-                useCORS: true,
-                allowTaint: true,
-                logging: false,
-                backgroundColor: "#ffffff",
-                windowWidth: 1400, // Aumentado para evitar cortes laterales
-                width: 1400,
-                onclone: (clonedDoc) => {
-                    const header = clonedDoc.getElementById('pdfHeader');
-                    const footer = clonedDoc.getElementById('pdfFooter');
-                    
-                    if (header) {
-                        header.classList.remove('d-none');
-                        header.style.display = 'block';
+            // ── Helpers ──
+            const rgb = (arr) => ({ r: arr[0], g: arr[1], b: arr[2] });
 
-                        // Valor RP
-                        const rpValue = document.querySelector('.mini-value')?.textContent || '';
-                        const indicators = clonedDoc.getElementById('pdfIndicators');
-                        if (indicators) {
-                            indicators.innerHTML = `
-                                <div style="background: #0f172a; padding: 12px 20px; border-radius: 14px; border: 1px solid #1e293b; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
-                                    <div style="font-size: 8px; color: #94a3b8; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px;">VALOR TOTAL RP</div>
-                                    <div style="font-size: 22px; color: #ffffff; font-weight: 900; line-height: 1;">${rpValue}</div>
-                                </div>
-                            `;
-                        }
-
-                        // Fecha del reporte (Rango visible)
-                        const dateText = document.getElementById('dateDisplay')?.textContent || '';
-                        const pdfDateDisplay = clonedDoc.getElementById('pdfDateDisplay');
-                        if (pdfDateDisplay) pdfDateDisplay.textContent = dateText;
-
-                        // Filtros aplicados humanizados
-                        const filters = [];
-                        const fForm = document.getElementById('filterForm');
-                        if (fForm) {
-                            const contrato = fForm.querySelector('[name="contrato"]')?.value;
-                            if (contrato) filters.push(`Contrato: ${contrato}`);
-                            
-                            const supervisor = fForm.querySelector('[name="supervisor"] option:checked')?.text;
-                            if (supervisor && supervisor !== 'Todos') filters.push(`Supervisor: ${supervisor}`);
-                            
-                            const responsable = fForm.querySelector('[name="responsable"] option:checked')?.text;
-                            if (responsable && responsable !== 'Todos') filters.push(`Responsable: ${responsable}`);
-                            
-                            const estado = document.getElementById('selectedEstadoLabel')?.textContent;
-                            if (estado && estado !== 'Todos los estados') filters.push(`Estado: ${estado}`);
-                            
-                            const minP = document.getElementById('minVal')?.value;
-                            const maxP = document.getElementById('maxVal')?.value;
-                            if (minP !== "0" || maxP !== "100") filters.push(`Avance: ${minP}% - ${maxP}%`);
-                        }
-                        
-                        const pdfAppliedFilters = clonedDoc.getElementById('pdfAppliedFilters');
-                        if (pdfAppliedFilters) {
-                            pdfAppliedFilters.textContent = filters.length > 0 ? filters.join(' | ') : 'Sin filtros específicos (Global)';
-                        }
-                    }
-
-                    if (footer) {
-                        footer.classList.remove('d-none');
-                        footer.style.display = 'block';
-                    }
-
-                    // Forzar fondos blancos en ApexCharts para el PDF
-                    clonedDoc.querySelectorAll('.apexcharts-canvas').forEach(c => {
-                         c.style.background = '#ffffff';
-                         c.style.borderRadius = '0px';
-                    });
-
-                    // LÓGICA DE SALTO DE PÁGINA PARA TARJETAS
-                    const pageHeightPx = 990; // Proporción A4 Landscape para 1400px de ancho
-                    const cards = clonedDoc.querySelectorAll('.card, .kpi-card, .chart-container, .card-premium, .section-title');
-
-                    cards.forEach(card => {
-                        const rect = card.getBoundingClientRect();
-                        let top = 0;
-                        let curr = card;
-                        const container = clonedDoc.getElementById('captureArea');
-
-                        while (curr && curr !== container && curr !== clonedDoc.body) {
-                            top += curr.offsetTop;
-                            curr = curr.offsetParent;
-                        }
-
-                        const bottom = top + rect.height;
-                        const pageNumAtTop = Math.floor(top / pageHeightPx);
-                        const pageNumAtBottom = Math.floor(bottom / pageHeightPx);
-
-                        if (pageNumAtTop !== pageNumAtBottom && rect.height < pageHeightPx * 0.8) {
-                            const neededShift = (pageNumAtBottom * pageHeightPx) - top;
-                            card.style.marginTop = (neededShift + 40) + 'px';
-                        }
-                    });
-                }
-            }).then(canvas => {
-                const { jsPDF } = window.jspdf;
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-
-                const pdf = new jsPDF({ orientation: 'l', unit: 'mm', format: 'a4' });
-
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-
-                const imgWidth = pdfWidth;
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-                let heightLeft = imgHeight;
-                let position = 0;
-
-                // Página 1
-                pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                heightLeft -= pdfHeight;
-
-                // Páginas subsiguientes
-                while (heightLeft > 0) {
-                    position = heightLeft - imgHeight;
+            function newPageIfNeeded(neededMm) {
+                if (y + neededMm > H - M) {
                     pdf.addPage();
-                    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-                    heightLeft -= pdfHeight;
+                    drawPageFooter();
+                    y = M;
+                    return true;
                 }
+                return false;
+            }
 
-                pdf.save(`SGCC_Reporte_Analitico_${new Date().toISOString().split('T')[0]}.pdf`);
-                table.page.len(originalLength).draw();
-                element.classList.remove('is-exporting');
-                btn.html(originalContent).prop('disabled', false);
-            }).catch(err => {
-                console.error(err);
-                table.page.len(originalLength).draw();
-                element.classList.remove('is-exporting');
-                btn.html(originalContent).prop('disabled', false);
+            function drawPageFooter() {
+                const pageNum = pdf.internal.getCurrentPageInfo().pageNumber;
+                pdf.setDrawColor(...C.border);
+                pdf.setLineWidth(0.2);
+                pdf.line(M, H - 8, W - M, H - 8);
+                pdf.setFontSize(7);
+                pdf.setTextColor(...C.slateLt);
+                pdf.text('© ' + new Date().getFullYear() + ' Gobernación de Cundinamarca — Informe Analítico BI', M, H - 4);
+                pdf.text('Pág. ' + pageNum, W - M, H - 4, { align: 'right' });
+            }
+
+            // ── PÁGINA 1: ENCABEZADO ──────────────────────────────────────
+            // Banda superior institucional
+            pdf.setFillColor(...C.navy);
+            pdf.rect(0, 0, W, 22, 'F');
+
+            // Línea de acento
+            pdf.setFillColor(...C.blue);
+            pdf.rect(0, 22, W, 1.2, 'F');
+
+            // Texto encabezado
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(14);
+            pdf.setTextColor(...C.white);
+            pdf.text('INFORME DE GESTIÓN BI', M, 10);
+
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7.5);
+            pdf.setTextColor(...C.slateLt);
+            pdf.text('Secretaría de Tecnologías de la Información y las Comunicaciones', M, 16);
+
+            // Metadata derecha
+            const now     = new Date();
+            const dateStr = now.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+            const userName = document.querySelector('meta[name="user-name"]')?.content
+                          || (document.querySelector('.navbar .dropdown-toggle')?.textContent?.trim() || 'Admin Sistema');
+
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7);
+            pdf.setTextColor(...C.slateLt);
+            pdf.text('GENERADO POR', W - M, 7, { align: 'right' });
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(8);
+            pdf.setTextColor(...C.white);
+            pdf.text(userName, W - M, 12, { align: 'right' });
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7);
+            pdf.setTextColor(...C.slateLt);
+            pdf.text('FECHA: ' + dateStr + ' ' + timeStr, W - M, 17, { align: 'right' });
+
+            y = 30;
+
+            // ── Filtros aplicados ──
+            const filters = [];
+            const ff = document.getElementById('filterForm');
+            if (ff) {
+                const c = ff.querySelector('[name="contrato"]')?.value;
+                if (c) filters.push('Contrato: ' + c);
+                const s = ff.querySelector('[name="supervisor"] option:checked')?.text;
+                if (s && s !== 'Todos') filters.push('Supervisor: ' + s);
+                const r = ff.querySelector('[name="responsable"] option:checked')?.text;
+                if (r && r !== 'Todos') filters.push('Responsable: ' + r);
+                const e = document.getElementById('selectedEstadoLabel')?.textContent;
+                if (e && e !== 'Todos los estados') filters.push('Estado: ' + e);
+            }
+            const dateRange = document.getElementById('dateDisplay')?.textContent?.trim() || dateStr;
+            const filterTxt = filters.length > 0 ? filters.join('  |  ') : 'Sin filtros específicos (Global)';
+
+            pdf.setFillColor(...C.bg);
+            pdf.roundedRect(M, y, W - M * 2, 10, 2, 2, 'F');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(7);
+            pdf.setTextColor(...C.slate);
+            pdf.text('Filtros aplicados:', M + 3, y + 4.5);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setTextColor(...C.slateLt);
+            pdf.text(filterTxt, M + 32, y + 4.5);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setTextColor(...C.slate);
+            pdf.text('Período:  ' + dateRange, W - M - 3, y + 4.5, { align: 'right' });
+            y += 15;
+
+            // ── SECCIÓN: KPIs ─────────────────────────────────────────────
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(8);
+            pdf.setTextColor(...C.slate);
+            pdf.text('INDICADORES CLAVE', M, y);
+            pdf.setDrawColor(...C.blue);
+            pdf.setLineWidth(0.5);
+            pdf.line(M, y + 1, M + 38, y + 1);
+            y += 5;
+
+            // Recolectar valores KPI desde el DOM
+            const kpiCards = document.querySelectorAll('.kpi-card');
+            const kpiData  = [];
+
+            // Valor RP del mini-indicator
+            const rpVal = document.querySelector('.mini-value')?.textContent?.trim() || '$0';
+            kpiData.push({ label: 'Valor Total RP', value: rpVal, color: C.navy });
+
+            kpiCards.forEach(card => {
+                const val   = card.querySelector('.kpi-value')?.textContent?.trim() || '0';
+                const label = card.querySelector('.kpi-label')?.textContent?.trim() || '';
+                let color   = C.blue;
+                if (card.classList.contains('kpi-amber'))  color = C.amber;
+                if (card.classList.contains('kpi-green'))  color = C.green;
+                if (card.classList.contains('kpi-red'))    color = C.red;
+                if (card.classList.contains('kpi-indigo')) color = C.indigo;
+                if (card.classList.contains('kpi-teal'))   color = C.teal;
+                if (label) kpiData.push({ label, value: val, color });
             });
-        }, 800);
+
+            // Dibujar tarjetas KPI en una fila
+            const kpiCount = Math.min(kpiData.length, 7);
+            const kpiW     = (W - M * 2 - (kpiCount - 1) * 3) / kpiCount;
+            const kpiH     = 26; // Aumentado de 20 para mejor proporción
+
+            kpiData.slice(0, kpiCount).forEach((kpi, i) => {
+                const kx = M + i * (kpiW + 3);
+                const ky = y;
+
+                // Fondo tarjeta
+                pdf.setFillColor(...C.white);
+                pdf.setDrawColor(...C.border);
+                pdf.setLineWidth(0.15);
+                pdf.roundedRect(kx, ky, kpiW, kpiH, 2, 2, 'FD');
+
+                // Barra de color superior
+                pdf.setFillColor(...kpi.color);
+                pdf.roundedRect(kx, ky, kpiW, 1.8, 1, 1, 'F');
+                pdf.rect(kx, ky + 1, kpiW, 0.8, 'F');
+
+                // Valor
+                pdf.setFont('helvetica', 'bold');
+                const fontSize = kpi.value.length > 12 ? 8 : 11;
+                pdf.setFontSize(fontSize);
+                pdf.setTextColor(...kpi.color);
+                pdf.text(kpi.value, kx + kpiW / 2, ky + 13, { align: 'center' }); // Centrado vertical mejorado
+
+                // Label
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(6.5);
+                pdf.setTextColor(...C.slateLt);
+                const labelLines = pdf.splitTextToSize(kpi.label, kpiW - 4);
+                pdf.text(labelLines, kx + kpiW / 2, ky + 20, { align: 'center' });
+            });
+            y += kpiH + 10;
+
+            // ── SECCIÓN: Gráficos (exportados como imagen desde ApexCharts) ──
+            newPageIfNeeded(10);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(8);
+            pdf.setTextColor(...C.slate);
+            pdf.text('ANÁLISIS GRÁFICO', M, y);
+            pdf.setDrawColor(...C.indigo);
+            pdf.setLineWidth(0.5);
+            pdf.line(M, y + 1, M + 38, y + 1);
+            y += 6;
+
+            // Exportar gráficos como PNG desde ApexCharts respetando aspect ratio
+            const getImageSize = (src) => new Promise(res => {
+                const img = new Image();
+                img.onload = () => res({ w: img.width, h: img.height });
+                img.src = src;
+            });
+
+            async function addChartToPdf(chartInstance, label, x, cy, w, h) {
+                if (!chartInstance) return;
+                try {
+                    const uri = await chartInstance.dataURI();
+                    const imgSrc = uri.imgURI || uri;
+                    if (imgSrc && imgSrc.startsWith('data:image')) {
+                        // Marco contenedor
+                        pdf.setFillColor(...C.white);
+                        pdf.setDrawColor(...C.border);
+                        pdf.setLineWidth(0.15);
+                        pdf.roundedRect(x, cy, w, h + 8, 2, 2, 'FD');
+
+                        // Etiqueta del gráfico
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(7);
+                        pdf.setTextColor(...C.slate);
+                        pdf.text(label, x + 4, cy + 5);
+
+                        // Calcular ajuste proporcional (Aspect Ratio)
+                        const size = await getImageSize(imgSrc);
+                        const ratio = size.w / size.h;
+                        
+                        let targetW = w - 8;
+                        let targetH = targetW / ratio;
+
+                        if (targetH > h) {
+                            targetH = h;
+                            targetW = targetH * ratio;
+                        }
+
+                        // Centrar imagen dentro del marco disponible
+                        const offsetX = (w - targetW) / 2;
+                        const offsetY = (h - targetH) / 2 + 6; // +6 por la etiqueta
+
+                        pdf.addImage(imgSrc, 'PNG', x + offsetX, cy + offsetY, targetW, targetH, undefined, 'FAST');
+                    }
+                } catch (e) {
+                    pdf.setFillColor(...C.bg);
+                    pdf.setDrawColor(...C.border);
+                    pdf.setLineWidth(0.15);
+                    pdf.roundedRect(x, cy, w, h + 8, 2, 2, 'FD');
+                    pdf.setFont('helvetica', 'italic');
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(...C.slateLt);
+                    pdf.text('Gráfico no disponible', x + w / 2, cy + (h + 8) / 2, { align: 'center' });
+                }
+            }
+
+            const chartRowH = 58;
+            const gutter    = 10; // Aumentado para más aire entre columnas
+            const halfW     = (W - M * 2 - gutter) / 2;
+
+            // Fila 1: Donut + Pipeline
+            newPageIfNeeded(chartRowH + 15);
+            await addChartToPdf(charts.donut,    'DISTRIBUCIÓN DE ESTADOS',         M,             y, halfW, chartRowH);
+            await addChartToPdf(charts.gap,      'PIPELINE — CARGA POR ETAPA',      M + halfW + gutter, y, halfW, chartRowH);
+            y += chartRowH + 18;
+
+            // Fila 2: Demora + Timeline
+            newPageIfNeeded(chartRowH + 15);
+            await addChartToPdf(charts.delay,    'DEMORA PROMEDIO (HORAS)',         M,             y, halfW, chartRowH);
+            await addChartToPdf(charts.timeline, 'ACTIVIDAD ÚLTIMOS 30 DÍAS',       M + halfW + gutter, y, halfW, chartRowH);
+            y += chartRowH + 18;
+
+            // ── SECCIÓN: Tabla de contratos ────────────────────────────────
+            newPageIfNeeded(20);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(8);
+            pdf.setTextColor(...C.slate);
+            pdf.text('DETALLE POR CONTRATO', M, y);
+            pdf.setDrawColor(...C.green);
+            pdf.setLineWidth(0.5);
+            pdf.line(M, y + 1, M + 46, y + 1);
+            y += 6;
+
+            // Recolectar datos de la tabla del DOM
+            const dtApi  = $('#alertTable').DataTable();
+            const allRows = dtApi.rows({ search: 'applied' }).data().toArray();
+
+            // Cabeceras visibles (excluir columna de botones toggle)
+            const headers = ['N° Contrato', 'Contratista', 'Etapa Actual', 'Estado', 'Meta', 'Radicadas', 'Pendientes', 'Avance'];
+
+            // Limpiar html de las celdas
+            function cellText(raw) {
+                if (raw === null || raw === undefined) return '';
+                const str = String(raw);
+                const tmp = document.createElement('div');
+                tmp.innerHTML = str;
+                return (tmp.textContent || tmp.innerText || '').trim();
+            }
+
+            const tableRows = allRows.map(row => {
+                return Array.from({ length: 8 }, (_, i) => cellText(row[i]));
+            });
+
+            // Estilos de columna
+            const colStyles = {
+                0: { cellWidth: 28 },
+                1: { cellWidth: 48 },
+                2: { cellWidth: 35 },
+                3: { cellWidth: 35 },
+                4: { cellWidth: 20, halign: 'center' },
+                5: { cellWidth: 22, halign: 'center' },
+                6: { cellWidth: 22, halign: 'center' },
+                7: { cellWidth: 28, halign: 'center' },
+            };
+
+            if (typeof pdf.autoTable === 'function') {
+                pdf.autoTable({
+                    startY:     y,
+                    head:       [headers],
+                    body:       tableRows,
+                    margin:     { left: M, right: M },
+                    styles: {
+                        fontSize:    7,
+                        cellPadding: 2.5,
+                        lineColor:   C.border,
+                        lineWidth:   0.15,
+                        textColor:   C.slate,
+                        font:        'helvetica',
+                        overflow:    'ellipsize',
+                    },
+                    headStyles: {
+                        fillColor:   C.navy,
+                        textColor:   C.white,
+                        fontStyle:   'bold',
+                        halign:      'left',
+                        fontSize:    7,
+                    },
+                    alternateRowStyles: { fillColor: C.bg },
+                    columnStyles: colStyles,
+                    didParseCell: function (data) {
+                        // Colorear columna Pendientes si > 0
+                        if (data.section === 'body' && data.column.index === 6) {
+                            const val = parseInt(data.cell.raw) || 0;
+                            if (val > 0) {
+                                data.cell.styles.textColor = C.red;
+                                data.cell.styles.fontStyle  = 'bold';
+                            } else {
+                                data.cell.styles.textColor = C.green;
+                            }
+                        }
+                    },
+                    didDrawPage: function () {
+                        drawPageFooter();
+                    }
+                });
+            } else {
+                // Fallback simple si autoTable no está disponible
+                pdf.setFontSize(8);
+                pdf.setTextColor(...C.red);
+                pdf.text('Instale jspdf-autotable para ver la tabla de contratos.', M, y + 5);
+                y += 10;
+            }
+
+            // Footer de la última página
+            drawPageFooter();
+
+            pdf.save('Informe_Analitico_' + now.getTime() + '.pdf');
+
+            btn.html(originalContent).prop('disabled', false);
+            window.showSnackbar('Reporte PDF generado exitosamente', 'success');
+
+        } catch (error) {
+            console.error('Error exportando PDF:', error);
+            Swal.fire('Error', 'No se pudo generar el PDF: ' + error.message, 'error');
+            btn.html(originalContent).prop('disabled', false);
+        }
     });
 
-    // --- Lógica de Ocultar Columnas ---
+    // ==============================
+    // EXCEL EXPORT
+    // ==============================
+    $('#btnExportExcel').on('click', function () {
+        const table = $('#alertTable').DataTable();
+        table.button('.buttons-excel').trigger();
+    });
+
+    // ==============================
+    // LÓGICA DE OCULTAR COLUMNAS
+    // ==============================
     let minimizedColumns = new Set();
 
     window.resetColumns = function () {
@@ -605,37 +814,27 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     function toggleColumn(index) {
-        if (minimizedColumns.has(index)) {
-            minimizedColumns.delete(index);
-        } else {
-            minimizedColumns.add(index);
-        }
+        if (minimizedColumns.has(index)) minimizedColumns.delete(index);
+        else minimizedColumns.add(index);
         applyMinimizedColumns();
     }
 
     function applyMinimizedColumns() {
-        const table = document.getElementById('alertTable');
+        const tableEl  = document.getElementById('alertTable');
         const resetBtn = document.getElementById('btnResetColumns');
-        if (!table) return;
+        if (!tableEl) return;
 
-        // Resetear todo
-        table.querySelectorAll('.column-hidden').forEach(el => el.classList.remove('column-hidden'));
+        tableEl.querySelectorAll('.column-hidden').forEach(el => el.classList.remove('column-hidden'));
 
-        // Ocultar columnas seleccionadas
         minimizedColumns.forEach(index => {
-            const cells = table.querySelectorAll(`tr > *:nth-child(${index + 1})`);
-            cells.forEach(cell => {
+            tableEl.querySelectorAll(`tr > *:nth-child(${index + 1})`).forEach(cell => {
                 cell.classList.add('column-hidden');
             });
         });
 
-        // Mostrar/Ocultar botón de reset
-        if (resetBtn) {
-            resetBtn.style.display = minimizedColumns.size > 0 ? 'inline-flex' : 'none';
-        }
+        if (resetBtn) resetBtn.style.display = minimizedColumns.size > 0 ? 'inline-flex' : 'none';
     }
 
-    // Listener delegado para los botones de ocultar
     document.addEventListener('click', function (e) {
         const btn = e.target.closest('.toggle-col-btn');
         if (btn) {
@@ -648,7 +847,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // ==============================
-    // ANALITICA ESTADO PICKER (Custom JS - No Bootstrap)
+    // ANALITICA ESTADO PICKER
     // ==============================
     const picker       = document.getElementById('estadoPicker');
     const pickerBtn    = document.getElementById('estadoPickerBtn');
@@ -657,19 +856,16 @@ document.addEventListener('DOMContentLoaded', function () {
     const estadoLabel  = document.getElementById('selectedEstadoLabel');
 
     if (picker && pickerBtn) {
-        // Abrir/Cerrar al pulsar el botón
         pickerBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             picker.classList.toggle('is-open');
         });
 
-        // Clic en un ítem de estado → seleccionar y cerrar
         if (pickerMenu) {
             pickerMenu.addEventListener('click', function (e) {
-                const item = e.target.closest('.analitica-picker-item');
+                const item        = e.target.closest('.analitica-picker-item');
                 const groupHeader = e.target.closest('.analitica-picker-group-header');
 
-                // Toggle de grupo (bloque)
                 if (groupHeader) {
                     e.stopPropagation();
                     const group = groupHeader.closest('.analitica-picker-group');
@@ -677,7 +873,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     return;
                 }
 
-                // Selección de estado
                 if (item) {
                     e.stopPropagation();
                     const value = item.dataset.value;
@@ -686,24 +881,17 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (hiddenEstado) hiddenEstado.value = value;
                     if (estadoLabel)  estadoLabel.textContent = label;
 
-                    // Marcar activo
                     pickerMenu.querySelectorAll('.analitica-picker-item').forEach(el => el.classList.remove('is-active'));
                     item.classList.add('is-active');
-
-                    // Cerrar el picker
                     picker.classList.remove('is-open');
 
-                    // Disparar filtrado BI
                     refreshDashboard();
                 }
             });
         }
 
-        // Cerrar al hacer clic fuera
         document.addEventListener('click', function (e) {
-            if (!picker.contains(e.target)) {
-                picker.classList.remove('is-open');
-            }
+            if (!picker.contains(e.target)) picker.classList.remove('is-open');
         });
     }
 });

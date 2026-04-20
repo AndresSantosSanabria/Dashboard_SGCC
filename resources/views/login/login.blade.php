@@ -218,7 +218,7 @@
 
             historyModalInstance.show();
 
-            window.apiFetch(`{{ url('/') }}/consultar-historial/${cuentaId}`)
+            window.apiFetch(`{{ route('public.historial', '') }}/${cuentaId}`)
                 .then(response => response.json())
                 .then(data => {
                     spinner.style.display = "none";

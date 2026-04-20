@@ -43,9 +43,16 @@ return new class extends Migration
             $table->foreignId('responsable_actual_id')->nullable()->constrained('usuarios');
             $table->text('observaciones')->nullable();
 
+            // Trazabilidad de tiempos de proceso (Cache para Dashboard)
+            $table->integer('tiempo_total_segundos')->default(0);
+            $table->timestamp('ultimo_inicio_conteo')->nullable();
+            $table->timestamp('fecha_ultimo_cambio_estado')->nullable()->comment('Reseteado en cada cambio. Para alertas de reposo.');
+            $table->bigInteger('tiempo_total_proceso_segundos')->default(0)->comment('Acumulado persistente de todo el ciclo.');
+
             // SS: Mes de la última cuenta de Seguridad Social finalizada.
             // Se actualiza OBLIGATORIAMENTE cada vez que la cuenta pasa de "Sin Tramite" → "En Revision".
-            $table->string('ss_ultima_cuenta', 20)->nullable()->default(null);
+            $table->string('ss_ultima_cuenta', 50)->nullable()->default(null);
+            $table->integer('diferencia_cuentas')->default(0);
 
             // Campos de integración con el área de Hacienda (Post-radicación interna)
             $table->string('ultima_factura_hacienda', 50)->nullable();

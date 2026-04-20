@@ -6,9 +6,15 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * TRAZABILIDAD DE TIEMPOS POR TAREA
+     * 
+     * Registra cada sesión de trabajo realizada sobre una cuenta de cobro en un 
+     * estado específico. Permite una auditoría exacta de cuánto tiempo "activo" 
+     * pasó cada cuenta en cada etapa del workflow.
+     */
     public function up(): void
     {
-        // 1. Tabla de Trazabilidad de Tiempos (Petición explícita del usuario)
         Schema::create('tasks_time_log', function (Blueprint $table) {
             $table->id();
             $table->foreignId('cuenta_cobro_id')->constrained('cuentas_cobro')->cascadeOnDelete();
@@ -23,21 +29,12 @@ return new class extends Migration
             $table->timestamps();
 
             $table->index('cuenta_cobro_id');
-            $table->index(['cuenta_cobro_id', 'end_time']); // Para encontrar el log activo rápido
-        });
-
-        // 2. Columnas de caché en la tabla principal para optimizar el Dashboard (Incremental)
-        Schema::table('cuentas_cobro', function (Blueprint $table) {
-            $table->integer('tiempo_total_segundos')->default(0)->after('observaciones');
-            $table->timestamp('ultimo_inicio_conteo')->nullable()->after('tiempo_total_segundos');
+            $table->index(['cuenta_cobro_id', 'end_time']); 
         });
     }
 
     public function down(): void
     {
-        Schema::table('cuentas_cobro', function (Blueprint $table) {
-            $table->dropColumn(['tiempo_total_segundos', 'ultimo_inicio_conteo']);
-        });
         Schema::dropIfExists('tasks_time_log');
     }
 };

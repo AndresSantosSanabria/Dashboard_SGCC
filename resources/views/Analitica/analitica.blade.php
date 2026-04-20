@@ -43,6 +43,9 @@
                     <button id="btnExportPDF" class="btn btn-glass h-100 px-4 py-3">
                         <i class="bi bi-file-earmark-pdf me-2"></i>Exportar PDF
                     </button>
+                    <button id="btnExportExcel" class="btn btn-glass h-100 px-4 py-3 ms-2">
+                        <i class="bi bi-file-earmark-excel me-2"></i>Exportar Excel
+                    </button>
                 </div>
             </div>
 
@@ -399,8 +402,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 
     @vite(['resources/views/Analitica/analitica.js'])
 @endpush
