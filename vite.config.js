@@ -18,6 +18,7 @@ export default defineConfig({
                 'resources/views/Analitica/analitica.js',
                 'resources/views/seguimiento/seguimiento.css',
                 'resources/views/seguimiento/seguimiento.js',
+                'resources/views/configuracion/configuracion.css',
             ],
             refresh: true,
         }),

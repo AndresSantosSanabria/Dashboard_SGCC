@@ -61,12 +61,12 @@ class SeguimientoController extends Controller
         // 2. HIDRATACIÓN DINÁMICA OPTIMIZADA (Database-Driven Calculation)
         // Usamos withCount para obtener los totales directamente desde Postgres, evitando cargar miles de filas en memoria.
         $query->withCount([
-            'seguimientoMensual as count_ok_mensual' => fn($q) => $q->where('estado', 'OK'),
-            'seguimientoMensual as count_na_mensual' => fn($q) => $q->where('estado', 'N/A'),
-            'seguimientoMensual as count_pend_mensual' => fn($q) => $q->whereIn('estado', ['PENDIENTE', 'RECHAZADO', 'FALTA', 'CRÍTICO']),
-            'seguimientoRequisitos as count_ok_req' => fn($q) => $q->where('estado', 'OK'),
-            'seguimientoRequisitos as count_na_req' => fn($q) => $q->where('estado', 'N/A'),
-            'seguimientoRequisitos as count_pend_req' => fn($q) => $q->whereIn('estado', ['PENDIENTE', 'RECHAZADO', 'FALTA', 'CRÍTICO']),
+            'seguimientoMensual as count_ok_mensual' => fn($q) => $q->where('seguimiento_mensual.estado', 'OK'),
+            'seguimientoMensual as count_na_mensual' => fn($q) => $q->where('seguimiento_mensual.estado', 'N/A'),
+            'seguimientoMensual as count_pend_mensual' => fn($q) => $q->whereIn('seguimiento_mensual.estado', ['PENDIENTE', 'RECHAZADO', 'FALTA', 'CRÍTICO']),
+            'seguimientoRequisitos as count_ok_req' => fn($q) => $q->where('seguimiento_requisitos.estado', 'OK'),
+            'seguimientoRequisitos as count_na_req' => fn($q) => $q->where('seguimiento_requisitos.estado', 'N/A'),
+            'seguimientoRequisitos as count_pend_req' => fn($q) => $q->whereIn('seguimiento_requisitos.estado', ['PENDIENTE', 'RECHAZADO', 'FALTA', 'CRÍTICO']),
         ]);
 
         // 3. ORDENAMIENTO POR NÚMERO (Usando el índice funcional natural)
@@ -131,8 +131,8 @@ class SeguimientoController extends Controller
         
         $statsSub = (clone $contratosQuery);
         // Estadísticas Dinámicas: Calculadas sobre el set filtrado completo
-        // Usamos fromSub() que es el método oficial y más robusto para manejar subconsultas con bindings en Laravel
-        $summary = DB::query()->fromSub($statsSub->toBase(), 'sub')
+        // Usamos fromSub() directamente con el builder de Eloquent (Laravel 10+ lo soporta y maneja mejor los bindings)
+        $summary = DB::query()->fromSub($statsSub, 'sub')
             ->selectRaw("
                 COUNT(*) as total,
                 SUM(CASE WHEN (count_ok_mensual + count_ok_req + count_na_mensual + count_na_req) >= $totalEvaluatedFields AND (count_pend_mensual + count_pend_req) = 0 THEN 1 ELSE 0 END) as count_ok,
