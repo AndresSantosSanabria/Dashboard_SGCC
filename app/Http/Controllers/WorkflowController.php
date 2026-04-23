@@ -389,12 +389,13 @@ class WorkflowController extends Controller
             ->first();
             
         $estadoEfectivo = $auto ? EstadoWorkflow::findOrFail($auto->estado_destino_id) : $estadoDestino;
-        
+
         $esCambioDeBloque = $cuenta->bloque_actual_id != $estadoEfectivo->bloque_id;
         $esBloqueFinal = $estadoEfectivo->bloque_id == 6;
-        
-        // Una devolución se identifica por el tipo de estado o por el orden del bloque
-        $esDevolucion = ($estadoEfectivo->tipo === 'DEVUELTO') || $this->esDevolucionDeBloque($cuenta->bloque_actual_id, $estadoEfectivo->bloque_id);
+
+        // Una devolución se identifica por el flag permite_devolucion (configurado en BD)
+        // o por el orden del bloque (si retrocede a un bloque anterior)
+        $esDevolucion = ($estadoEfectivo->permite_devolucion ?? false) || $this->esDevolucionDeBloque($cuenta->bloque_actual_id, $estadoEfectivo->bloque_id);
 
         // REGLA: El modal aparece si cambia de bloque (y no es el final automático) O si es una devolución.
         if (($esCambioDeBloque && !$esBloqueFinal) || $esDevolucion) {
@@ -474,16 +475,16 @@ class WorkflowController extends Controller
         if ($request->filled('bloque_id')) {
             $bloqueForzadoId = $request->bloque_id;
             $estadoOriginal = EstadoWorkflow::find($request->estado_destino_id);
-            
-            // Detectamos si es devolución: por bloque o porque el estado original ya era de tipo devuelto
-            $esD = ($estadoOriginal?->tipo === 'DEVUELTO') || $this->esDevolucionDeBloque($cuenta->bloque_actual_id, $bloqueForzadoId);
-            
+
+            // Detectamos si es devolución: por flag permite_devolucion (configurado en BD) o por orden de bloque
+            $esD = ($estadoOriginal?->permite_devolucion ?? false) || $this->esDevolucionDeBloque($cuenta->bloque_actual_id, $bloqueForzadoId);
+
             $queryEstado = EstadoWorkflow::where('bloque_id', $bloqueForzadoId)
                 ->where('es_activo', true);
 
             if ($esD) {
-                // Si es devolución, buscamos el estado tipo DEVUELTO del bloque seleccionado
-                $estadoDestinoId = (clone $queryEstado)->where('tipo', 'DEVUELTO')->first()?->id 
+                // Si es devolución, buscamos el estado con permite_devolucion del bloque seleccionado
+                $estadoDestinoId = (clone $queryEstado)->where('permite_devolucion', true)->first()?->id
                                    ?? (clone $queryEstado)->orderBy('id', 'asc')->first()?->id;
             } else {
                 // Si es avance, buscamos el inicial
@@ -803,16 +804,16 @@ class WorkflowController extends Controller
      */
     private function marcarBloqueComoDevuelto($cuentaId, $bloqueAnteriorId, $comentario = null)
     {
-        // Buscar un estado de tipo "DEVUELTO" para el bloque anterior
+        // Buscar un estado con flag permite_devolucion = true para el bloque anterior
         $estadoDevuelto = EstadoWorkflow::where('bloque_id', $bloqueAnteriorId)
-            ->where('tipo', 'DEVUELTO')
+            ->where('permite_devolucion', true)
             ->where('es_activo', true)
             ->first();
 
         if ($estadoDevuelto) {
             // Robustez: Usamos firstOrNew para asegurar que fecha_ingreso_bloque esté presente si el registro es nuevo
             $registroBloque = EstadoBloqueCuenta::firstOrNew(['cuenta_cobro_id' => $cuentaId, 'bloque_id' => $bloqueAnteriorId]);
-            
+
             if (!$registroBloque->exists) {
                 $registroBloque->fecha_ingreso_bloque = now();
             }
@@ -826,7 +827,7 @@ class WorkflowController extends Controller
 
             Log::info("📤 Bloque {$bloqueAnteriorId} marcado como DEVUELTO para cuenta {$cuentaId}. Estado: {$estadoDevuelto->nombre}");
         } else {
-            Log::warning("⚠️ No se encontró estado tipo DEVUELTO para bloque {$bloqueAnteriorId}. No se pudo marcar la devolución.");
+            Log::warning("⚠️ No se encontró estado con permite_devolucion=true para bloque {$bloqueAnteriorId}. No se pudo marcar la devolución.");
         }
     }
 

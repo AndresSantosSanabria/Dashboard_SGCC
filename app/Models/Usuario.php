@@ -57,8 +57,8 @@ class Usuario extends Authenticatable
             return true;
         }
 
-        // 2. Administrators have all permissions
-        if ($slug !== 'es_admin' && $this->isAdmin()) {
+        // 2. Administrators have all permissions EXCEPT responsibilities
+        if ($slug !== 'es_admin' && !str_starts_with($slug, 'responsable_') && $this->isAdmin()) {
             return true;
         }
 
@@ -248,8 +248,6 @@ class Usuario extends Authenticatable
                     $sq->where('slug', 'responsable_bloque_' . $bloqueCodigo);
                 })->orWhereHas('rol.permisos', function ($sq) use ($bloqueCodigo) {
                     $sq->where('slug', 'responsable_bloque_' . $bloqueCodigo);
-                })->orWhereHas('rol.permisos', function ($sq) {
-                    $sq->where('slug', 'es_admin');
                 });
             });
     }
@@ -292,8 +290,6 @@ class Usuario extends Authenticatable
                     $sq->whereIn('slug', ['responsable_sap', 'responsable_bloque_SAP']);
                 })->orWhereHas('rol.permisos', function ($sq) {
                     $sq->whereIn('slug', ['responsable_sap', 'responsable_bloque_SAP']);
-                })->orWhereHas('rol.permisos', function ($sq) {
-                    $sq->where('slug', 'es_admin');
                 });
             });
     }
@@ -306,8 +302,6 @@ class Usuario extends Authenticatable
                     $sq->whereIn('slug', ['responsable_facturacion', 'responsable_bloque_FAC']);
                 })->orWhereHas('rol.permisos', function ($sq) {
                     $sq->whereIn('slug', ['responsable_facturacion', 'responsable_bloque_FAC']);
-                })->orWhereHas('rol.permisos', function ($sq) {
-                    $sq->where('slug', 'es_admin');
                 });
             });
     }

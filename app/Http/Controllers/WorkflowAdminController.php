@@ -330,9 +330,7 @@ class WorkflowAdminController extends Controller
                         ],
                         [
                             'es_activa'           => true,
-                            'requiere_comentario' => ($destino->permite_devolucion || 
-                                                     stripos($destino->nombre, 'devu') !== false || 
-                                                     stripos($destino->nombre, 'devo') !== false),
+                            'requiere_comentario' => ($destino->permite_devolucion ?? false),
                             'requiere_documento'  => false,
                             'accion'              => null,
                         ]
@@ -384,14 +382,14 @@ class WorkflowAdminController extends Controller
                 $estadosDevolucion = $estadosBloque->filter(fn($e) => $e->permite_devolucion);
                 if ($estadosDevolucion->isNotEmpty()) {
                     $bloqueAnterior = $bloques[$index - 1];
-                    
-                    // Aterrizaje seguro: Priorizamos un estado "devuelta" en el bloque anterior 
+
+                    // Aterrizaje seguro: Priorizamos un estado con permite_devolucion=true en el bloque anterior
                     $estadoAterrizaje = $bloqueAnterior->estados
-                        ->first(fn($e) => stripos($e->nombre, 'devu') !== false || stripos($e->nombre, 'devo') !== false);
-                    
+                        ->first(fn($e) => ($e->permite_devolucion ?? false));
+
                     if (!$estadoAterrizaje) {
                         // Aterrizaje alternativo: Estado inicial o el primer estado disponible
-                        $estadoAterrizaje = $bloqueAnterior->estados->where('es_inicial', true)->first() 
+                        $estadoAterrizaje = $bloqueAnterior->estados->where('es_inicial', true)->first()
                                          ?? $bloqueAnterior->estados->first();
                     }
 

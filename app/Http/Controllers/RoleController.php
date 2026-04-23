@@ -119,13 +119,16 @@ class RoleController extends Controller
             'acceder_workflow' => false,
             'editar_workflow' => false,
             'editar_dashboard' => false,
+            'acceder_reportes' => false,
             'reportes_exportar' => false,
             'logs_ver' => false,
             'ver_configuracion' => false,
             'editar_configuracion' => false,
             'ver_analitica' => false,
             'ver_seguimiento_secop' => false,
+            'crear_seguimiento_secop' => false,
             'editar_seguimiento_secop' => false,
+            'especiales_seguimiento_secop' => false,
             'ver_solo_asignados' => false,
             'ver_solo_bloques_con_asignacion' => false,
             'receptor_automatico_bloque_6' => false,
@@ -172,8 +175,14 @@ class RoleController extends Controller
         if (! empty($matrix['seguimiento_secop']['view'])) {
             $permissions['ver_seguimiento_secop'] = true;
         }
+        if (! empty($matrix['seguimiento_secop']['create'])) {
+            $permissions['crear_seguimiento_secop'] = true;
+        }
         if (! empty($matrix['seguimiento_secop']['edit'])) {
             $permissions['editar_seguimiento_secop'] = true;
+        }
+        if (! empty($matrix['seguimiento_secop']['especiales'])) {
+            $permissions['especiales_seguimiento_secop'] = true;
         }
 
         // 5. Workflow Module
@@ -185,6 +194,9 @@ class RoleController extends Controller
         }
 
         // 6. Reports
+        if (! empty($matrix['reports']['view'])) {
+            $permissions['acceder_reportes'] = true;
+        }
         if (! empty($matrix['reports']['export'])) {
             $permissions['reportes_exportar'] = true;
         }
@@ -250,34 +262,51 @@ class RoleController extends Controller
             ]);
 
             // Logic to Map Matrix -> System Permissions
-            $matrix = $request->input('permisos_matrix');
-            $systemPermissions = $this->mapMatrixToSystemPermissions($matrix);
+            $systemPermissions = $role->lista_permisos; // Start with existing permissions
 
-            // Add additional restrictions
-            if ($request->boolean('ver_solo_asignados')) {
-                $systemPermissions['ver_solo_asignados'] = true;
+            // 1. Matriz de Privilegios
+            if ($request->has('permisos_matrix')) {
+                $newMatrixPerms = $this->mapMatrixToSystemPermissions($request->input('permisos_matrix'));
+                foreach ($newMatrixPerms as $k => $v) {
+                    $systemPermissions[$k] = $v;
+                }
+            } elseif ($request->has('_update_matrix')) {
+                // User unchecked everything in the matrix
+                $emptyMatrix = $this->mapMatrixToSystemPermissions([]);
+                foreach ($emptyMatrix as $k => $v) {
+                    $systemPermissions[$k] = $v;
+                }
             }
 
-            if ($request->boolean('ver_solo_bloques_con_asignacion')) {
-                $systemPermissions['ver_solo_bloques_con_asignacion'] = true;
+            // 2. Restricciones de Datos
+            if ($request->has('_update_restricciones') || $request->has('ver_solo_asignados')) {
+                $systemPermissions['ver_solo_asignados'] = $request->boolean('ver_solo_asignados');
             }
-            if ($request->boolean('receptor_automatico_bloque_6')) {
-                $systemPermissions['receptor_automatico_bloque_6'] = true;
+            if ($request->has('_update_restricciones') || $request->has('ver_solo_bloques_con_asignacion')) {
+                $systemPermissions['ver_solo_bloques_con_asignacion'] = $request->boolean('ver_solo_bloques_con_asignacion');
             }
-            if ($request->has('acceder_notificaciones')) {
+            if ($request->has('_update_restricciones') || $request->has('receptor_automatico_bloque_6')) {
+                $systemPermissions['receptor_automatico_bloque_6'] = $request->boolean('receptor_automatico_bloque_6');
+            }
+            if ($request->has('_update_restricciones') || $request->has('acceder_notificaciones')) {
                 $systemPermissions['acceder_notificaciones'] = $request->boolean('acceder_notificaciones');
             }
 
-            // Handle Blocks
+            // 3. Workflow
             if ($request->has('bloques_all')) {
                 $systemPermissions['bloques_permitidos'] = true;
-            } else {
-                $bloquesArray = $request->input('bloques_permitidos', []);
-                $systemPermissions['bloques_permitidos'] = $bloquesArray;
+            } elseif ($request->has('bloques_permitidos')) {
+                $systemPermissions['bloques_permitidos'] = $request->input('bloques_permitidos', []);
+            } elseif ($request->has('_update_workflow')) {
+                $systemPermissions['bloques_permitidos'] = [];
             }
 
-            // Handle Responsibles por Bloque
-            $systemPermissions['responsables_bloque'] = $request->input('responsables_bloque', []);
+            // 4. Responsabilidades
+            if ($request->has('responsables_bloque')) {
+                $systemPermissions['responsables_bloque'] = $request->input('responsables_bloque', []);
+            } elseif ($request->has('_update_responsabilidades')) {
+                $systemPermissions['responsables_bloque'] = [];
+            }
 
             // Handle Responsibilities (Legacy removed, using dynamic blocks)
 

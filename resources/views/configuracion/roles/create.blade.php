@@ -45,6 +45,11 @@
             <div class="card-body p-4 p-md-5">
                 <form action="{{ route('configuracion.roles.store') }}" method="POST">
                     @csrf
+                    
+                    <input type="hidden" name="_update_restricciones" value="1">
+                    <input type="hidden" name="_update_workflow" value="1">
+                    <input type="hidden" name="_update_responsabilidades" value="1">
+                    <input type="hidden" name="_update_matrix" value="1">
 
                     <!-- 1. INFORMACIÓN BÁSICA -->
                     <div class="row g-4 mb-5">
@@ -278,12 +283,38 @@
                                         <td class="text-center small text-muted">-</td>
                                     </tr>
 
+                                    <!-- Seguimiento SECOP -->
+                                    <tr data-module="seguimiento_secop">
+                                        <td class="ps-4 fw-bold"><i class="bi bi-search me-2 text-primary"></i>Seguimiento SECOP</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-view" type="checkbox" name="permisos_matrix[seguimiento_secop][view]" value="1">
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[seguimiento_secop][create]" value="1">
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[seguimiento_secop][edit]" value="1">
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center align-items-center gap-2">
+                                                <input class="form-check-input perm-action" type="checkbox" name="permisos_matrix[seguimiento_secop][especiales]" id="secop_especiales" value="1">
+                                                <label class="small extra-small m-0 text-muted" for="secop_especiales">Opciones Especiales</label>
+                                            </div>
+                                        </td>
+                                    </tr>
+
                                     <!-- Reports -->
                                     <tr data-module="reports">
                                         <td class="ps-4 fw-bold"><i class="bi bi-graph-up-arrow me-2 text-primary"></i>Reportes y Estadísticas</td>
                                         <td class="text-center">
                                             <div class="form-check d-flex justify-content-center">
-                                                <input class="form-check-input" type="checkbox" name="permisos_matrix[reports][view]" value="1" disabled checked>
+                                                <input class="form-check-input perm-view" type="checkbox" name="permisos_matrix[reports][view]" value="1" checked>
                                             </div>
                                         </td>
                                         <td colspan="2" class="text-center border-start border-end">
