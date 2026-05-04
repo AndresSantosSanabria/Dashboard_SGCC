@@ -101,11 +101,11 @@
                                             ->sum('duracion_segundos');
 
                                         // 3. Tiempo "volátil" (solo si el timer está corriendo ahora)
-                                        //    Si fecha_ultimo_cambio_estado es NULL => el timer está parado y
-                                        //    todo el tiempo ya está en los logs → $volatil = 0
-                                        //    Si está activo → solo sumamos desde ese inicio hasta ahora
-                                        $volatil = $cuenta->fecha_ultimo_cambio_estado
-                                            ? $businessTime->getWorkingSecondsBetween($cuenta->fecha_ultimo_cambio_estado, now())
+                                        //    Si fecha_ultimo_cambio_estado es NULL => el timer está parado o 
+                                        //    fue insertado manualmente sin este campo. Fallback a fechaInicioReal.
+                                        $fechaInicioVolatil = $cuenta->fecha_ultimo_cambio_estado ?? $fechaInicioReal;
+                                        $volatil = $fechaInicioVolatil
+                                            ? $businessTime->getWorkingSecondsBetween($fechaInicioVolatil, now())
                                             : 0;
 
                                         $elapsedSeconds = $tiempoLogueado + $volatil;

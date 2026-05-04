@@ -187,9 +187,18 @@ class CuentaCobro extends Model
         $base = (int) ($this->tiempo_total_proceso_segundos ?? 0);
 
         // Volatil: tiempo transcurrido en el estado ACTUAL (aun no cerrado).
+        // Si no tiene fecha_ultimo_cambio_estado (ej. inserción manual), tratamos de deducirla.
+        $fechaInicioVolatil = $this->fecha_ultimo_cambio_estado;
+        if (!$fechaInicioVolatil && $this->estado_actual_id) {
+            $transicion = $this->historialWorkflow()
+                ->where('estado_destino_id', $this->estado_actual_id)
+                ->first();
+            $fechaInicioVolatil = $transicion?->fecha_transicion ?? $this->created_at;
+        }
+
         // Solo sumamos si el estado actual está configurado para contabilizar tiempo.
-        $volatil = ($this->fecha_ultimo_cambio_estado && ($this->estadoActual->contabiliza_tiempo ?? true))
-            ? $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now())
+        $volatil = ($fechaInicioVolatil && ($this->estadoActual->contabiliza_tiempo ?? true))
+            ? $businessTime->getWorkingSecondsBetween($fechaInicioVolatil, now())
             : 0;
 
         $totalSegundos = $base + $volatil;
@@ -212,11 +221,19 @@ class CuentaCobro extends Model
      */
     public function getTiempoEnEstadoActualAttribute(): string
     {
-        if (!$this->fecha_ultimo_cambio_estado)
+        $fechaInicioVolatil = $this->fecha_ultimo_cambio_estado;
+        if (!$fechaInicioVolatil && $this->estado_actual_id) {
+            $transicion = $this->historialWorkflow()
+                ->where('estado_destino_id', $this->estado_actual_id)
+                ->first();
+            $fechaInicioVolatil = $transicion?->fecha_transicion ?? $this->created_at;
+        }
+
+        if (!$fechaInicioVolatil)
             return '0m';
 
         $businessTime = app(\App\Services\BusinessTimeService::class);
-        $segundos = $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now());
+        $segundos = $businessTime->getWorkingSecondsBetween($fechaInicioVolatil, now());
 
         return $businessTime->formatInterval($segundos);
     }
@@ -226,11 +243,19 @@ class CuentaCobro extends Model
      */
     public function getSegundosEnEstadoActualAttribute(): int
     {
-        if (!$this->fecha_ultimo_cambio_estado)
+        $fechaInicioVolatil = $this->fecha_ultimo_cambio_estado;
+        if (!$fechaInicioVolatil && $this->estado_actual_id) {
+            $transicion = $this->historialWorkflow()
+                ->where('estado_destino_id', $this->estado_actual_id)
+                ->first();
+            $fechaInicioVolatil = $transicion?->fecha_transicion ?? $this->created_at;
+        }
+
+        if (!$fechaInicioVolatil)
             return 0;
 
         $businessTime = app(\App\Services\BusinessTimeService::class);
-        return $businessTime->getWorkingSecondsBetween($this->fecha_ultimo_cambio_estado, now());
+        return $businessTime->getWorkingSecondsBetween($fechaInicioVolatil, now());
     }
 
     /**

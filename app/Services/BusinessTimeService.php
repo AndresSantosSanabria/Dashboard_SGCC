@@ -18,7 +18,7 @@ class BusinessTimeService
      */
     public function getWorkingSecondsBetween(mixed $startInput, mixed $endInput)
     {
-        $tz = config('app.timezone', 'America/Bogota');
+        $tz = 'America/Bogota'; // Forzar zona horaria local para comparar horarios laborales correctamente
         $start = Carbon::parse($startInput)->setTimezone($tz);
         $end = Carbon::parse($endInput)->setTimezone($tz);
 
