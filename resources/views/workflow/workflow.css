@@ -40,11 +40,9 @@
 /* Estilos para Selectores de Bloque (Tabs) */
 .workflow-selectors {
     display: flex;
-    gap: 0.5rem;
-    overflow-x: auto;
-    padding: 0.25rem 0.1rem 0.75rem;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    flex-wrap: wrap; /* Allow wrapping to multiple rows */
+    gap: 0.75rem;
+    padding: 0.5rem 0.1rem 1rem;
 }
 
 .workflow-selectors::-webkit-scrollbar {
@@ -52,17 +50,18 @@
 }
 
 .workflow-selector {
-    flex: 0 0 auto;
-    min-width: 160px;
+    flex: 1 1 200px; /* Flexible width with a base of 200px */
+    min-width: 180px;
+    min-height: 80px; /* Increased height as requested */
     background: var(--bg-card);
-    border-radius: 8px;
-    padding: 0.6rem 0.75rem;
+    border-radius: 12px;
+    padding: 0.8rem 1rem;
     border: 1px solid var(--border-light);
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
     box-shadow: var(--shadow-sm);
     position: relative;
     overflow: hidden;
@@ -96,14 +95,14 @@
 }
 
 .selector-icon {
-    width: 32px;
-    height: 32px;
+    width: 40px; /* Larger icon container */
+    height: 40px;
     background: var(--bg-main);
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.9rem;
+    font-size: 1.1rem; /* Larger icon */
     color: var(--text-muted);
     transition: all 0.3s;
     flex-shrink: 0;
@@ -120,11 +119,11 @@
 }
 
 .selector-title {
-    font-weight: 700;
-    font-size: 0.8rem;
+    font-weight: 750;
+    font-size: 0.85rem; /* Slightly larger font */
     color: var(--text-main);
-    line-height: 1.25;
-    margin-bottom: 1px;
+    line-height: 1.2;
+    margin-bottom: 2px;
 }
 
 .selector-count {
@@ -947,5 +946,69 @@
     .custom-multilevel-dropdown .dropdown-menu {
         max-height: 400px;
         overflow-y: auto;
+    }
+}
+/* =============================================
+   MOBILE MODAL OPTIMIZATION
+   ============================================= */
+@media (max-width: 991px) {
+    .info-cards-row {
+        grid-template-columns: 1fr !important;
+        gap: 12px !important;
+    }
+
+    .info-card {
+        padding: 15px !important;
+    }
+
+    .timeline-marker-wrapper {
+        min-width: 40px !important;
+        margin-right: 12px !important;
+    }
+
+    .timeline-marker {
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 1rem !important;
+    }
+
+    .timeline-line {
+        top: 38px !important;
+    }
+
+    .timeline-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+    }
+
+    .timeline-date {
+        font-size: 0.7rem !important;
+    }
+
+    .timeline-meta {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse !important;
+        gap: 10px !important;
+    }
+
+    .modal-footer > * {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .status-buttons-row {
+        justify-content: center !important;
+    }
+    
+    .btn-estado {
+        flex: 1 1 45% !important;
+        text-align: center !important;
+        padding: 8px 12px !important;
+        font-size: 0.75rem !important;
     }
 }

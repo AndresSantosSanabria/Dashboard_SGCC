@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
+use App\Traits\HasBusinessDays;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,7 +17,7 @@ class Contrato extends Model
      * (Casts) para asegurar que el dinero ($monto_total) y las fechas se 
      * comporten de forma predecible en toda la aplicación.
      */
-    use Auditable, HasFactory;
+    use Auditable, HasFactory, HasBusinessDays;
 
     protected $table = 'contratos';
 
@@ -52,6 +53,8 @@ class Contrato extends Model
         'abogado_user_id',
         'contador_user_id',
         'ops_user_id',
+        'abogado_responsable',
+        'contador_responsable',
         'tipo_contratista',
         'no_planta',
         'concepto_precontractual',
@@ -131,12 +134,12 @@ class Contrato extends Model
      * Facilita el filtrado de contratos vigentes en el tiempo actual, 
      * algo crucial para los tableros de control operacional.
      */
-    public function scopeActivos($query)
+    public function scopeActivos(\Illuminate\Database\Eloquent\Builder $query)
     {
         return $query->where('es_activo', true);
     }
 
-    public function scopeVigentes($query)
+    public function scopeVigentes(\Illuminate\Database\Eloquent\Builder $query)
     {
         $hoy = now();
         return $query->where('fecha_inicio', '<=', $hoy)

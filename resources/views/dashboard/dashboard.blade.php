@@ -48,6 +48,11 @@
                             data-bs-target="#manualEntryModal" style="height: 50px; border-radius: 12px; border-width: 2px;">
                             <i class="bi bi-plus-circle me-2"></i>Carga Manual
                         </button>
+                        <a href="{{ route('dashboard.exportar', request()->all()) }}"
+                            class="btn btn-success fw-bold d-inline-flex align-items-center"
+                            style="text-decoration: none; height: 50px; border-radius: 12px; background: #15803d; border: none;">
+                            <i class="bi bi-file-earmark-excel me-2"></i>Exportar
+                        </a>
                         <a href="{{ route('dashboard.plantilla') }}"
                             class="btn btn-primary fw-bold d-inline-flex align-items-center"
                             style="text-decoration: none; height: 50px; border-radius: 12px; background: #1e1e1e; border: none;">

@@ -19,27 +19,133 @@
 @endpush
 
 @section('page-content')
-    <div class="barra-superior-govco">
-        <a href="https://www.gov.co/" target="_blank" rel=noopener aria-label="Portal del Estado Colombiano - GOV.CO"></a>
-        <button class="idioma-btn-barra-superior-govco" aria-label="Button to change the language of the page to English">
-        </button>
+    {{-- GOV.CO Fixed Header (MOBILE ONLY) --}}
+    <div class="gov-header d-lg-none">
+        <div class="gov-container">
+            <div class="gov-logo-wrap">
+                <i class="bi bi-star-fill gov-star"></i>
+                <span class="gov-pipe">|</span>
+                <span class="gov-text">GOV.CO</span>
+            </div>
+            <div class="gov-lang">
+                <button class="btn-lang">EN</button>
+            </div>
+        </div>
     </div>
 
-    <div class="login-full-screen">
+    {{-- BARRA SUPERIOR ORIGINAL (DESKTOP ONLY) --}}
+    <div class="barra-superior-govco d-none d-lg-flex">
+        <a href="https://www.gov.co/" target="_blank" rel=noopener aria-label="Portal del Estado Colombiano - GOV.CO"></a>
+        <button class="idioma-btn-barra-superior-govco" aria-label="Button to change the language of the page to English"></button>
+    </div>
+
+    <div class="login-wrapper d-lg-none">
+        {{-- Blue Hero Section --}}
+        <div class="login-hero">
+            <div class="hero-content">
+                <div class="hero-line"></div>
+                <p class="hero-top-label">ACCESO CIUDADANO</p>
+                <h1 class="hero-title">Gestión de cuentas<br>de cobro</h1>
+                <p class="hero-subtitle">Gobernación de Cundinamarca</p>
+            </div>
+        </div>
+
+        {{-- White/Gray Main Container --}}
+        <div class="login-main-container">
+            <div class="content-limit">
+                
+                {{-- Card 1: Consultation --}}
+                <div class="dark-card consultation-card">
+                    <p class="card-label">CONSULTAR ESTADO DE CUENTA</p>
+                    <div class="search-field-wrap">
+                        <i class="bi bi-file-earmark-text"></i>
+                        <input type="text" id="consult-nit-mobile" class="card-input" placeholder="1234567890 — Cédula / NIT">
+                    </div>
+                    <button type="button" id="btn-consultar-mobile" class="card-btn">
+                        <i class="bi bi-search me-2"></i>
+                        <span id="btn-text-mobile">Consultar estado</span>
+                        <span id="btn-spinner-mobile" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                    </button>
+
+                    <div id="results-area-mobile" class="results-container d-none">
+                        <!-- AJAX Results will appear here -->
+                    </div>
+                </div>
+
+                <div class="separator-text">o inicia sesión</div>
+
+                {{-- Card 2: Login Form --}}
+                <div class="dark-card login-card">
+                    <div class="login-header-mini">
+                        <div class="icon-box">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div class="header-texts">
+                            <h3>Iniciar sesión</h3>
+                            <p>Ingresa tus credenciales para continuar</p>
+                        </div>
+                    </div>
+
+                    @if ($errors->any())
+                        <div class="alert alert-danger-custom">
+                            @foreach ($errors->all() as $error)
+                                <span>{{ $error }}</span>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('login.attempt') }}">
+                        @csrf
+                        <div class="field-group">
+                            <label>Usuario</label>
+                            <div class="input-wrap">
+                                <i class="bi bi-person-fill"></i>
+                                <input type="text" name="user" value="{{ old('user') }}" class="card-input" id="user-mobile" placeholder="admin" required autofocus>
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label>Contraseña</label>
+                            <div class="input-wrap">
+                                <i class="bi bi-lock-fill"></i>
+                                <input type="password" name="password" class="card-input" id="password-mobile" placeholder="••••••••" required>
+                                <button type="button" class="btn-toggle-pass" onclick="togglePassword('password-mobile')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="card-btn btn-submit">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Ingresar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- ORIGINAL DESKTOP DESIGN (REFINED) --}}
+    <div class="login-full-screen d-none d-lg-flex">
         <div class="premium-card">
-            <!-- Izquierda: Bienvenida Institucional -->
+            <!-- Izquierda: Bienvenida Institucional (CIUDADANOS) -->
             <div class="premium-left">
-                <div class="premium-left-card" id="consultation-card">
-                    <h2>Conoce el estado de tu cuenta</h2>
-                    <p>Ingresa tu cédula y valida en qué estado se encuentra tu cuenta de manera rápida y segura.</p>
+                <div class="premium-left-card">
+                    <p class="hero-top-label mb-2">CIUDADANOS</p>
+                    <h2>Conoce el estado<br>de tu cuenta</h2>
+                    <p class="mb-4">Ingresa tu cédula y valida en qué estado se encuentra tu cuenta de manera rápida y segura.</p>
 
                     <div class="search-field-prem">
-                        <label>Número de Cédula / NIT</label>
-                        <input type="text" id="consult-nit" class="search-input-prem" placeholder="Ej: 1234567890">
+                        <label>NÚMERO DE CÉDULA / NIT</label>
+                        <div class="search-input-wrapper">
+                            <i class="bi bi-file-earmark-text"></i>
+                            <input type="text" id="consult-nit" class="search-input-prem" placeholder="1234567890">
+                        </div>
                     </div>
 
                     <button type="button" id="btn-consultar" class="btn-search-prem">
-                        <span id="btn-text">Consultar Estado</span>
+                        <i class="bi bi-search me-2"></i>
+                        <span id="btn-text">Consultar estado</span>
                         <span id="btn-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
                     </button>
 
@@ -49,39 +155,58 @@
                 </div>
             </div>
 
-            <!-- Derecha: Formulario White Card -->
+            <!-- Derecha: Formulario (INICIAR SESIÓN) -->
             <div class="premium-right">
                 <div class="white-login-box">
-                    <div class="premium-logo">
-                        <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo Gobernación"
-                            style="width: 100%;">
+                    <div class="login-right-header">
+                        <div class="icon-box-blue">
+                            <i class="bi bi-house-door"></i>
+                        </div>
+                        <div class="header-text-group">
+                            <span class="gob-title">Gobernación de Cundinamarca</span>
+                            <span class="sys-subtitle">Sistema de gestión de cuentas de cobro</span>
+                        </div>
                     </div>
-                    <h1>Iniciar Sesión</h1>
-                    <p class="subtitle">Ingresa tus credenciales para continuar</p>
+
+                    <hr class="header-sep">
+
+                    <h1 class="mt-4">Iniciar sesión</h1>
+                    <p class="subtitle mb-4">Ingresa tus credenciales para continuar</p>
 
                     @if ($errors->any())
-                        <div class="alert alert-danger"
-                            style="font-size: 0.75rem; border-radius: 10px; margin-bottom: 20px;">
-                            <ul class="mb-0 ps-3">
-                                @foreach ($errors->all() as $error)
-                                    <li>{{ $error }}</li>
-                                @endforeach
-                            </ul>
+                        <div class="alert alert-danger-custom mb-3">
+                            @foreach ($errors->all() as $error)
+                                <span>{{ $error }}</span>
+                            @endforeach
                         </div>
                     @endif
 
                     <form method="POST" action="{{ route('login.attempt') }}">
                         @csrf
                         <div class="form-group-prem">
-                            <label for="user">Usuario</label>
-                            <input type="text" name="user" value="{{ old('user') }}" class="input-prem"
-                                id="user" placeholder="Ej: admin" required autofocus>
+                            <label>Usuario</label>
+                            <div class="input-prem-wrapper">
+                                <i class="bi bi-person"></i>
+                                <input type="text" name="user" value="{{ old('user') }}" class="input-prem" id="user" placeholder="admin" required autofocus>
+                            </div>
                         </div>
 
                         <div class="form-group-prem">
-                            <label for="password">Contraseña</label>
-                            <input type="password" name="password" class="input-prem" id="password" placeholder="••••••••"
-                                required>
+                            <label>Contraseña</label>
+                            <div class="input-prem-wrapper">
+                                <i class="bi bi-lock"></i>
+                                <input type="password" name="password" class="input-prem" id="password" placeholder="••••••••" required>
+                                <button type="button" class="btn-toggle-pass-desktop" onclick="togglePassword('password')">
+                                    <i class="bi bi-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remember" name="remember">
+                                <label class="form-check-label text-muted small fw-bold" for="remember">Recordar sesión</label>
+                            </div>
                         </div>
 
                         <button type="submit" class="btn-prem-login">Ingresar</button>
@@ -95,11 +220,11 @@
     @include('dashboard.componentes.history_modal')
 
     <script>
-        document.getElementById('btn-consultar').addEventListener('click', function() {
-            const nit = document.getElementById('consult-nit').value;
-            const btnText = document.getElementById('btn-text');
-            const btnSpinner = document.getElementById('btn-spinner');
-            const resultsArea = document.getElementById('results-area');
+        function performConsultation(nitId, textId, spinnerId, resultsId) {
+            const nit = document.getElementById(nitId).value;
+            const btnText = document.getElementById(textId);
+            const btnSpinner = document.getElementById(spinnerId);
+            const resultsArea = document.getElementById(resultsId);
 
             if (!nit) {
                 alert('Por favor ingresa un NIT o Cédula');
@@ -107,6 +232,7 @@
             }
 
             // UI Loading state
+            const originalText = btnText.textContent;
             btnText.textContent = 'Consultando...';
             btnSpinner.classList.remove('d-none');
             resultsArea.classList.add('d-none');
@@ -119,7 +245,7 @@
                 })
                 .then(async response => {
                     const data = await response.json();
-                    btnText.textContent = 'Consultar Estado';
+                    btnText.textContent = originalText;
                     btnSpinner.classList.add('d-none');
 
                     if (!response.ok || data.error) {
@@ -133,17 +259,17 @@
                         </div>
                         <div class="result-item" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px;">
                             <span class="result-label" style="color: #fbfbfbff; opacity: 1;">Estado Actual</span>
-                            <span class="status-badge" style="background: #2563eb;">${data.estado}</span>
+                            <span class="status-badge" style="background: #2563eb; color:white; padding:2px 8px; border-radius:4px;">${data.estado}</span>
                         </div>
                         <div class="result-item">
                             <span class="result-label">Bloque Actual</span>
                             <span class="result-value">${data.bloque}</span>
                         </div>
                         ${data.responsable ? `
-                        <div class="result-item" style="border-top: 1px solid rgba(255,255,255,0.15); padding-top: 10px; margin-top: 6px; background: rgba(96,165,250,0.12); border-radius: 8px; padding: 10px 14px;">
-                            <span class="result-label" style="color:#93c5fd; font-size:0.72rem; letter-spacing:0.08em;">FUE ASIGNADO A</span>
-                            <span class="result-value" style="display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:700;color:#fff;">
-                                <i class="fas fa-user-check" style="color:#60a5fa; font-size:1.1rem;"></i>
+                        <div class="result-item" style="border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 6px; background: #eff6ff; border-radius: 8px; padding: 10px 14px;">
+                            <span class="result-label" style="color:#3b82f6; font-size:0.72rem; letter-spacing:0.08em; font-weight: 800;">FUE ASIGNADO A</span>
+                            <span class="result-value" style="display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:800;color:#1e293b;">
+                                <i class="bi bi-person-check-fill" style="color:#3b82f6; font-size:1.1rem;"></i>
                                 ${data.responsable}
                             </span>
                         </div>
@@ -153,7 +279,7 @@
                             <span class="result-value" style="font-size: 0.8rem; opacity: 0.7;">${data.ultima_actualizacion}</span>
                         </div>
                         <div class="result-item mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button type="button" class="btn-search-prem w-100" onclick="showHistory(${data.id}, 'Tramite Actual')" style="font-size: 0.9rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); position: relative; z-index: 5;">
+                            <button type="button" class="btn btn-primary w-100" onclick="showHistory(${data.id}, 'Tramite Actual')" style="font-size: 0.9rem;">
                                 <i class="fas fa-history me-2"></i> Ver Historial Detallado
                             </button>
                         </div>
@@ -162,13 +288,23 @@
                     resultsArea.classList.remove('d-none');
                 })
                 .catch(error => {
-                    btnText.textContent = 'Consultar Estado';
+                    btnText.textContent = originalText;
                     btnSpinner.classList.add('d-none');
                     resultsArea.innerHTML =
                         `<div class="text-danger small">Error de conexión con el servidor.</div>`;
                     resultsArea.classList.remove('d-none');
                 });
+        }
+
+        document.getElementById('btn-consultar').addEventListener('click', () => {
+            performConsultation('consult-nit', 'btn-text', 'btn-spinner', 'results-area');
         });
+
+        if (document.getElementById('btn-consultar-mobile')) {
+            document.getElementById('btn-consultar-mobile').addEventListener('click', () => {
+                performConsultation('consult-nit-mobile', 'btn-text-mobile', 'btn-spinner-mobile', 'results-area-mobile');
+            });
+        }
 
         let historyModalInstance = null;
 
@@ -322,6 +458,19 @@
                     empty.style.display = "block";
                     empty.querySelector("p").textContent = "Error al cargar el historial.";
                 });
+        };
+
+        window.togglePassword = function(inputId) {
+            const passInput = document.getElementById(inputId);
+            const btn = event.currentTarget;
+            const icon = btn.querySelector('i');
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                icon.classList.replace('bi-eye', 'bi-eye-slash');
+            } else {
+                passInput.type = 'password';
+                icon.classList.replace('bi-eye-slash', 'bi-eye');
+            }
         };
     </script>
 @endsection

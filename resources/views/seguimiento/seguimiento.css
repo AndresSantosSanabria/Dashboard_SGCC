@@ -29,8 +29,32 @@ body {
 
 /* ── LAYOUT ── */
 .dashboard-container {
-    padding: 2rem 2.5rem;
+    padding: 1.5rem 2rem; /* Reduced padding */
     max-width: 100%;
+    overflow: visible !important; /* Crucial for sticky children */
+}
+
+.sticky-header-wrapper {
+    position: sticky;
+    top: 0;
+    z-index: 1050; /* Above table headers and other elements */
+    background: var(--bg-app);
+    padding-top: 1rem;
+    margin-top: -1.5rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    transition: all 0.3s;
+    max-width: 100%; /* Prevents horizontal overflow */
+}
+
+/* Adjust top for mobile top bar if needed */
+@media (max-width: 991px) {
+    .sticky-header-wrapper {
+        top: 59px; /* Height of mobile-top-bar */
+        padding-top: 0.5rem;
+        margin-top: 0;
+    }
 }
 
 /* ── HEADER ── */
@@ -38,12 +62,12 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2.5rem;
+    margin-bottom: 1.5rem; /* Reduced from 2.5rem */
 }
 
 .db-header h1 {
     font-weight: 800;
-    font-size: 1.75rem;
+    font-size: 1.4rem; /* Reduced from 1.75rem */
     color: var(--primary);
     margin: 0;
     letter-spacing: -0.03em;
@@ -59,14 +83,14 @@ body {
 .analytics-summary {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 1.25rem;
-    margin-bottom: 1.5rem;
+    gap: 1rem; /* Reduced from 1.25rem */
+    margin-bottom: 1rem; /* Reduced from 1.5rem */
 }
 
 .summary-mini-card {
     background: white;
-    padding: 1.5rem;
-    border-radius: var(--radius-lg);
+    padding: 0.75rem 1rem; /* Even more compact */
+    border-radius: var(--radius-md);
     border: 1px solid var(--border);
     position: relative;
     overflow: hidden;
@@ -100,7 +124,7 @@ body {
 }
 
 .summary-mini-card .val {
-    font-size: 1.75rem;
+    font-size: 1.25rem; /* Further reduced from 1.5rem */
     font-weight: 800;
     color: var(--primary);
     line-height: 1;
@@ -115,14 +139,16 @@ body {
 /* ── FILTERS ── */
 .filter-card-saas {
     background: white;
-    padding: 1.25rem;
+    padding: 0.75rem 1.25rem; /* Reduced vertical padding */
     border-radius: var(--radius-md);
     border: 1px solid var(--border);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem; /* Reduced from 2rem */
     display: flex;
     gap: 1rem;
     align-items: flex-end;
     box-shadow: var(--shadow-sm);
+    position: relative;
+    z-index: 50;
 }
 
 .form-group-saas { flex: 1; }
@@ -309,23 +335,23 @@ body {
 .batch-save-banner {
     position: fixed;
     bottom: 2rem;
-    left: 50%;
-    transform: translateX(-50%) translateY(150%);
+    right: 2rem;
+    transform: translateX(200%);
     background: var(--primary);
     color: white;
-    padding: 1.25rem 2.5rem;
-    border-radius: 60px;
+    padding: 1rem 2rem;
+    border-radius: 20px;
     display: flex;
     align-items: center;
-    gap: 2.5rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    gap: 1.5rem;
+    box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4);
     z-index: 1000;
     border: 1px solid rgba(255,255,255,0.1);
-    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .batch-save-banner.show {
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(0);
 }
 
 .banner-dot-pulse {

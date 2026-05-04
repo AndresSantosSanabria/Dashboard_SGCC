@@ -17,7 +17,7 @@
             default => 'badge-na',
         };
     @endphp
-    <tr class="contract-row">
+    <tr class="contract-row" data-id="{{ $c->id }}">
         {{-- GESTIÓN --}}
         <td class="stk-saas stk-gest text-center">
             <div class="d-flex flex-column gap-2 align-items-center">
@@ -62,7 +62,7 @@
         <td class="text-center">
             <div class="dropdown">
                 <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown" 
-                     data-original-val="{{ $c->tipo_contratista ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                     data-original-val="{{ $c->tipo_contratista ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="tipo_contratista">
                     {{ $c->tipo_contratista ?: 'VACÍO' }}
                 </div>
                 <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn" style="font-size: 0.8rem;">
@@ -100,7 +100,7 @@
             @php $bPlanta = $badgeMap[$c->planta_status] ?? $badgeMap['']; @endphp
             <div class="dropdown">
                 <div class="badge-pill-saas {{ $bPlanta['class'] }} w-100" data-bs-toggle="dropdown"
-                     data-original-val="{{ $c->planta_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                     data-original-val="{{ $c->planta_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="planta_status">
                     {{ $c->planta_status ?: 'V' }}
                 </div>
                 <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
@@ -114,7 +114,7 @@
             @php $bConcepto = $badgeMap[$c->concepto_status] ?? $badgeMap['']; @endphp
             <div class="dropdown">
                 <div class="badge-pill-saas {{ $bConcepto['class'] }} w-100" data-bs-toggle="dropdown"
-                     data-original-val="{{ $c->concepto_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                     data-original-val="{{ $c->concepto_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="concepto_status">
                     {{ $c->concepto_status ?: 'V' }}
                 </div>
                 <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
@@ -128,7 +128,7 @@
             @php $bCdp = $badgeMap[$c->cdp_status] ?? $badgeMap['']; @endphp
             <div class="dropdown">
                 <div class="badge-pill-saas {{ $bCdp['class'] }} w-100" data-bs-toggle="dropdown"
-                     data-original-val="{{ $c->cdp_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                     data-original-val="{{ $c->cdp_status ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="cdp_status">
                     {{ $c->cdp_status ?: 'V' }}
                 </div>
                 <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
@@ -146,7 +146,7 @@
             <td class="text-center" style="{{ $loop->last ? 'border-right: 2px solid #E2E8F0' : '' }}">
                 <div class="dropdown">
                     <div class="badge-pill-saas {{ $b['class'] }} w-100 justify-content-center" data-bs-toggle="dropdown"
-                         data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                         data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="{{ $field }}">
                         <i class="bi {{ $b['icon'] }}"></i>
                     </div>
                     <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
@@ -169,7 +169,7 @@
         <td class="text-center">
             <div class="dropdown">
                 <div class="badge-pill-saas {{ $secopClass }} w-100" data-bs-toggle="dropdown"
-                     data-original-val="{{ $c->secop_estado_contrato ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                     data-original-val="{{ $c->secop_estado_contrato ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="secop_estado_contrato">
                     {{ $c->secop_estado_contrato ?: 'VACÍO' }}
                 </div>
                 <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
@@ -182,7 +182,7 @@
         <td class="text-center">
             <div class="dropdown">
                 <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown" 
-                     data-original-val="{{ $c->aprobado_y_pagado ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                     data-original-val="{{ $c->aprobado_y_pagado ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="aprobado_y_pagado">
                     {{ $c->aprobado_y_pagado ?: '-' }}
                 </div>
                 <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
@@ -194,7 +194,7 @@
         <td class="text-center" style="border-right: 2px solid #E2E8F0">
             <div class="dropdown">
                 <div class="badge-pill-saas badge-na w-100" data-bs-toggle="dropdown"
-                     data-original-val="{{ $c->modificaciones_y_cierre ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                     data-original-val="{{ $c->modificaciones_y_cierre ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="modificaciones_y_cierre">
                     {{ $c->modificaciones_y_cierre ?: '-' }}
                 </div>
                 <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
@@ -212,7 +212,7 @@
                 <td class="text-center" style="{{ $i == 12 && $field == 'cta12_sia_status' ? 'border-right: 2px solid #E2E8F0' : '' }}">
                     <div class="dropdown">
                         <div class="badge-pill-saas {{ $b['class'] }} w-100 justify-content-center" data-bs-toggle="dropdown"
-                             data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                             data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="{{ $field }}">
                             {{ $c->$field ?: 'V' }}
                         </div>
                         <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
@@ -232,7 +232,7 @@
             <td class="text-center" style="{{ $field == 'acta_liq_sia_status' ? 'border-right: 2px solid #E2E8F0' : '' }}">
                 <div class="dropdown">
                     <div class="badge-pill-saas {{ $b['class'] }} w-100 justify-content-center" data-bs-toggle="dropdown"
-                         data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}">
+                         data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="{{ $field }}">
                         <i class="bi {{ $b['icon'] }}"></i>
                     </div>
                     <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">

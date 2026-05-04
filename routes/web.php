@@ -42,13 +42,16 @@ Route::post('/login', [LoginController::class, 'login'])->name('login.attempt');
 Route::post('/logout', [LoginController::class, 'logout'])->middleware('auth')->name('logout');
 
 // Public Consultation
-Route::post('/consultar-estado', [CuentaCobroController::class, 'publicConsultation'])->name('public.consultation');
+Route::post('/consultar-estado', [CuentaCobroController::class, 'publicConsultation'])
+    ->middleware('throttle:public.consultation')
+    ->name('public.consultation');
 Route::get('/consultar-historial/{cuenta}', [CuentaCobroController::class, 'publicHistorial'])->name('public.historial');
 
 // Dashboard y Cuentas de Cobro (protected)
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [CuentaCobroController::class, 'index'])->name('dashboard');
     Route::post('/dashboard/importar', [CuentaCobroController::class, 'importExcel'])->name('dashboard.importar');
+    Route::get('/dashboard/exportar', [CuentaCobroController::class, 'exportExcel'])->name('dashboard.exportar');
     Route::post('/dashboard/manual', [CuentaCobroController::class, 'storeManual'])->name('dashboard.manual');
     Route::get('/dashboard/plantilla', [CuentaCobroController::class, 'exportTemplate'])->name('dashboard.plantilla');
     Route::get('/dashboard/editar/{id}', [CuentaCobroController::class, 'edit'])->name('dashboard.editar');
@@ -81,10 +84,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/workflow/usuarios-responsables', [WorkflowController::class, 'getUsuariosResponsables'])->name('workflow.usuarios-responsables');
     Route::post('/workflow/sync-timer', [WorkflowController::class, 'syncTimer'])->name('workflow.sync-timer');
     Route::post('/workflow/iniciar-siguiente-cuenta/{cuenta}', [WorkflowController::class, 'iniciarSiguienteCuenta'])->name('workflow.iniciar-siguiente-cuenta');
+    Route::post('/workflow/exportar', [WorkflowController::class, 'exportExcel'])->name('workflow.exportar');
 });
 
 // Configuración (admin only)
-Route::middleware('auth')->prefix('configuracion')->group(function () {
+Route::middleware(['auth', \App\Http\Middleware\EnsureIsAdmin::class])->prefix('configuracion')->group(function () {
     Route::get('/', [\App\Http\Controllers\ConfiguracionController::class, 'index'])->name('configuracion.index');
     Route::get('/crear', [\App\Http\Controllers\ConfiguracionController::class, 'create'])->name('configuracion.create');
     Route::post('/store', [\App\Http\Controllers\ConfiguracionController::class, 'store'])->name('configuracion.store');

@@ -272,6 +272,12 @@ function abrirModalResponsable(data, cuentaId) {
     // Carga inicial de responsables para el bloque sugerido
     cargarResponsablesPorBloque(data.target_bloque_codigo);
 
+    // Bloquear el selector de bloque si el servidor lo indica
+    const selectBloqueLocked = document.getElementById('selectBloqueDestino');
+    if (selectBloqueLocked) {
+        selectBloqueLocked.disabled = data.block_locked || false;
+    }
+
     new bootstrap.Modal(document.getElementById('modalAsignarResponsable')).show();
     
     // Ocultar modal de detalle si está abierto
@@ -452,6 +458,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (modalSs) modalSs.hide();
 
                 if (data.success) {
+                    if (data.requires_responsible) {
+                        abrirModalResponsable(data, cuentaId);
+                        return;
+                    }
                     window.showSnackbar(`✅ Pasado a En Revisión. SS: ${mes}`, 'success');
                     if (window.recargarKanban) setTimeout(() => window.recargarKanban(), 800);
                     else setTimeout(() => location.reload(), 1200);

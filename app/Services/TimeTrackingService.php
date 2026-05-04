@@ -136,7 +136,7 @@ class TimeTrackingService
         TaskTimeLog::create([
             'cuenta_cobro_id' => $cuenta->id,
             'estado_id'       => $cuenta->estado_actual_id,
-            'usuario_id'      => Auth::id() ?? $cuenta->responsable_actual_id,
+            'usuario_id'      => $cuenta->responsable_actual_id, // Siempre el responsable de la cuenta
             'start_time'      => $ahora,
         ]);
 

@@ -1,6 +1,6 @@
 @foreach($cuentas as $c)
     @php $diff = ($c->numero_pagos_totales ?? 0) - ($c->radicadas_bi ?? 0); @endphp
-    <tr class="{{ $diff > 0 ? 'table-alert' : '' }}">
+    <tr class="{{ $diff > 0 ? 'table-alert has-brecha' : '' }}">
         <td class="fw-bold text-govco-blue">{{ $c->contrato->numero_contrato ?? 'N/A' }}</td>
         <td><small>{{ $c->contrato->contratista->nombre_completo ?? 'N/A' }}</small></td>
         <td><small class="badge" style="background:rgba(0,72,132,.08); color:var(--govco-blue); font-weight:600;">{{ $c->bloqueActual->nombre ?? 'N/A' }}</small></td>

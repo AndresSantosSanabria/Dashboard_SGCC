@@ -20,6 +20,9 @@
                 <button class="btn btn-white shadow-sm border" onclick="window.location.reload()">
                     <i class="bi bi-arrow-clockwise me-1"></i> Sincronizar
                 </button>
+                <button type="button" class="btn btn-success shadow-sm" data-bs-toggle="modal" data-bs-target="#modalExportarExcel" style="background-color: #10b981; border-color: #10b981; color: white; border-radius: 8px;">
+                    <i class="bi bi-file-earmark-excel me-1"></i> Exportar
+                </button>
             </div>
         </div>
 
@@ -137,6 +140,7 @@
     </div>
 
     @include('workflow.componentes.responsible_modal')
+    @include('workflow.componentes.modal_exportar')
 
     @push('scripts')
         <script>

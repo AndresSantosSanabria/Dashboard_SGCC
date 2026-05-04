@@ -127,7 +127,7 @@ class SeguimientoController extends Controller
         $contratosQuery = $this->getFilteredContratos($request);
 
         // Calculamos el universo de cumplimiento sobre la query filtrada (subquery atomizada para Postgres)
-        $totalEvaluatedFields = 51; // 12 meses * 3 fuentes + 15 reqs (9 checklist + 6 cierre)
+        $totalEvaluatedFields = 54; // 12 meses * 3 fuentes + 18 reqs (3 base + 9 checklist + 6 cierre)
         
         $statsSub = (clone $contratosQuery);
         // Estadísticas Dinámicas: Calculadas sobre el set filtrado completo
@@ -137,7 +137,7 @@ class SeguimientoController extends Controller
                 COUNT(*) as total,
                 SUM(CASE WHEN (count_ok_mensual + count_ok_req + count_na_mensual + count_na_req) >= $totalEvaluatedFields AND (count_pend_mensual + count_pend_req) = 0 THEN 1 ELSE 0 END) as count_ok,
                 SUM(CASE WHEN (count_pend_mensual + count_pend_req) > 0 THEN 1 ELSE 0 END) as count_pend,
-                AVG(((count_ok_mensual + count_ok_req + count_na_mensual + count_na_req) * 100.0) / $totalEvaluatedFields) as avg_cumplimiento,
+                AVG(LEAST(100.0, ((count_ok_mensual + count_ok_req + count_na_mensual + count_na_req) * 100.0) / $totalEvaluatedFields)) as avg_cumplimiento,
                 SUM(CASE WHEN secop_estado_contrato ILIKE 'CERRADO' OR secop_estado_contrato ILIKE 'TERMINADO' THEN 1 ELSE 0 END) as sec_cerrado,
                 SUM(CASE WHEN secop_estado_contrato ILIKE 'EN EJECUCION' THEN 1 ELSE 0 END) as sec_ejecucion,
                 SUM(CASE WHEN secop_estado_contrato IS NULL OR secop_estado_contrato = '' THEN 1 ELSE 0 END) as sec_vacio
@@ -418,7 +418,7 @@ class SeguimientoController extends Controller
     /**
      * Actualiza un contrato existente.
      */
-    public function update(Request $request, $id)
+    public function update(Request $request, int $id)
     {
         return $this->processStoreOrUpdate($request, $id);
     }
@@ -439,6 +439,15 @@ class SeguimientoController extends Controller
                 'objeto' => 'nullable|string',
                 'link_secop' => 'nullable|url',
                 'cdp_codigo' => 'nullable|string',
+                'tipo_contratista' => 'nullable|string',
+                'abogado_responsable' => 'nullable|string',
+                'contador_responsable' => 'nullable|string',
+                'saldo' => 'nullable|numeric',
+                'observacion_1_razon' => 'nullable|string',
+                'observacion_2_accion' => 'nullable|string',
+                'razon_no_liquidacion' => 'nullable|string',
+                'aprobado_y_pagado' => 'nullable|string',
+                'modificaciones_y_cierre' => 'nullable|string',
             ];
 
             $validated = $request->validate($rules);
@@ -485,7 +494,7 @@ class SeguimientoController extends Controller
     /**
      * Elimina un contrato y todos sus registros relacionados.
      */
-    public function destroy($id)
+    public function destroy(int $id)
     {
         /** @var Usuario $user */
         $user = Auth::user();
@@ -528,9 +537,12 @@ class SeguimientoController extends Controller
         }
     }
 
-    private function hydrateContratoData($c)
+    /**
+     * @param Contrato|object $c
+     */
+    private function hydrateContratoData(object $c)
     {
-        $totalEvaluatedFields = 51;
+        $totalEvaluatedFields = 54;
 
         foreach ($c->seguimientoMensual as $sm) {
             $attr = "cta{$sm->mes}_" . strtolower($sm->fuente) . '_status';
@@ -545,10 +557,10 @@ class SeguimientoController extends Controller
         $pend = ($c->count_pend_mensual ?? 0) + ($c->count_pend_req ?? 0);
 
         if ($pend > 0) $c->global_status = 'CRÍTICO';
-        elseif (($ok + $na) === $totalEvaluatedFields) $c->global_status = 'COMPLETO';
+        elseif (($ok + $na) >= $totalEvaluatedFields) $c->global_status = 'COMPLETO';
         elseif (($ok + $na) > 0) $c->global_status = 'EN PROGRESO';
         else $c->global_status = 'VACÍO';
 
-        $c->perc_cumplimiento = $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0;
+        $c->perc_cumplimiento = min(100, $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0);
     }
 }

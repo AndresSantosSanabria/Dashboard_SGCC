@@ -24,153 +24,156 @@
 @section('page-content')
     <div class="dashboard-container animate-fadeIn">
 
-        {{-- HEADER ESTRATÉGICO --}}
-        <header class="db-header">
-            <div>
-                <h1>Gestión Estratégica SECOP</h1>
-                <p>Monitoreo en tiempo real de contratación y cumplimiento normativo.</p>
-            </div>
-            <div class="d-flex gap-3">
-                <button class="btn-saas-secondary" onclick="exportToExcel()">
-                    <i class="bi bi-file-earmark-excel-fill text-success me-2"></i> Reporte Excel
-                </button>
-                <button class="btn-saas-primary" onclick="window.location.reload()">
-                    <i class="bi bi-arrow-clockwise"></i> Sincronizar
-                </button>
-            </div>
-        </header>
-
-        {{-- ANALÍTICA RESUMEN SUPERIOR --}}
-        <div class="analytics-summary">
-            <div class="summary-mini-card">
-                <span class="label text-success">Contratos en Norma</span>
-                <span class="val" id="stat-ok">{{ number_format($stats['ok_contratos']) }}</span>
-                <span class="sub"><i class="bi bi-check-all"></i> Checklist Validado</span>
-            </div>
-            <div class="summary-mini-card">
-                <span class="label text-warning">Acciones Pendientes</span>
-                <span class="val" id="stat-pend">{{ number_format($stats['pend_contratos']) }}</span>
-                <span class="sub"><i class="bi bi-activity"></i> Gestión en curso</span>
-            </div>
-            <div class="summary-mini-card">
-                <span class="label text-primary">Cumplimiento Global</span>
-                <div class="val"><span id="stat-avg">{{ number_format($stats['avg_cumplimiento'], 1) }}</span>%</div>
-                <div class="progress mt-2" style="height: 6px;">
-                    <div class="progress-bar bg-primary" id="stat-bar" style="width: {{ $stats['avg_cumplimiento'] }}%"></div>
+        {{-- SECCIÓN SUPERIOR FIJA (HEADER, KPI Y FILTROS) --}}
+        <div class="sticky-header-wrapper">
+            {{-- HEADER ESTRATÉGICO --}}
+            <header class="db-header">
+                <div>
+                    <h1>Gestión Estratégica SECOP</h1>
+                    <p>Monitoreo en tiempo real de contratación y cumplimiento normativo.</p>
                 </div>
-            </div>
-            <div class="summary-mini-card">
-                <span class="label text-indigo">Universo de Registros</span>
-                <span class="val" id="stat-val-total">{{ number_format($stats['total']) }}</span>
-                <span class="sub"><i class="bi bi-database-fill"></i> Base de datos activa</span>
-            </div>
-        </div>
-
-        {{-- SEGUNDA FILA: ANALÍTICA SECOP --}}
-        <div class="analytics-summary mb-4">
-            <div class="summary-mini-card">
-                <span class="label text-emerald">Cerrados SECOP</span>
-                <span class="val" id="stat-sec-cerrado">{{ number_format($stats['sec_cerrado']) }}</span>
-                <span class="sub">Efectividad de cierre</span>
-            </div>
-            <div class="summary-mini-card">
-                <span class="label text-amber">En Ejecución</span>
-                <span class="val" id="stat-sec-ejecucion">{{ number_format($stats['sec_ejecucion']) }}</span>
-                <span class="sub">Obras y servicios activos</span>
-            </div>
-            <div class="summary-mini-card">
-                <span class="label text-slate">Sin Datos SECOP</span>
-                <span class="val" id="stat-sec-vacio">{{ number_format($stats['sec_vacio']) }}</span>
-                <span class="sub">Pendientes de plataforma</span>
-            </div>
-            <div class="summary-mini-card bg-primary text-white after-none">
-                <span class="label text-white opacity-75">Estado Consolidado</span>
-                <span class="val text-white" id="stat-total-con-seg">{{ number_format($stats['total']) }}</span>
-                <span class="sub text-white opacity-75">Total plataforma</span>
-            </div>
-        </div>
-
-        {{-- FILTROS PREMIUM --}}
-        <div class="filter-card-saas animate-fadeIn">
-            <div class="form-group-saas">
-                <label>Búsqueda de Contrato</label>
-                <input type="text" id="filterContrato" class="input-saas" placeholder="Filtro por Nº...">
-            </div>
-            <div class="form-group-saas">
-                <label>Tipo Contratista</label>
-                <select id="filterTipo" class="input-saas">
-                    <option value="">Todos los tipos</option>
-                    <option value="Natural">Natural</option>
-                    <option value="Juridica">Juridica</option>
-                </select>
-            </div>
-            <div class="form-group-saas">
-                <label>Estatus SECOP</label>
-                <select id="filterSecop" class="input-saas">
-                    <option value="">Cualquier estado</option>
-                    <option value="CERRADO">CERRADO</option>
-                    <option value="TERMINADO">TERMINADO</option>
-                    <option value="EN EJECUCION">EN EJECUCION</option>
-                </select>
-            </div>
-            <div class="form-group-saas">
-                <label>ESTADO</label>
-                <div class="dropdown custom-multilevel-dropdown">
-                    <button class="dropdown-toggle text-start w-100 d-flex justify-content-between align-items-center"
-                        type="button" id="dropdownEstado" data-bs-toggle="dropdown" aria-expanded="false">
-                        <span id="selectedEstadoLabel" class="text-truncate" style="max-width: 150px;">
-                            Todos los estados
-                        </span>
-                        <i class="bi bi-chevron-down ms-2 opacity-50"></i>
+                <div class="d-flex gap-3">
+                    <button class="btn-saas-secondary" onclick="exportToExcel()">
+                        <i class="bi bi-file-earmark-excel-fill text-success me-2"></i> Reporte Excel
                     </button>
-                    <input type="hidden" id="filterEstado" value="">
-                    <ul class="dropdown-menu shadow-lg" aria-labelledby="dropdownEstado">
-                        <div class="dropdown-header-custom">
-                            <i class="bi bi-layers"></i> Todos los estados
-                        </div>
-                        <div class="accordion-block">
-                             <a class="dropdown-item filter-estado-item filter-estado-item-main active" href="#" data-value="">
-                                <i class="bi bi-circle-fill me-2 small opacity-50"></i> Todos los estados
-                             </a>
-                        </div>
-                        
-                        @foreach ($bloques as $bloque)
-                            @php $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect(); @endphp
-                            @if ($estadosDelBloque->isNotEmpty())
-                                <div class="accordion-block">
-                                    <div class="accordion-block-header">
-                                        <span><i class="bi bi-folder2 me-2 text-primary"></i>{{ $bloque->nombre }}</span>
-                                        <i class="bi bi-chevron-down"></i>
-                                    </div>
-                                    <div class="accordion-block-content">
-                                        @foreach ($estadosDelBloque as $est)
-                                            <a class="dropdown-item filter-estado-item" href="#" data-value="{{ $est->nombre }}">
-                                                {{ $est->nombre }}
-                                            </a>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            @endif
-                        @endforeach
-                    </ul>
+                    <button class="btn-saas-primary" onclick="window.location.reload()">
+                        <i class="bi bi-arrow-clockwise"></i> Sincronizar
+                    </button>
+                </div>
+            </header>
+
+            {{-- ANALÍTICA RESUMEN SUPERIOR --}}
+            <div class="analytics-summary">
+                <div class="summary-mini-card">
+                    <span class="label text-success">Contratos en Norma</span>
+                    <span class="val" id="stat-ok">{{ number_format($stats['ok_contratos']) }}</span>
+                    <span class="sub"><i class="bi bi-check-all"></i> Checklist Validado</span>
+                </div>
+                <div class="summary-mini-card">
+                    <span class="label text-warning">Acciones Pendientes</span>
+                    <span class="val" id="stat-pend">{{ number_format($stats['pend_contratos']) }}</span>
+                    <span class="sub"><i class="bi bi-activity"></i> Gestión en curso</span>
+                </div>
+                <div class="summary-mini-card">
+                    <span class="label text-primary">Cumplimiento Global</span>
+                    <div class="val"><span id="stat-avg">{{ number_format($stats['avg_cumplimiento'], 1) }}</span>%</div>
+                    <div class="progress mt-2" style="height: 6px;">
+                        <div class="progress-bar bg-primary" id="stat-bar" style="width: {{ $stats['avg_cumplimiento'] }}%"></div>
+                    </div>
+                </div>
+                <div class="summary-mini-card">
+                    <span class="label text-indigo">Universo de Registros</span>
+                    <span class="val" id="stat-val-total">{{ number_format($stats['total']) }}</span>
+                    <span class="sub"><i class="bi bi-database-fill"></i> Base de datos activa</span>
                 </div>
             </div>
-            <div class="form-group-saas">
-                <label>Supervisor Asignado</label>
-                <select class="input-saas" id="filterSup">
-                    <option value="">Todos los supervisores</option>
-                    @foreach ($supervisores as $s)
-                        <option value="{{ $s->id }}">{{ $s->nombre_completo }}</option>
-                    @endforeach
-                </select>
+
+            {{-- SEGUNDA FILA: ANALÍTICA SECOP --}}
+            <div class="analytics-summary">
+                <div class="summary-mini-card">
+                    <span class="label text-emerald">Cerrados SECOP</span>
+                    <span class="val" id="stat-sec-cerrado">{{ number_format($stats['sec_cerrado']) }}</span>
+                    <span class="sub">Efectividad de cierre</span>
+                </div>
+                <div class="summary-mini-card">
+                    <span class="label text-amber">En Ejecución</span>
+                    <span class="val" id="stat-sec-ejecucion">{{ number_format($stats['sec_ejecucion']) }}</span>
+                    <span class="sub">Obras y servicios activos</span>
+                </div>
+                <div class="summary-mini-card">
+                    <span class="label text-slate">Sin Datos SECOP</span>
+                    <span class="val" id="stat-sec-vacio">{{ number_format($stats['sec_vacio']) }}</span>
+                    <span class="sub">Pendientes de plataforma</span>
+                </div>
+                <div class="summary-mini-card bg-primary text-white after-none">
+                    <span class="label text-white opacity-75">Estado Consolidado</span>
+                    <span class="val text-white" id="stat-total-con-seg">{{ number_format($stats['total']) }}</span>
+                    <span class="sub text-white opacity-75">Total plataforma</span>
+                </div>
             </div>
-            <button class="btn-saas-primary px-4 py-2" onclick="applyAdvancedFilters()" style="height:42px">
-                <i class="bi bi-search"></i>
-            </button>
-            <button class="btn-saas-secondary" onclick="window.location.href='{{ route('seguimiento.index') }}'" style="height:42px">
-                <i class="bi bi-x-lg"></i>
-            </button>
-            <input type="hidden" id="sortOrder" value="{{ request('sort_order', 'asc') }}">
+
+            {{-- FILTROS PREMIUM --}}
+            <div class="filter-card-saas animate-fadeIn">
+                <div class="form-group-saas">
+                    <label>Búsqueda de Contrato</label>
+                    <input type="text" id="filterContrato" class="input-saas" placeholder="Filtro por Nº...">
+                </div>
+                <div class="form-group-saas">
+                    <label>Tipo Contratista</label>
+                    <select id="filterTipo" class="input-saas">
+                        <option value="">Todos los tipos</option>
+                        <option value="Natural">Natural</option>
+                        <option value="Juridica">Juridica</option>
+                    </select>
+                </div>
+                <div class="form-group-saas">
+                    <label>Estatus SECOP</label>
+                    <select id="filterSecop" class="input-saas">
+                        <option value="">Cualquier estado</option>
+                        <option value="CERRADO">CERRADO</option>
+                        <option value="TERMINADO">TERMINADO</option>
+                        <option value="EN EJECUCION">EN EJECUCION</option>
+                    </select>
+                </div>
+                <div class="form-group-saas">
+                    <label>ESTADO</label>
+                    <div class="dropdown custom-multilevel-dropdown">
+                        <button class="dropdown-toggle text-start w-100 d-flex justify-content-between align-items-center"
+                            type="button" id="dropdownEstado" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <span id="selectedEstadoLabel" class="text-truncate" style="max-width: 150px;">
+                                Todos los estados
+                            </span>
+                            <i class="bi bi-chevron-down ms-2 opacity-50"></i>
+                        </button>
+                        <input type="hidden" id="filterEstado" value="">
+                        <ul class="dropdown-menu shadow-lg" aria-labelledby="dropdownEstado">
+                            <div class="dropdown-header-custom">
+                                <i class="bi bi-layers"></i> Todos los estados
+                            </div>
+                            <div class="accordion-block">
+                                <a class="dropdown-item filter-estado-item filter-estado-item-main active" href="#" data-value="">
+                                    <i class="bi bi-circle-fill me-2 small opacity-50"></i> Todos los estados
+                                </a>
+                            </div>
+                            
+                            @foreach ($bloques as $bloque)
+                                @php $estadosDelBloque = $todosLosEstados[$bloque->codigo] ?? collect(); @endphp
+                                @if ($estadosDelBloque->isNotEmpty())
+                                    <div class="accordion-block">
+                                        <div class="accordion-block-header">
+                                            <span><i class="bi bi-folder2 me-2 text-primary"></i>{{ $bloque->nombre }}</span>
+                                            <i class="bi bi-chevron-down"></i>
+                                        </div>
+                                        <div class="accordion-block-content">
+                                            @foreach ($estadosDelBloque as $est)
+                                                <a class="dropdown-item filter-estado-item" href="#" data-value="{{ $est->nombre }}">
+                                                    {{ $est->nombre }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+                <div class="form-group-saas">
+                    <label>Supervisor Asignado</label>
+                    <select class="input-saas" id="filterSup">
+                        <option value="">Todos los supervisores</option>
+                        @foreach ($supervisores as $s)
+                            <option value="{{ $s->id }}">{{ $s->nombre_completo }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <button class="btn-saas-primary px-4 py-2" onclick="applyAdvancedFilters()" style="height:42px">
+                    <i class="bi bi-search"></i>
+                </button>
+                <button class="btn-saas-secondary" onclick="window.location.href='{{ route('seguimiento.index') }}'" style="height:42px">
+                    <i class="bi bi-x-lg"></i>
+                </button>
+                <input type="hidden" id="sortOrder" value="{{ request('sort_order', 'asc') }}">
+            </div>
         </div>
 
         {{-- TABLA MAESTRA --}}
@@ -478,6 +481,17 @@
                 applyAdvancedFilters();
             }
         });
+        
+        // Interceptar clics en los links de paginación para usar AJAX (Sin refresco de página)
+        document.getElementById('pagination-container').addEventListener('click', function(e) {
+            const link = e.target.closest('a');
+            if (link && link.href) {
+                e.preventDefault();
+                applyAdvancedFilters(link.href);
+                // Scroll suave al inicio de la tabla
+                document.querySelector('.table-scroll-container').scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
 
         let changesQueue = {};
 
@@ -674,6 +688,31 @@
                 const data = await res.json();
                 document.getElementById('tableBody').innerHTML = data.table;
                 document.getElementById('pagination-container').innerHTML = data.pagination;
+
+                // Re-aplicar cambios visuales de la cola de guardado masivo
+                const badgeMap = {
+                    'OK': { class: 'badge-ok', icon: 'bi-check-circle-fill' },
+                    'PENDIENTE': { class: 'badge-pend', icon: 'bi-hourglass-split' },
+                    'RECHAZADO': { class: 'badge-crit', icon: 'bi-x-circle-fill' },
+                    'CRÍTICO': { class: 'badge-crit', icon: 'bi-exclamation-triangle-fill' },
+                    'N/A': { class: 'badge-na', icon: 'bi-dash-circle' },
+                    '': { class: 'badge-vacio', icon: 'bi-circle' }
+                };
+
+                Object.values(changesQueue).forEach(c => {
+                    const row = document.querySelector(`.contract-row[data-id="${c.id}"]`);
+                    if (row) {
+                        const badge = row.querySelector(`.badge-pill-saas[data-field="${c.field}"]`);
+                        if (badge) {
+                            const b = badgeMap[c.newValue] || badgeMap[''];
+                            badge.className = `badge-pill-saas ${b.class} w-100 field-modified`;
+                            const iconHtml = b.icon ? `<i class="bi ${b.icon}"></i> ` : '';
+                            badge.innerHTML = `${iconHtml}${c.newValue || 'VACÍO'}`;
+                            row.classList.add('row-has-changes');
+                        }
+                    }
+                });
+
                 // Update stats
                 document.getElementById('stat-ok').innerText = parseInt(data.stats.ok_contratos).toLocaleString();
                 document.getElementById('stat-pend').innerText = parseInt(data.stats.pend_contratos).toLocaleString();
@@ -870,15 +909,16 @@
             if(banner) {
                 banner.style.opacity = '0';
                 banner.style.pointerEvents = 'none';
-                banner.style.transform = 'translateX(-50%) translateY(150%)';
+                banner.style.transform = 'translateX(200%)';
             }
         });
 
         document.addEventListener('hidden.bs.modal', function () {
             const banner = document.getElementById('batchBanner');
             if(banner) {
-                banner.style.opacity = '1';
-                banner.style.pointerEvents = 'auto';
+                banner.style.opacity = '';
+                banner.style.pointerEvents = '';
+                banner.style.transform = '';
                 renderBatchBanner();
             }
         });

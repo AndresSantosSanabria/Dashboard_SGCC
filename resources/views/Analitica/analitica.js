@@ -6,6 +6,14 @@
  * recrean dinámicamente según la respuesta del servidor (AJAX).
  */
 document.addEventListener('DOMContentLoaded', function () {
+    window.currentDelayView = 'general';
+    
+    function formatMinutosLabel(val, full = false) {
+        const h = Math.floor(val / 60);
+        const m = Math.round(val % 60);
+        if (full) return `${h}h ${m}m en total`;
+        return `${h}h ${m}m`;
+    }
     let chartData = window.chartData || {};
     let charts = {};
     const slider      = document.getElementById('rangeSlider');
@@ -15,11 +23,11 @@ document.addEventListener('DOMContentLoaded', function () {
     // PALETA DE COLORES INSTITUCIONAL
     const P = {
         primary:  '#0f172a',
-        accent:   '#3b82f6',
+        accent:   '#6366f1',
         success:  '#10b981',
         warning:  '#f59e0b',
         danger:   '#ef4444',
-        info:     '#6366f1',
+        info:     '#3b82f6',
         slate:    '#475569',
         slateLt:  '#94a3b8',
         muted:    '#f1f5f9',
@@ -40,22 +48,31 @@ document.addEventListener('DOMContentLoaded', function () {
     const baseFont  = { fontFamily: 'Inter, sans-serif' };
     const noToolbar = { show: false };
 
-
-
     // ==============================
     // CHARTS
     // ==============================
     function initCharts(data) {
+        const isMobile = window.innerWidth <= 991;
+        const chartTheme = isMobile ? 'dark' : 'light';
+        const labelColor = isMobile ? '#94a3b8' : P.slateLt;
+        const titleColor = isMobile ? '#f1f5f9' : P.primary;
+        const gridColor  = isMobile ? 'rgba(255,255,255,0.05)' : '#f8fafc';
 
         // 1. DISTRIBUCIÓN POR ESTADO (Donut)
         if (data.estado_anillos) {
             if (charts.donut) charts.donut.destroy();
             charts.donut = new ApexCharts(document.querySelector('#donutChart'), {
                 series: data.estado_anillos.series,
-                chart: { type: 'donut', height: 320, ...baseFont },
+                chart: { 
+                    type: 'donut', 
+                    height: isMobile ? 260 : 320, 
+                    ...baseFont,
+                    theme: { mode: chartTheme }
+                },
                 labels: data.estado_anillos.labels,
-                colors: [P.accent, P.danger],
+                colors: [P.accent, '#ef4444'], // Blue for Process, Red for Return/Gap
                 legend: {
+                    show: !isMobile,
                     position: 'bottom',
                     fontSize: '13px',
                     fontWeight: 500,
@@ -71,16 +88,16 @@ document.addEventListener('DOMContentLoaded', function () {
                                 show: true,
                                 total: {
                                     show: true,
-                                    label: 'Total General',
-                                    fontSize: '12px',
+                                    label: 'total',
+                                    fontSize: '14px',
                                     fontWeight: 600,
-                                    color: P.slateLt,
+                                    color: labelColor,
                                     formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
                                 },
                                 value: {
-                                    fontSize: '2.2rem',
+                                    fontSize: isMobile ? '1.6rem' : '2.2rem',
                                     fontWeight: 800,
-                                    color: P.primary,
+                                    color: titleColor,
                                     offsetY: 5
                                 }
                             }
@@ -88,66 +105,132 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 },
                 dataLabels: { enabled: false },
-                stroke: { width: 5, colors: ['#fff'] }
+                stroke: { width: isMobile ? 2 : 5, colors: [isMobile ? 'transparent' : '#fff'] }
             });
             charts.donut.render();
-        }
 
-        // 1.5 DELAY – Demora por Etapa
-        if (data.demora_bloques && data.demora_bloques.length > 0) {
-            const promedios = data.demora_bloques.map(d => d.promedio_horas);
-            const maxTime   = Math.max(...promedios);
-            const minTime   = Math.min(...promedios);
-            const range     = maxTime - minTime;
+            // Populate Mobile Legend
+            if (isMobile) {
+                const legendEl = document.getElementById('mobileDonutLegend');
+                if (legendEl) {
+                    legendEl.innerHTML = data.estado_anillos.labels.map((label, i) => `
+                        <div class="m-legend-item">
+                            <span class="m-legend-dot" style="background: ${[P.accent, P.danger][i]}"></span>
+                            <span class="m-legend-label">${label}</span>
+                            <span class="m-legend-value">${data.estado_anillos.series[i]}</span>
+                        </div>
+                    `).join('');
+                }
+            }
+            // 1.5 DELAY – Demora por Usuario y Etapa (NUEVA LÓGICA)
+        const delayData = data.demora_usuario_etapa;
+        if (delayData && (delayData.tiempoEquipo.length > 0 || delayData.porUsuario.length > 0)) {
+            const isGrouped = window.currentDelayView === 'grouped';
+            let series = [];
+            let categories = [];
 
-            const delayColors = data.demora_bloques.map(d => {
-                const h = d.promedio_horas;
-                if (range < 0.1) return P.green;
-                const band1 = minTime + (range * 0.33);
-                const band2 = minTime + (range * 0.66);
-                if (h <= band1) return P.green;
-                if (h <= band2) return P.orange;
-                return P.red;
-            });
+            if (!isGrouped) {
+                // Vista General
+                series = [{
+                    name: 'Tiempo Total Equipo',
+                    data: delayData.tiempoEquipo.map(d => d.minutos_totales)
+                }];
+                categories = delayData.tiempoEquipo.map(d => d.etapa);
+            } else {
+                // Vista por Usuario
+                const allEtapas = [...new Set(delayData.tiempoEquipo.map(d => d.etapa))];
+                categories = allEtapas;
+                series = delayData.porUsuario.map(u => {
+                    return {
+                        name: u.usuario,
+                        data: allEtapas.map(etapa => {
+                            const found = u.datos.find(d => d.etapa === etapa);
+                            return found ? found.minutos : 0;
+                        })
+                    };
+                });
+            }
 
             if (charts.delay) charts.delay.destroy();
             charts.delay = new ApexCharts(document.querySelector('#delayChart'), {
-                series: [{ name: 'Promedio (Horas)', data: data.demora_bloques.map(d => d.promedio_horas) }],
-                chart: { type: 'bar', height: 280, toolbar: noToolbar, ...baseFont, animations: { enabled: true, easing: 'easeinout', speed: 800 } },
-                plotOptions: { bar: { horizontal: true, borderRadius: 8, barHeight: '45%', distributed: true } },
-                colors: delayColors,
-                xaxis: {
-                    categories: data.demora_bloques.map(d => d.bloque),
-                    labels: { style: { fontSize: '11px', colors: P.slateLt, fontWeight: 500 } }
+                series: series,
+                chart: { 
+                    type: 'bar', 
+                    height: isMobile ? 300 : 380, 
+                    toolbar: noToolbar, 
+                    ...baseFont, 
+                    animations: { enabled: true, easing: 'easeinout', speed: 800 },
+                    theme: { mode: chartTheme }
                 },
-                yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.slate } } },
+                plotOptions: { 
+                    bar: { 
+                        horizontal: true, 
+                        borderRadius: 6, 
+                        barHeight: isGrouped ? '80%' : '50%',
+                        dataLabels: { position: 'top' }
+                    } 
+                },
+                colors: [P.accent, P.teal, P.indigo, P.amber, P.orange, P.red, P.green],
+                xaxis: {
+                    categories: categories,
+                    labels: { 
+                        style: { fontSize: '11px', colors: labelColor, fontWeight: 500 },
+                        formatter: val => formatMinutosLabel(val)
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: labelColor } } },
                 tooltip: {
                     theme: 'dark',
                     y: {
-                        formatter: val => {
-                            const h = Math.floor(val);
-                            const m = Math.round((val - h) * 60);
-                            return `${h}h ${m}m en promedio`;
-                        }
+                        formatter: val => formatMinutosLabel(val, true)
                     }
                 },
                 dataLabels: {
-                    enabled: true,
-                    formatter: val => {
-                        const h = Math.floor(val);
-                        const m = Math.round((val - h) * 60);
-                        return m > 0 ? `${h}h ${m}m` : `${h}h`;
-                    },
-                    style: { fontSize: '11px', fontWeight: 700, colors: ['#fff'] },
-                    offsetX: 5
+                    enabled: !isGrouped,
+                    formatter: val => formatMinutosLabel(val),
+                    style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] },
+                    offsetX: -6
                 },
-                grid: { borderColor: '#f8fafc', strokeDashArray: 4 },
-                legend: { show: false }
+                grid: { borderColor: gridColor, strokeDashArray: 4 },
+                legend: { show: !isMobile, position: 'top', horizontalAlign: 'left', fontSize: '12px' }
             });
             charts.delay.render();
+            
+            // Actualizar KPIs de la tarjeta
+            if (delayData.kpis) {
+                document.getElementById('kpi-general').textContent = delayData.kpis.general;
+                document.getElementById('kpi-lenta').textContent = delayData.kpis.lenta;
+                document.getElementById('kpi-rapida').textContent = delayData.kpis.rapida;
+
+                // Update Mobile KPIs
+                if (isMobile) {
+                    const mKpiTotal = document.getElementById('m-kpi-total');
+                    const mKpiLenta = document.getElementById('m-kpi-lenta');
+                    const mKpiLentaSub = document.getElementById('m-kpi-lenta-sub');
+                    const mKpiRapida = document.getElementById('m-kpi-rapida');
+                    const mKpiRapidaSub = document.getElementById('m-kpi-rapida-sub');
+
+                    if (mKpiTotal) mKpiTotal.textContent = delayData.kpis.general;
+                    
+                    if (mKpiLenta) {
+                        const lentaParts = delayData.kpis.lenta.split(' En ');
+                        mKpiLenta.textContent = lentaParts[0];
+                        if (mKpiLentaSub && lentaParts[1]) mKpiLentaSub.textContent = 'En ' + lentaParts[1];
+                    }
+
+                    if (mKpiRapida) {
+                        const rapidaParts = delayData.kpis.rapida.split(' ');
+                        mKpiRapida.textContent = rapidaParts[0];
+                        if (mKpiRapidaSub && rapidaParts[1]) mKpiRapidaSub.textContent = rapidaParts.slice(1).join(' ');
+                    }
+                }
+            }
         } else {
             const el = document.querySelector('#delayChart');
-            if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-clock"></i>Sin datos de demora históricos</div>';
+            if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-clock"></i>Sin datos de demora configurados</div>';
+        }
         }
 
         // 2. PIPELINE – Carga por Etapa
@@ -155,14 +238,22 @@ document.addEventListener('DOMContentLoaded', function () {
             if (charts.gap) charts.gap.destroy();
             charts.gap = new ApexCharts(document.querySelector('#gapChart'), {
                 series: [{ name: 'Contratos', data: data.gap_chart.series }],
-                chart: { type: 'bar', height: 320, toolbar: noToolbar, ...baseFont, animations: { enabled: true, speed: 800 } },
+                chart: { 
+                    type: 'bar', 
+                    height: isMobile ? 260 : 320, 
+                    toolbar: noToolbar, 
+                    ...baseFont, 
+                    animations: { enabled: true, speed: 800 },
+                    theme: { mode: chartTheme }
+                },
                 plotOptions: { bar: { horizontal: true, borderRadius: 10, barHeight: '55%', distributed: true } },
                 colors: [P.blue, P.indigo, P.teal, P.green, P.amber, P.red],
                 xaxis: {
                     categories: data.gap_chart.labels,
-                    labels: { style: { fontSize: '11px', colors: P.slateLt } }
+                    labels: { style: { fontSize: '11px', colors: labelColor } },
+                    axisBorder: { show: false }
                 },
-                yaxis: { labels: { style: { fontSize: '12px', fontWeight: 600, colors: P.slate } } },
+                yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: labelColor } } },
                 legend: { show: false },
                 tooltip: { theme: 'dark', y: { formatter: val => val + ' contratos' } },
                 dataLabels: {
@@ -171,9 +262,28 @@ document.addEventListener('DOMContentLoaded', function () {
                     style: { colors: ['#fff'], fontSize: '12px', fontWeight: 700 },
                     offsetX: 10
                 },
-                grid: { borderColor: '#f8fafc', strokeDashArray: 4 }
+                grid: { borderColor: gridColor, strokeDashArray: 4 }
             });
             charts.gap.render();
+
+            // Populate Mobile Pipeline Bars
+            if (isMobile) {
+                const pipeEl = document.getElementById('mobilePipelineBars');
+                if (pipeEl) {
+                    const maxVal = Math.max(...data.gap_chart.series, 1);
+                    pipeEl.innerHTML = data.gap_chart.labels.map((label, i) => `
+                        <div class="m-pipeline-item">
+                            <div class="m-pipeline-header">
+                                <span>${label}</span>
+                                <span>${data.gap_chart.series[i]}</span>
+                            </div>
+                            <div class="m-pipeline-bar-bg">
+                                <div class="m-pipeline-bar-fill" style="width: ${(data.gap_chart.series[i] / maxVal) * 100}%"></div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
         } else {
             const el = document.querySelector('#gapChart');
             if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-bar-chart"></i>Sin datos en el pipeline</div>';
@@ -184,7 +294,13 @@ document.addEventListener('DOMContentLoaded', function () {
             if (charts.timeline) charts.timeline.destroy();
             charts.timeline = new ApexCharts(document.querySelector('#timelineChart'), {
                 series: [{ name: 'Transiciones', data: data.timeline.series }],
-                chart: { type: 'area', height: 280, toolbar: noToolbar, ...baseFont },
+                chart: { 
+                    type: 'area', 
+                    height: isMobile ? 220 : 280, 
+                    toolbar: noToolbar, 
+                    ...baseFont,
+                    theme: { mode: chartTheme }
+                },
                 colors: [P.accent],
                 fill: {
                     type: 'gradient',
@@ -193,13 +309,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 stroke: { curve: 'smooth', width: 3 },
                 xaxis: {
                     categories: data.timeline.labels,
-                    labels: { rotate: -45, style: { fontSize: '10px', colors: P.slateLt } },
+                    labels: { rotate: -45, style: { fontSize: '10px', colors: labelColor } },
                     axisBorder: { show: false },
                     axisTicks: { show: false }
                 },
-                yaxis: { labels: { formatter: val => Math.round(val), style: { colors: P.slateLt } } },
+                yaxis: { labels: { formatter: val => Math.round(val), style: { colors: labelColor } } },
                 dataLabels: { enabled: false },
-                grid: { borderColor: '#f8fafc', strokeDashArray: 4 },
+                grid: { borderColor: gridColor, strokeDashArray: 4 },
                 markers: { size: 5, colors: ['#fff'], strokeColors: P.accent, strokeWidth: 3, hover: { size: 7 } },
                 tooltip: { theme: 'dark', y: { formatter: val => val + ' transiciones' } }
             });
@@ -246,14 +362,26 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const globalProgress = document.querySelector('.kpi-teal .progress-bar');
         if (globalProgress) globalProgress.style.width = Math.min(data.avanceGlobal, 100) + '%';
+
+        // Update Mobile Global Progress
+        const mGlobalProgressVal = document.getElementById('mobileGlobalProgressVal');
+        const mGlobalProgressBar = document.getElementById('mobileGlobalProgressBar');
+        if (mGlobalProgressVal) mGlobalProgressVal.textContent = fmtDec.format(data.avanceGlobal) + '%';
+        if (mGlobalProgressBar) mGlobalProgressBar.style.width = Math.min(data.avanceGlobal, 100) + '%';
     }
 
-    function updateTable(html) {
+    function updateTable(html, mobileHtml = null) {
         const table = $('#alertTable').DataTable();
         table.destroy();
         document.getElementById('tableBody').innerHTML = html;
         initDataTable();
         applyMinimizedColumns();
+
+        // Update Mobile List if provided
+        if (mobileHtml) {
+            const mobileList = document.getElementById('mobileContractList');
+            if (mobileList) mobileList.innerHTML = mobileHtml;
+        }
     }
 
     // ==============================
@@ -263,6 +391,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const formData = new FormData(filterForm);
         const params   = new URLSearchParams(formData);
 
+        const filterEtapa = document.getElementById('filterEtapa');
+        const filterUsuario = document.getElementById('filterUsuario');
+        if (filterEtapa && filterEtapa.value) params.append('f_etapa', filterEtapa.value);
+        if (filterUsuario && filterUsuario.value) params.append('f_usuario', filterUsuario.value);
+
         if (captureArea) captureArea.classList.add('loading');
 
         try {
@@ -271,7 +404,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
             updateKPIs(data);
             initCharts(data.chartData);
-            updateTable(data.tableHtml);
+            updateTable(data.tableHtml, data.mobileTableHtml);
+
+            // Update user metrics cards if available
+            if (data.chartData.demora_usuario_etapa) {
+                const du = data.chartData.demora_usuario_etapa;
+                document.getElementById('kpi-general').textContent = du.kpis.general;
+                document.getElementById('kpi-lenta').textContent = du.kpis.lenta;
+                document.getElementById('kpi-rapida').textContent = du.kpis.rapida;
+            }
 
             const newUrl = window.location.pathname + '?' + params.toString();
             window.history.pushState({ path: newUrl }, '', newUrl);
@@ -401,6 +542,29 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    // ==============================
+    // EVENT LISTENERS PARA MÉTRICAS
+    // ==============================
+    const filterEtapa = document.getElementById('filterEtapa');
+    const filterUsuario = document.getElementById('filterUsuario');
+    const btnToggleView = document.getElementById('btnToggleView');
+
+    function refreshDelayChart() {
+        refreshDashboard();
+    }
+
+    if (filterEtapa) filterEtapa.addEventListener('change', refreshDelayChart);
+    if (filterUsuario) filterUsuario.addEventListener('change', refreshDelayChart);
+    if (btnToggleView) {
+        btnToggleView.addEventListener('click', function() {
+            window.currentDelayView = window.currentDelayView === 'general' ? 'grouped' : 'general';
+            this.innerHTML = window.currentDelayView === 'general' ? '<i class="bi bi-person-lines-fill"></i>' : '<i class="bi bi-people-fill"></i>';
+            refreshDelayChart();
+        });
+    }
+
+    // Se eliminó la lógica de administración manual por solicitud del usuario
 
     // ===================================================================
     // PDF EXPORT — Generación programática limpia con jsPDF + AutoTable

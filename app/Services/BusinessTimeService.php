@@ -8,13 +8,15 @@ use Illuminate\Support\Facades\DB;
 
 class BusinessTimeService
 {
+    /** @var array|null */
+    /** @var array|null */
     protected static $festivosConfig = null;
 
     /**
      * Calcula los segundos laborables entre dos fechas.
      * Garantiza que el tiempo se detenga al final de la jornada laboral.
      */
-    public function getWorkingSecondsBetween($startInput, $endInput)
+    public function getWorkingSecondsBetween(mixed $startInput, mixed $endInput)
     {
         $tz = config('app.timezone', 'America/Bogota');
         $start = Carbon::parse($startInput)->setTimezone($tz);
@@ -71,6 +73,140 @@ class BusinessTimeService
         }
 
         return (int) $totalSeconds;
+    }
+
+    /**
+     * Calcula la cantidad de días hábiles entre dos fechas.
+     * Excluye fines de semana y festivos de la tabla 'festivos'.
+     *
+     * @param mixed $startInput
+     * @param mixed $endInput
+     * @return int
+     */
+    public function getNetWorkDays($startInput, $endInput): int
+    {
+        $start = Carbon::parse($startInput)->startOfDay();
+        $end = Carbon::parse($endInput)->startOfDay();
+
+        if ($start->gt($end)) return 0;
+
+        // Cargar festivos una sola vez por ejecución para el rango dado
+        $festivos = DB::table('festivos')
+            ->whereBetween('fecha', [$start->format('Y-m-d'), $end->format('Y-m-d')])
+            ->pluck('fecha')
+            ->map(fn($f) => Carbon::parse($f)->format('Y-m-d'))
+            ->toArray();
+
+        $workDays = 0;
+        $p = $start->copy();
+        $endDateStr = $end->format('Y-m-d');
+
+        // Para rangos razonables (menos de 10 años), el bucle es suficientemente rápido y preciso
+        while ($p->format('Y-m-d') <= $endDateStr) {
+            if (!$p->isWeekend() && !in_array($p->format('Y-m-d'), $festivos)) {
+                $workDays++;
+            }
+            $p->addDay();
+        }
+
+        return $workDays;
+    }
+
+    /**
+     * Suma días hábiles a una fecha dada.
+     *
+     * @param mixed $dateInput
+     * @param int $days
+     * @return Carbon
+     */
+    public function addBusinessDays($dateInput, int $days): Carbon
+    {
+        $date = Carbon::parse($dateInput);
+        $added = 0;
+
+        while ($added < $days) {
+            $date->addDay();
+            if (!$date->isWeekend() && !Festivo::esFestivo($date)) {
+                $added++;
+            }
+        }
+
+        return $date;
+    }
+
+    /**
+     * Suma segundos hábiles a una fecha dada.
+     * Útil para calcular fechas de vencimiento precisas o delays de jobs.
+     *
+     * @param mixed $dateInput
+     * @param int $seconds
+     * @return Carbon
+     */
+    public function addBusinessSeconds($dateInput, int $seconds): Carbon
+    {
+        $date = Carbon::parse($dateInput);
+        
+        $rawStart = \App\Models\Configuracion::getValor('HORARIO_LABORAL_INICIO', '06:00');
+        $rawEnd = \App\Models\Configuracion::getValor('HORARIO_LABORAL_FIN', '18:00');
+        
+        $workStartStr = Carbon::parse($rawStart)->format('H:i');
+        $workEndStr = Carbon::parse($rawEnd)->format('H:i');
+
+        // Seguridad: Si el horario laboral es inválido o de 0 horas, no podemos calcular.
+        if (strtotime($workStartStr) >= strtotime($workEndStr)) {
+            return $date;
+        }
+
+        // Cargar festivos una sola vez para mejorar rendimiento
+        if (is_null(self::$festivosConfig)) {
+            self::$festivosConfig = DB::table('festivos')
+                ->pluck('fecha')
+                ->map(fn($f) => substr($f, 0, 10))
+                ->toArray();
+        }
+
+        $remainingSeconds = $seconds;
+        $maxLoops = 1000; // Seguridad adicional contra bucles infinitos
+        $loops = 0;
+
+        while ($remainingSeconds > 0 && $loops < $maxLoops) {
+            $loops++;
+            $dateStr = $date->format('Y-m-d');
+            $isHoliday = in_array($dateStr, self::$festivosConfig);
+
+            // Si es fin de semana o festivo, saltar al siguiente día laboral a la hora de inicio
+            if ($date->isWeekend() || $isHoliday) {
+                $date->addDay()->setTimeFromTimeString($workStartStr);
+                continue;
+            }
+
+            $dayStart = $date->copy()->setTimeFromTimeString($workStartStr);
+            $dayEnd = $date->copy()->setTimeFromTimeString($workEndStr);
+
+            // Si la fecha actual está ANTES del inicio laboral, saltar al inicio laboral
+            if ($date->lt($dayStart)) {
+                $date->setTimeFromTimeString($workStartStr);
+            }
+
+            // Si la fecha actual está DESPUÉS del fin laboral, saltar al siguiente día laboral
+            if ($date->gte($dayEnd)) {
+                $date->addDay()->setTimeFromTimeString($workStartStr);
+                continue;
+            }
+
+            // Segundos disponibles hoy hasta el fin de la jornada
+            $secondsAvailableToday = $date->diffInSeconds($dayEnd);
+
+            if ($remainingSeconds <= $secondsAvailableToday) {
+                $date->addSeconds($remainingSeconds);
+                $remainingSeconds = 0;
+            } else {
+                $remainingSeconds -= $secondsAvailableToday;
+                $date->addDay()->setTimeFromTimeString($workStartStr);
+            }
+        }
+
+        return $date;
     }
 
     /**
@@ -162,8 +298,8 @@ class BusinessTimeService
     private function moveToNextMonday(string $dateStr): string
     {
         $date = Carbon::parse($dateStr);
-        if ($date->dayOfWeek !== Carbon::MONDAY) {
-            return $date->next(Carbon::MONDAY)->format('Y-m-d');
+        if ($date->dayOfWeek !== \Carbon\CarbonInterface::MONDAY) {
+            return $date->next(\Carbon\CarbonInterface::MONDAY)->format('Y-m-d');
         }
         return $dateStr;
     }

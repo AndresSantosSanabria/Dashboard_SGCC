@@ -2,9 +2,9 @@
     style="height: 100vh; position: sticky; top: 0; z-index: 1000;">
     <div
         class="sidebar-header d-flex align-items-center justify-content-between mb-3 mb-md-0 me-md-auto text-white text-decoration-none w-100">
-        <a href="/" class="d-flex align-items-center text-decoration-none sidebar-logo-link">
-            <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo Gobernación" class="sidebar-logo"
-                style="max-width: 160px; height: auto;">
+        <a href="/" class="d-flex align-items-center text-decoration-none sidebar-logo-link px-2 py-1">
+            <img src="{{ asset('assets/img/logo-blanco.png') }}" alt="Logo Gobernación" class="sidebar-logo"
+                style="max-width: 150px; height: auto;">
         </a>
         <button id="sidebarToggle" class="btn btn-link text-white p-0 d-flex align-items-center justify-content-center"
             style="width: 32px; height: 32px; min-width: 32px;">

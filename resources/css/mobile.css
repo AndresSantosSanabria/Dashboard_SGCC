@@ -1,0 +1,1835 @@
+/*
+ * ============================================================
+ *  MOBILE RESPONSIVE LAYER — Dashboard SGCC
+ *  Autor: Antigravity (UX/UI Expert)
+ *
+ *  REGLA FUNDAMENTAL:
+ *  ─────────────────────────────────────────────────────────
+ *  TODOS los estilos aquí están dentro de @media queries.
+ *  Nada de esto afectará la vista de escritorio (≥992 px).
+ * ============================================================
+ */
+
+/* ══════════════════════════════════════════════════════════
+   0. CUSTOM PROPERTIES MÓVILES
+   ══════════════════════════════════════════════════════════ */
+:root {
+    --mobile-tap-target: 44px;       /* Área mínima de toque (WCAG 2.5.5) */
+    --mobile-padding-x: 1rem;        /* Padding horizontal base */
+    --mobile-bottom-bar-h: 68px;     /* Altura de la Tab Bar inferior */
+    --mobile-sidebar-w: 280px;       /* Ancho del sidebar cuando está abierto en mobile */
+    --mobile-font-base: 1rem;        /* 16px — lectura cómoda en móvil */
+    --mobile-font-sm: 0.875rem;      /* 14px */
+    --mobile-font-xs: 0.8125rem;     /* 13px */
+    --mobile-radius: 14px;
+    --mobile-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ══════════════════════════════════════════════════════════
+   1. LAYOUT BASE — Evitar scroll horizontal
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    html, body {
+        overflow-x: hidden !important;
+        max-width: 100vw;
+    }
+
+    /* Padding inferior para que el contenido no quede oculto
+       detrás de la Tab Bar fija */
+    main.flex-grow-1 {
+        padding-bottom: calc(var(--mobile-bottom-bar-h) + 1rem) !important;
+        padding-left: var(--mobile-padding-x) !important;
+        padding-right: var(--mobile-padding-x) !important;
+        padding-top: 1rem !important;
+    }
+
+    /* Fuerza una sola columna */
+    .container-fluid {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    /* El wrapper d-flex del app layout pasa a columna */
+    .d-flex.align-items-start,
+    [style*="min-height: 100vh"].d-flex {
+        flex-direction: column !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   2. SIDEBAR — Off-canvas deslizable en móvil
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* El sidebar deja de ser sticky/en-fila y se convierte
+       en un panel deslizante que se oculta fuera de pantalla */
+    #sidebar {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        height: 100% !important;
+        width: var(--mobile-sidebar-w) !important;
+        min-width: var(--mobile-sidebar-w) !important;
+        max-width: var(--mobile-sidebar-w) !important;
+        transform: translateX(-100%) !important;
+        transition: transform var(--mobile-transition) !important;
+        z-index: 1050 !important;
+        overflow-y: auto !important;
+        box-shadow: none;
+    }
+
+    /* Estado ABIERTO — añadido por JS con la clase "mobile-open" */
+    #sidebar.mobile-open {
+        transform: translateX(0) !important;
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25) !important;
+    }
+
+    /* El toggle de escritorio queda oculto dentro del sidebar en móvil */
+    #sidebarToggle {
+        display: none !important;
+    }
+
+    /* Restablecer colapso de escritorio — en móvil nunca colapsado */
+    #sidebar.collapsed {
+        width: var(--mobile-sidebar-w) !important;
+        min-width: var(--mobile-sidebar-w) !important;
+        max-width: var(--mobile-sidebar-w) !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    #sidebar.collapsed .sidebar-text,
+    #sidebar.collapsed .sidebar-logo-link,
+    #sidebar.collapsed .sidebar-header-text,
+    #sidebar.collapsed .user-profile-info strong {
+        display: inline !important;
+        opacity: 1 !important;
+    }
+
+    #sidebar.collapsed .nav-link {
+        justify-content: flex-start !important;
+        padding-left: 1.1rem !important;
+        padding-right: 1.1rem !important;
+    }
+
+    #sidebar.collapsed .nav-link i {
+        font-size: 1rem !important;
+        margin-right: 0 !important;
+    }
+
+    /* Navegación items — área táctil mínima */
+    #sidebar .nav-link {
+        min-height: var(--mobile-tap-target);
+        font-size: var(--mobile-font-base) !important;
+    }
+
+    /* Logo visible en móvil */
+    #sidebar.collapsed .sidebar-logo-link {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   3. OVERLAY — Fondo semitransparente al abrir sidebar
+   ══════════════════════════════════════════════════════════ */
+#mobile-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1040;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+    opacity: 0;
+    transition: opacity var(--mobile-transition);
+}
+
+#mobile-sidebar-overlay.active {
+    display: block;
+    opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════════
+   4. TOP MOBILE HEADER (Barra superior con hamburguesa)
+   ══════════════════════════════════════════════════════════ */
+#mobile-top-bar {
+    display: none; /* Oculto en escritorio */
+}
+
+@media (max-width: 991.98px) {
+    #mobile-top-bar {
+        display: flex;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 var(--mobile-padding-x);
+        height: 56px;
+        min-height: 56px;
+        background: var(--govcolor-cobalt, #003f7f);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        flex-shrink: 0;
+    }
+
+    /* Botón hamburguesa */
+    #mobile-hamburger-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--mobile-tap-target);
+        height: var(--mobile-tap-target);
+        min-width: var(--mobile-tap-target);
+        border: none;
+        background: transparent;
+        color: #ffffff;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.2s;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #mobile-hamburger-btn:active {
+        background: rgba(255, 255, 255, 0.15);
+    }
+
+    #mobile-hamburger-btn .bi {
+        font-size: 1.5rem;
+    }
+
+    /* Título central en top bar */
+    #mobile-page-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: 0.2px;
+        flex: 1;
+        text-align: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0 0.5rem;
+    }
+
+    /* Campana en top bar */
+    #mobile-top-notif-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--mobile-tap-target);
+        height: var(--mobile-tap-target);
+        min-width: var(--mobile-tap-target);
+        border: none;
+        background: transparent;
+        color: #ffffff;
+        border-radius: 8px;
+        cursor: pointer;
+        position: relative;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    #mobile-top-notif-btn .bi {
+        font-size: 1.3rem;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   5. TAB BAR INFERIOR (Navegación de pulgar)
+   ══════════════════════════════════════════════════════════ */
+#mobile-tab-bar {
+    display: none; /* Oculto en escritorio */
+}
+
+@media (max-width: 991.98px) {
+    #mobile-tab-bar {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: var(--mobile-bottom-bar-h);
+        background: #ffffff;
+        border-top: 1px solid #e2e8f0;
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+        z-index: 1030;
+        align-items: center;
+        justify-content: space-around;
+        padding: 0 0.25rem;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .mobile-tab-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        min-height: var(--mobile-tap-target);
+        padding: 6px 4px;
+        text-decoration: none;
+        color: #94a3b8;
+        transition: color var(--mobile-transition);
+        border-radius: 10px;
+        -webkit-tap-highlight-color: transparent;
+        cursor: pointer;
+        border: none;
+        background: transparent;
+        gap: 3px;
+    }
+
+    .mobile-tab-item .tab-icon {
+        font-size: 1.35rem;
+        line-height: 1;
+        transition: transform 0.2s, color var(--mobile-transition);
+    }
+
+    .mobile-tab-item .tab-label {
+        font-size: 0.62rem;
+        font-weight: 600;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        line-height: 1;
+    }
+
+    .mobile-tab-item.active,
+    .mobile-tab-item:active {
+        color: #003f7f;
+    }
+
+    .mobile-tab-item.active .tab-icon {
+        transform: translateY(-2px);
+    }
+
+    /* Indicador activo (píldora) */
+    .mobile-tab-item.active::before {
+        content: '';
+        position: absolute;
+        top: 6px;
+        width: 28px;
+        height: 3px;
+        border-radius: 2px;
+        background: #003f7f;
+    }
+
+    .mobile-tab-item {
+        position: relative;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   6. TIPOGRAFÍA — Escala legible en móvil
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    body {
+        font-size: var(--mobile-font-base) !important;
+    }
+
+    h1, .h1, .main-dashboard-title {
+        font-size: 1.35rem !important;
+        line-height: 1.3 !important;
+    }
+
+    h2, .h2 {
+        font-size: 1.15rem !important;
+    }
+
+    h3, .h3, .card-title {
+        font-size: 1rem !important;
+    }
+
+    h5, .h5, .modal-title {
+        font-size: 0.95rem !important;
+    }
+
+    p, .text-muted, label {
+        font-size: var(--mobile-font-sm) !important;
+        line-height: 1.6;
+    }
+
+    small, .small {
+        font-size: var(--mobile-font-xs) !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   7. BOTONES — Área táctil mínima 44×44px
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    .btn {
+        min-height: var(--mobile-tap-target) !important;
+        padding-left: 1.1rem !important;
+        padding-right: 1.1rem !important;
+        font-size: var(--mobile-font-sm) !important;
+        border-radius: 10px !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
+    .btn-sm {
+        min-height: 36px !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    /* Botones de icono circular */
+    .btn-action-premium {
+        width: var(--mobile-tap-target) !important;
+        height: var(--mobile-tap-target) !important;
+        min-width: var(--mobile-tap-target) !important;
+    }
+
+    /* Links que actúan como botones */
+    a.btn, button.btn, input[type="submit"], input[type="button"] {
+        min-height: var(--mobile-tap-target) !important;
+    }
+
+    /* Form controls — más grandes para toque */
+    .form-control,
+    .form-select,
+    .filter-input {
+        min-height: var(--mobile-tap-target) !important;
+        font-size: var(--mobile-font-base) !important;
+        border-radius: 10px !important;
+        padding: 10px 14px !important;
+    }
+
+    /* Checkboxes y radios más grandes */
+    .form-check-input {
+        width: 1.3em !important;
+        height: 1.3em !important;
+    }
+
+    .form-check {
+        padding-left: 2rem !important;
+        margin-bottom: 12px !important;
+    }
+
+    .form-check-label {
+        font-size: var(--mobile-font-sm) !important;
+        cursor: pointer;
+        min-height: var(--mobile-tap-target);
+        display: flex !important;
+        align-items: center;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   8. FORMULARIOS Y FILTROS — Una columna, espaciados generosos
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* Todos los col-* pasan a ser de ancho completo */
+    .filters-container-glass .row > [class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    /* El row de botones de filtros se agrupa bien */
+    .filters-container-glass .col-md-3.d-flex {
+        flex-direction: row !important;
+        gap: 0.5rem !important;
+    }
+
+    .filters-container-glass .card-body {
+        padding: 1rem !important;
+    }
+
+    /* Sección de carga de archivo — apilado vertical */
+    .carga-archivo-govco .row > [class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        margin-bottom: 0.75rem;
+    }
+
+    .carga-archivo-govco .d-flex.align-items-center.gap-3 {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+
+    .carga-archivo-govco .d-flex.align-items-center.gap-2 {
+        justify-content: flex-end;
+    }
+
+    .carga-archivo-govco {
+        padding: 1rem !important;
+    }
+
+    /* Sección carga botones: alineados en fila a la derecha */
+    .carga-archivo-govco .col-lg-5 {
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        gap: 0.5rem !important;
+    }
+
+    /* Dropdown de Estado — ancho completo */
+    .custom-multilevel-dropdown .dropdown-menu {
+        min-width: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Separación entre filas del formulario */
+    .row.g-3 {
+        gap: 0.75rem 0 !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   9. TABLA — Scroll horizontal controlado
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* Contenedor con scroll horizontal suave, sin desbordarse */
+    #tableContainer {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Indicador visual de scroll */
+    #tableContainer::after {
+        content: '';
+        display: block;
+        position: sticky;
+        right: 0;
+        top: 0;
+        width: 32px;
+        background: linear-gradient(to left, rgba(255,255,255,0.9), transparent);
+        pointer-events: none;
+    }
+
+    /* Celdas con padding más generoso para toque */
+    #cuentasTable tbody td {
+        padding: 10px 10px !important;
+        font-size: var(--mobile-font-xs) !important;
+    }
+
+    #cuentasTable thead th {
+        font-size: 0.72rem !important;
+        padding: 8px 10px !important;
+    }
+
+    /* Card header de la tabla */
+    .table-card-premium .card-header {
+        padding: 10px 14px !important;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   10. CARDS Y PANELES — Espaciados generosos
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    .card {
+        border-radius: var(--mobile-radius) !important;
+        margin-bottom: 1rem;
+    }
+
+    .card-body {
+        padding: 1rem !important;
+    }
+
+    /* Grids de KPI cards — 2 columnas en mobile */
+    .row.g-4 > [class*="col-"] {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+
+    /* En pantallas muy pequeñas, 1 columna */
+    @media (max-width: 480px) {
+        .row.g-4 > [class*="col-"] {
+            flex: 0 0 100% !important;
+            max-width: 100% !important;
+        }
+    }
+
+    /* Márgenes entre secciones */
+    .mb-4 { margin-bottom: 1rem !important; }
+    .mb-3 { margin-bottom: 0.75rem !important; }
+    .mt-4 { margin-top: 1rem !important; }
+
+    /* Espaciado del section header */
+    .section-header,
+    [class*="section-"] h2,
+    [class*="section-"] h3 {
+        margin-bottom: 0.75rem;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   11. MODALES — Pantalla completa en móvil
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    .modal-dialog {
+        margin: 0 !important;
+        max-width: 100% !important;
+        min-height: 100%;
+    }
+
+    .modal-dialog.modal-dialog-centered {
+        align-items: flex-end !important; /* Bottom sheet style */
+        min-height: 100%;
+    }
+
+    .modal-content {
+        border-radius: var(--mobile-radius) var(--mobile-radius) 0 0 !important;
+        min-height: auto;
+    }
+
+    .modal-header {
+        padding: 1rem 1.25rem !important;
+    }
+
+    .modal-body {
+        padding: 1.25rem !important;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        padding: 1rem 1.25rem !important;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .modal-footer .btn {
+        flex: 1 !important;
+    }
+
+    /* Botón de cerrar más grande */
+    .modal-header .btn-close,
+    .modal-header .btn-close-white {
+        width: var(--mobile-tap-target) !important;
+        height: var(--mobile-tap-target) !important;
+        padding: 0.5rem !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   12. OFFCANVAS — Ancho completo en móvil
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+    .offcanvas.offcanvas-end {
+        width: min(100vw, 400px) !important;
+    }
+
+    .offcanvas-header {
+        padding: 1rem 1.25rem !important;
+        min-height: 60px;
+    }
+
+    .offcanvas-body {
+        padding: 1.25rem !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   13. NOTIFICACIONES MODAL — Optimizado para mobile
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    #modalNotificaciones .modal-dialog {
+        max-width: 100% !important;
+    }
+
+    #modalNotificaciones .modal-body {
+        max-height: 60vh !important;
+    }
+
+    .notif-item {
+        padding: 14px 16px !important;
+    }
+
+    .notif-item .d-flex.gap-3 {
+        gap: 0.75rem !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   14. BADGES Y CHIPS — Legibles y tocables
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    .badge-pill-custom {
+        padding: 6px 14px !important;
+        font-size: 0.75rem !important;
+    }
+
+    /* Chips de filtros activos */
+    .d-flex.flex-wrap.gap-2 .badge {
+        padding: 6px 12px !important;
+        font-size: var(--mobile-font-xs) !important;
+    }
+
+    .d-flex.flex-wrap.gap-2 a.btn-link {
+        min-height: auto !important;
+        padding: 0 !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   15. ANALYTICS / WORKFLOW — Gráficos responsivos
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* Canvas de Chart.js — limitar altura */
+    canvas {
+        max-height: 300px !important;
+    }
+
+    /* Controles de filtro de analítica en columna */
+    .analitica-controls,
+    [id*="filtros"],
+    [class*="filter-row"] {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+
+    /* Selectores de analítica en ancho completo */
+    .analitica-controls select,
+    .analitica-controls .form-select {
+        width: 100% !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   16. AJUSTES FINALES — Accesibilidad y detalles
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* Focus visible para accesibilidad táctil */
+    :focus-visible {
+        outline: 3px solid rgba(0, 63, 127, 0.5) !important;
+        outline-offset: 2px !important;
+    }
+
+    /* Transición de páginas más suave */
+    .animate-in {
+        animation-duration: 0.2s !important;
+    }
+
+    /* Ocultar texto largo de breadcrumbs en móvil */
+    .breadcrumb-item + .breadcrumb-item::before {
+        padding: 0 0.4rem;
+    }
+
+    /* Snackbar — ancho completo en móvil */
+    #snackbar {
+        left: 1rem !important;
+        right: 1rem !important;
+        bottom: calc(var(--mobile-bottom-bar-h) + 0.75rem) !important;
+        width: auto !important;
+        max-width: calc(100vw - 2rem) !important;
+        text-align: center;
+    }
+
+    /* Spinner centrado */
+    .spinner-border {
+        flex-shrink: 0;
+    }
+
+    /* Imágenes responsivas */
+    img {
+        max-width: 100%;
+        height: auto;
+    }
+
+    /* Tables sin overflow accidental */
+    table {
+        table-layout: auto;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   17. TABLAS — Eliminar sticky columns en móvil + scroll libre
+   ══════════════════════════════════════════════════════════
+   PROBLEMA: Las columnas sticky (position:sticky) bloquean el
+   desplazamiento horizontal y no permiten ver el resto de datos.
+   SOLUCIÓN: En móvil se elimina sticky de TODAS las tablas.
+   El usuario puede hacer scroll horizontal libremente.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* ── ELIMINAR sticky en TODAS las tablas de la app ── */
+    /* Dashboard principal (sticky-col-1/2/3) */
+    .sticky-col-1,
+    .sticky-col-2,
+    .sticky-col-3 {
+        position: static !important;   /* anula position:sticky */
+        left: auto !important;
+        z-index: auto !important;
+        box-shadow: none !important;
+        background: inherit !important;
+    }
+
+    /* SECOP (stk-saas: stk-gest, stk-score, stk-proc, stk-num, stk-nom) */
+    .stk-saas,
+    .stk-saas.stk-gest,
+    .stk-saas.stk-score,
+    .stk-saas.stk-proc,
+    .stk-saas.stk-num,
+    .stk-saas.stk-nom {
+        position: static !important;
+        left: auto !important;
+        z-index: auto !important;
+        box-shadow: none !important;
+        min-width: unset !important;
+        max-width: unset !important;
+    }
+
+    /* ── Scroll horizontal nativo en contenedores de tabla ── */
+    #tableContainer,
+    .table-card-premium .card-body,
+    .table-scroll-container,
+    .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* ── Dashboard: card header compacto ── */
+    .table-card-premium {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        border-radius: 12px !important;
+    }
+
+    .table-card-premium .card-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        padding: 10px 12px !important;
+    }
+
+    .table-card-premium .card-header > .d-flex {
+        width: 100%;
+        justify-content: space-between !important;
+    }
+
+    /* Celdas compactas en tabla principal */
+    #cuentasTable td,
+    #cuentasTable th {
+        white-space: nowrap;
+        font-size: 0.75rem !important;
+        padding: 8px 8px !important;
+    }
+
+    /* Chips de filtros activos — scroll horizontal en una fila */
+    .mb-3.d-flex.flex-wrap.gap-2 {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .mb-3.d-flex.flex-wrap.gap-2 a.btn-link {
+        flex-shrink: 0 !important;
+        white-space: nowrap;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   18. SECOP / SEGUIMIENTO — KPI cards & header
+   ══════════════════════════════════════════════════════════
+   PROBLEMA: .analytics-summary usa grid de 4 cols fijas →
+   las tarjetas quedan de ~80px cada una y el texto se corta.
+   El .db-header tiene flex-row con botones que se desbordan.
+   SOLUCIÓN: Pasar a 2 cols en móvil, header apilado vertical.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* Contenedor principal con padding reducido */
+    .dashboard-container {
+        padding: 1rem !important;
+    }
+
+    /* ── Header SECOP: apilado vertical ── */
+    .db-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+        margin-bottom: 1.25rem !important;
+    }
+
+    .db-header h1 {
+        font-size: 1.3rem !important;
+    }
+
+    .db-header p {
+        font-size: 0.82rem !important;
+        margin-top: 2px;
+    }
+
+    /* Botones del header SECOP en fila completa */
+    .db-header > .d-flex {
+        width: 100% !important;
+        gap: 0.5rem !important;
+    }
+
+    .db-header .btn-saas-secondary,
+    .db-header .btn-saas-primary {
+        flex: 1 !important;
+        justify-content: center !important;
+        min-height: 44px !important;
+        font-size: 0.82rem !important;
+    }
+
+    /* ── Grid de KPI cards: 2 columnas ── */
+    .analytics-summary {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.75rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Cards KPI internas: padding más compacto, texto legible */
+    .summary-mini-card {
+        padding: 1rem !important;
+    }
+
+    .summary-mini-card .label {
+        font-size: 0.65rem !important;
+        margin-bottom: 4px !important;
+    }
+
+    .summary-mini-card .val {
+        font-size: 1.4rem !important;
+        line-height: 1.1 !important;
+    }
+
+    .summary-mini-card .sub {
+        font-size: 0.68rem !important;
+        margin-top: 4px !important;
+    }
+
+    /* ── Filtros SECOP: columna única ── */
+    .filter-card-saas {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+        padding: 1rem !important;
+    }
+
+    .form-group-saas {
+        width: 100% !important;
+    }
+
+    .filter-card-saas .btn-saas-primary,
+    .filter-card-saas .btn-saas-secondary {
+        min-height: 44px !important;
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    /* Dropdown de estado SECOP ancho completo */
+    .filter-card-saas .custom-multilevel-dropdown .dropdown-menu {
+        min-width: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+    }
+
+    /* ── Tabla SECOP: solo scroll horizontal, no rota el layout ── */
+    .table-card-saas {
+        border-radius: 12px !important;
+    }
+
+    .table-scroll-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        /* No limitamos min-width de .saas-table (ya viene en 4500px) */
+    }
+
+    /* Banner de guardado masivo: que no tape la Tab Bar */
+    .batch-save-banner {
+        bottom: calc(var(--mobile-bottom-bar-h) + 0.75rem) !important;
+        padding: 1rem 1.25rem !important;
+        border-radius: 16px !important;
+        gap: 1rem !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        max-width: calc(100vw - 2rem) !important;
+    }
+
+    .batch-save-banner > .d-flex {
+        width: 100% !important;
+    }
+
+    .batch-save-banner .btn {
+        flex: 1 !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   19. ANALÍTICA — Diseño dark mobile completo
+   ══════════════════════════════════════════════════════════ */
+
+/* ─── Variables de tema dark para analítica ─── */
+@media (max-width: 991.98px) {
+    :root {
+        --analitica-dark: #0f172a;
+        --analitica-dark-2: #1e293b;
+        --analitica-dark-3: #334155;
+        --analitica-text: #f1f5f9;
+        --analitica-muted: #94a3b8;
+    }
+}
+
+/* ─── WRAPPER: fondo claro ─── */
+@media (max-width: 991.98px) {
+    .dashboard-wrapper {
+        background: #f1f5f9 !important; /* Gris muy claro de fondo */
+        overflow-x: hidden !important;
+        min-height: 100vh !important;
+    }
+
+    .header-bg {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        height: 220px !important; /* Altura del bloque azul superior */
+        z-index: 0 !important;
+        background: #0f172a !important;
+    }
+
+    /* Contenedor principal */
+    .contents-container.container-fluid {
+        position: relative !important;
+        z-index: 5 !important;
+        padding: 0 !important;
+    }
+
+    /* ─── HERO BLOCK ─── */
+    #mobile-analytics-hero {
+        padding: 1.5rem 1.2rem 1.5rem !important;
+        background: transparent !important;
+        color: white !important;
+    }
+
+    .mhero-label {
+        font-size: 0.65rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 1.2px !important;
+        text-transform: uppercase !important;
+        opacity: 0.7 !important;
+        margin-bottom: 0.4rem !important;
+    }
+
+    .mhero-value {
+        font-size: 2.2rem !important;
+        font-weight: 900 !important;
+        letter-spacing: -1px !important;
+        margin-bottom: 0.2rem !important;
+    }
+
+    .mhero-date {
+        font-size: 0.8rem !important;
+        opacity: 0.6 !important;
+        margin-bottom: 1.2rem !important;
+    }
+
+    .mhero-label {
+        font-size: 0.65rem !important;
+        font-weight: 700 !important;
+        letter-spacing: 1.5px !important;
+        text-transform: uppercase !important;
+        color: var(--analitica-muted) !important;
+        margin: 0 0 2px !important;
+    }
+
+    .mhero-amount {
+        font-size: 1.8rem !important;
+        font-weight: 800 !important;
+        color: #ffffff !important;
+        margin: 0 0 2px !important;
+        letter-spacing: -0.5px !important;
+        line-height: 1.1 !important;
+    }
+
+    .mhero-date {
+        font-size: 0.78rem !important;
+        color: var(--analitica-muted) !important;
+        margin: 0 0 0.85rem !important;
+    }
+
+    /* Chips de filtro rápido */
+    .mhero-chips {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 0.4rem !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-bottom: 2px;
+    }
+
+    .mhero-chip {
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        padding: 6px 14px !important;
+        border-radius: 20px !important;
+        font-size: 0.72rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        background: #334155 !important;
+        color: white !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+        text-decoration: none !important;
+    }
+
+    .mhero-chip-active {
+        background: #1e3a8a !important; /* Azul oscuro active */
+        border-color: rgba(255,255,255,0.4) !important;
+    }
+
+    .mhero-chip-brecha {
+        background: rgba(239,68,68,0.15) !important;
+        border-color: rgba(239,68,68,0.3) !important;
+        color: #fca5a5 !important;
+    }
+
+    .mhero-dot {
+        width: 7px !important;
+        height: 7px !important;
+        border-radius: 50% !important;
+        background: #ef4444 !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* ─── COMPACT MOBILE FILTER ROW (Horizontal Card Style) ─── */
+    #filterSection.filter-bar {
+        background: transparent !important;
+        border: none !important;
+        padding: 0 1rem !important;
+        margin-top: -1.5rem !important; /* Solapado con el hero */
+        position: relative !important;
+        z-index: 20 !important;
+    }
+
+    .mobile-filter-row {
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+        width: 100% !important;
+    }
+
+    /* Selectores tipo tarjeta oscura */
+    .mfr-card-select {
+        background: #334155 !important;
+        border-radius: 12px !important;
+        padding: 0.5rem 0.75rem !important;
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        position: relative !important;
+        min-width: 0 !important;
+    }
+
+    .mfr-card-select .mfr-label {
+        font-size: 0.58rem !important;
+        color: #94a3b8 !important;
+        margin-bottom: 1px !important;
+        font-weight: 600 !important;
+        text-transform: none !important;
+        letter-spacing: 0 !important;
+    }
+
+    .mfr-card-select select {
+        background: transparent !important;
+        border: none !important;
+        color: white !important;
+        font-size: 0.8rem !important;
+        font-weight: 700 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        outline: none !important;
+        appearance: none !important;
+    }
+
+    .mfr-card-select i.bi-chevron-down {
+        position: absolute !important;
+        right: 0.6rem !important;
+        bottom: 0.5rem !important;
+        font-size: 0.7rem !important;
+        color: #94a3b8 !important;
+    }
+
+    /* Botones de acción */
+    .mfr-btn {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        border-radius: 12px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: none !important;
+        font-size: 1rem !important;
+    }
+
+    .mfr-btn-submit {
+        background: #1e3a8a !important; /* Azul oscuro */
+        color: white !important;
+    }
+
+    .mfr-btn-reset {
+        background: #334155 !important;
+        color: #94a3b8 !important;
+    }
+
+    /* ─── TABLA → LISTA (Fondo blanco) ─── */
+    #alertTable tbody tr {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+        padding: 1rem 0.5rem !important;
+        border-bottom: 1px solid #f1f5f9 !important;
+        background: transparent !important;
+    }
+
+    #alertTable tbody td {
+        display: none !important;
+        border: none !important;
+        padding: 0 !important;
+        color: #1e293b !important;
+    }
+
+    #alertTable tbody td:nth-child(1) {
+        display: block !important;
+        color: #0f172a !important;
+    }
+
+    #alertTable tbody td:nth-child(2) {
+        display: block !important;
+        color: #64748b !important;
+    }
+
+    /* ─── KPI CARDS (Dark style as in design) ─── */
+    .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.8rem !important;
+        padding: 0 1rem !important;
+    }
+
+    .kpi-card {
+        background: #334155 !important; /* Gris oscuro azulado */
+        border: none !important;
+        border-radius: 18px !important;
+        padding: 1.2rem !important;
+        box-shadow: none !important;
+        color: white !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    .kpi-card .kpi-icon-wrap {
+        width: 36px !important;
+        height: 36px !important;
+        border-radius: 10px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        background: rgba(255,255,255,0.1) !important;
+        margin-bottom: 1rem !important;
+        font-size: 1rem !important;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 1.5rem !important;
+        font-weight: 800 !important;
+        margin-bottom: 2px !important;
+        color: white !important;
+    }
+
+    .kpi-card .kpi-label {
+        font-size: 0.7rem !important;
+        color: #94a3b8 !important;
+        font-weight: 600 !important;
+        margin-bottom: 0.8rem !important;
+    }
+
+    .kpi-trend {
+        padding: 4px 12px !important;
+        border-radius: 20px !important;
+        font-size: 0.65rem !important;
+        font-weight: 700 !important;
+        background: rgba(255,255,255,0.1) !important;
+        color: white !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 1.3rem !important;
+        color: inherit !important;
+        font-weight: 800 !important;
+    }
+
+    .kpi-card .kpi-label {
+        font-size: 0.68rem !important;
+        color: var(--analitica-muted) !important;
+    }
+
+    .kpi-card .kpi-trend {
+        font-size: 0.62rem !important;
+    }
+
+    .kpi-card .progress-slim {
+        background: rgba(255,255,255,0.08) !important;
+    }
+
+    /* ─── CHART CARDS (Dark style) ─── */
+    .card-premium {
+        background: #334155 !important;
+        border: none !important;
+        border-radius: 20px !important;
+        margin-bottom: 1rem !important;
+        color: white !important;
+    }
+
+    .card-premium .card-header {
+        padding: 1.2rem 1.2rem 0.5rem !important;
+    }
+
+    .card-premium .card-header h6 {
+        color: white !important;
+        font-size: 0.9rem !important;
+        font-weight: 700 !important;
+    }
+
+    .card-premium .card-body {
+        padding: 0.5rem 1.2rem 1.2rem !important;
+    }
+
+    .card-premium .card-header .chart-badge {
+        font-size: 0.58rem !important;
+    }
+
+    .card-premium .card-body {
+        padding: 0.5rem 0.85rem 1rem !important;
+    }
+
+    /* ─── MINI SUMMARY CARDS (tiempo real) ─── */
+    .mini-summary-card {
+        background: rgba(255,255,255,0.05) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        border-radius: 10px !important;
+        padding: 0.6rem 0.75rem !important;
+    }
+
+    .mini-summary-card .m-label {
+        color: var(--analitica-muted) !important;
+        font-size: 0.6rem !important;
+    }
+
+    .mini-summary-card .m-value {
+        color: var(--analitica-text) !important;
+        font-size: 0.82rem !important;
+        font-weight: 700 !important;
+    }
+
+    /* ─── TABLA → LISTA DE TARJETAS ─── */
+    .table-responsive {
+        overflow-x: visible !important;
+    }
+
+    /* Ocultar cabecera de la tabla */
+    #alertTable thead {
+        display: none !important;
+    }
+
+    /* Cada fila como una tarjeta */
+    #alertTable tbody tr {
+        display: flex !important;
+        align-items: center !important;
+        gap: 0.75rem !important;
+        padding: 0.75rem 0.5rem !important;
+        border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+
+    #alertTable tbody tr:hover {
+        background: rgba(255,255,255,0.03) !important;
+        transform: none !important;
+    }
+
+    /* Ocultar todas las celdas excepto las 2 primeras y la de avance */
+    #alertTable tbody td {
+        display: none !important;
+        border: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+        color: var(--analitica-text) !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Mostrar: N° Contrato + Contratista + Avance */
+    #alertTable tbody td:nth-child(1) {
+        display: block !important;
+        font-weight: 700 !important;
+        font-size: 0.72rem !important;
+        color: var(--analitica-text) !important;
+        white-space: nowrap !important;
+        flex-shrink: 0 !important;
+        min-width: 0 !important;
+    }
+
+    #alertTable tbody td:nth-child(2) {
+        display: block !important;
+        font-size: 0.68rem !important;
+        color: var(--analitica-muted) !important;
+        flex: 1 !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        line-height: 1.2 !important;
+    }
+
+    #alertTable tbody td:nth-child(2)::before {
+        content: attr(data-sub) !important; /* we might need to add this in JS/Blade */
+    }
+
+    #alertTable tbody td:nth-child(8) {
+        display: block !important;
+        flex-shrink: 0 !important;
+        min-width: 45px !important;
+        text-align: right !important;
+        font-weight: 700 !important;
+        font-size: 0.72rem !important;
+        color: #10b981 !important;
+    }
+
+    /* Punto de color para brecha (solo si tiene brecha) */
+    #alertTable tbody tr.has-brecha::before {
+        content: '' !important;
+        width: 8px !important;
+        height: 8px !important;
+        min-width: 8px !important;
+        border-radius: 50% !important;
+        background: #ef4444 !important;
+        flex-shrink: 0 !important;
+        margin-left: 4px !important;
+    }
+    
+    #alertTable tbody tr:not(.has-brecha)::before {
+        content: '' !important;
+        width: 8px !important;
+        height: 8px !important;
+        min-width: 8px !important;
+        border-radius: 50% !important;
+        background: transparent !important;
+        flex-shrink: 0 !important;
+        margin-left: 4px !important;
+    }
+
+    /* Botones de minimizar columna ocultos */
+    .toggle-col-btn {
+        display: none !important;
+    }
+
+    /* Card de la tabla */
+    .card-premium.mb-4 .card-header h6 {
+        font-size: 0.78rem !important;
+    }
+
+    /* ─── RANGESLIDER ─── */
+    #rangeSlider {
+        width: 100% !important;
+    }
+
+    /* ─── PICKER ESTADO ─── */
+    .analitica-picker-btn {
+        height: 44px !important;
+        background: rgba(255,255,255,0.06) !important;
+        border-color: rgba(255,255,255,0.12) !important;
+        color: var(--analitica-text) !important;
+    }
+
+    .analitica-picker-menu {
+        position: fixed !important;
+        bottom: calc(var(--mobile-bottom-bar-h) + 0.5rem) !important;
+        top: auto !important;
+        left: 1rem !important;
+        right: 1rem !important;
+        width: auto !important;
+        max-width: 100% !important;
+        max-height: 55vh !important;
+        border-radius: 14px !important;
+        z-index: 2000 !important;
+        background: var(--analitica-dark-2) !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+    }
+
+    .analitica-picker-item {
+        color: var(--analitica-text) !important;
+    }
+
+    .analitica-picker-item:hover, .analitica-picker-item.is-active {
+        background: rgba(255,255,255,0.1) !important;
+    }
+
+    /* ─── APEXCHARTS OVERRIDES FOR DARK CARDS ─── */
+    .apexcharts-canvas text { fill: #f1f5f9 !important; }
+    .apexcharts-xaxis-label, .apexcharts-yaxis-label { fill: #94a3b8 !important; }
+    .apexcharts-legend-text { color: #f1f5f9 !important; }
+    .apexcharts-gridline { stroke: rgba(255,255,255,0.05) !important; }
+    .apexcharts-tooltip { background: #1e293b !important; color: #fff !important; border-color: #334155 !important; }
+}
+
+   ══════════════════════════════════════════════════════════
+   RAÍZ DEL PROBLEMA:
+   · .header-bg es position:absolute con height:320px fija →
+     en móvil el contenido apilado supera ese alto y queda
+     fuera del fondo oscuro (el texto "flota" en blanco).
+   · .filter-bar tiene margin-top:-2rem (en el CSS fuente) →
+     se solapa con lo que hay arriba.
+   SOLUCIÓN:
+   · Cambiar .dashboard-wrapper a position:relative normal y
+     hacer .header-bg position:relative con height:auto para
+     que envuelva el contenido, OR mejor: añadir padding-top
+     al wrapper y convertir el bg en un ::before pseudo-element.
+   · Opción más simple sin tocar el HTML: usar un padding-top
+     grande en .contents-container y compensar con el bg.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* ── El dashboard-wrapper controla la pila ── */
+    .dashboard-wrapper {
+        overflow-x: hidden !important;
+    }
+
+    /* ── El fondo oscuro: altura automática basada en contenido ── */
+    /* En lugar de height fija ponemos un mínimo y dejamos que
+       el contenido defina la altura real del área oscura. */
+    .header-bg {
+        height: auto !important;
+        min-height: 280px !important;
+        /* Extendemos hacia abajo para cubrir el header completo */
+        padding-bottom: 2rem !important;
+    }
+
+    /* El contenedor de contenido: sin padding-top excesivo */
+    .contents-container.container-fluid {
+        padding-top: 0.75rem !important;
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+
+    /* ── Bloque de encabezado: columna única ── */
+    .header-content.d-flex {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    /* ── Título ── */
+    .header-content h2,
+    .dashboard-wrapper h2.animate-in {
+        font-size: 1.35rem !important;
+        letter-spacing: -0.3px !important;
+        -webkit-text-fill-color: white !important; /* El gradiente se pierde en mobile */
+        background: none !important;
+        color: white !important;
+    }
+
+    .header-subtitle {
+        font-size: 0.82rem !important;
+        color: #94a3b8 !important;
+    }
+
+    /* ── Selector de fecha: ancho completo ── */
+    .header-date-selector {
+        width: 100% !important;
+        justify-content: space-between !important;
+        padding: 10px 16px !important;
+        font-size: 0.82rem !important;
+        border-radius: 12px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* ── Hero indicator + botones de exportar: en fila ── */
+    .header-content > .d-flex.gap-3 {
+        width: 100% !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
+
+    .hero-indicator-mini {
+        width: 100% !important;
+        padding: 10px 16px !important;
+        text-align: left !important;
+        border-radius: 12px !important;
+        box-sizing: border-box !important;
+    }
+
+    .hero-indicator-mini .mini-value {
+        font-size: 1.25rem !important;
+    }
+
+    /* Botones PDF y Excel: 50% del ancho cada uno */
+    .btn-glass {
+        flex: 1 1 45% !important;
+        min-height: 44px !important;
+        justify-content: center !important;
+        font-size: 0.78rem !important;
+        padding: 8px 10px !important;
+    }
+
+    /* ── Filter bar: eliminar el margin-top negativo ── */
+    /* El negative margin-top:-2rem del CSS fuente causa el gap blanco */
+    #filterSection.filter-bar {
+        margin-top: 0 !important;      /* cancela el -2rem del fuente */
+        padding: 1rem !important;
+        border-radius: 14px !important;
+        position: relative !important;
+        z-index: 10 !important;
+    }
+
+    /* Todos los col-* dentro del filtro: ancho completo */
+    #filterSection .row > [class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+
+    /* Inputs del filter-bar */
+    #filterSection .form-control,
+    #filterSection .form-select {
+        height: 44px !important;
+        font-size: 0.9rem !important;
+    }
+
+    /* Botones de filtrar/reset en fila */
+    #filterSection .btn-filter,
+    #filterSection .btn-reset {
+        min-height: 44px !important;
+        border-radius: 10px !important;
+        flex: 1 !important;
+    }
+
+    /* Contenedor de botones: fila */
+    #filterSection .d-flex.gap-2 {
+        gap: 0.5rem !important;
+    }
+
+    /* Picker de estado analítica: menú no desborda */
+    .analitica-picker-btn {
+        height: 44px !important;
+    }
+
+    .analitica-picker-menu {
+        max-width: 100% !important;
+        width: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+        position: fixed !important;
+        bottom: calc(var(--mobile-bottom-bar-h) + 0.5rem) !important;
+        top: auto !important;
+        max-height: 55vh !important;
+        border-radius: 14px 14px 0 0 !important;
+        z-index: 2000 !important;
+    }
+
+    /* ── KPI row: 2 columnas ── */
+    .kpi-row {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.65rem !important;
+    }
+
+    .kpi-card {
+        padding: 1rem !important;
+    }
+
+    .kpi-card .kpi-value {
+        font-size: 1.2rem !important;
+    }
+
+    .kpi-card .kpi-icon-wrap {
+        width: 36px !important;
+        height: 36px !important;
+        margin-bottom: 0.6rem !important;
+        font-size: 1rem !important;
+    }
+
+    .kpi-card .kpi-label {
+        font-size: 0.7rem !important;
+    }
+
+    .kpi-card .kpi-trend {
+        font-size: 0.65rem !important;
+    }
+
+    /* Rangeslider de avance */
+    #rangeSlider {
+        width: 100% !important;
+    }
+
+    /* Cards de gráficos: sin hover flotante */
+    .card-premium:hover {
+        transform: none !important;
+    }
+
+    .card-premium .card-header {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+    }
+
+    /* Mini summary cards dentro del gráfico de demora */
+    .mini-summary-card {
+        padding: 0.6rem !important;
+    }
+
+    .mini-summary-card .m-value {
+        font-size: 0.85rem !important;
+    }
+
+    /* Tabla premium de analítica (alertTable) — scroll libre sin sticky */
+    #alertTable {
+        white-space: nowrap;
+    }
+
+    .table-premium thead th {
+        padding: 8px 10px !important;
+        font-size: 0.65rem !important;
+        white-space: nowrap !important;
+    }
+
+    .table-premium tbody td {
+        padding: 8px 10px !important;
+        font-size: 0.78rem !important;
+    }
+
+    /* Ocultar botones de minimizar columna en móvil */
+    .toggle-col-btn {
+        display: none !important;
+    }
+}
+
+/* ══════════════════════════════════════════════════════════
+   20. CONFIGURACIÓN — Header, tabla de usuarios y formularios
+   ══════════════════════════════════════════════════════════
+   PROBLEMA: El .config-header tiene flex-row con 5 botones
+   que se desbordan. La tabla tiene cols de texto anchas que
+   cortan el contenido en móvil.
+   SOLUCIÓN: Header apilado, botones en grid 2-cols,
+   tabla con display card-style en pantallas pequeñas.
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+
+    /* Contenedor de config con padding generoso */
+    .config-container {
+        padding: 1rem !important;
+    }
+
+    /* ── Header Configuración: apilado vertical ── */
+    .config-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 1rem !important;
+        margin-bottom: 1.25rem !important;
+    }
+
+    .config-header h1 {
+        font-size: 1.4rem !important;
+        /* Mantener el gradiente pero asegurarse que no se corte */
+        word-break: break-word;
+    }
+
+    /* Los botones de navegación en un grid 2x columnas */
+    .config-header > .d-flex {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 0.5rem !important;
+    }
+
+    .config-header .btn-premium {
+        min-height: 44px !important;
+        justify-content: center !important;
+        font-size: 0.8rem !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 10px !important;
+        width: 100% !important;
+    }
+
+    /* ── Tabla de usuarios: scroll horizontal limpio ── */
+    .premium-card {
+        border-radius: 14px !important;
+        overflow: hidden !important;
+    }
+
+    .premium-card .table-responsive {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Celdas: más compactas */
+    .premium-table th {
+        padding: 0.75rem 0.85rem !important;
+        font-size: 0.65rem !important;
+        white-space: nowrap !important;
+    }
+
+    .premium-table td {
+        padding: 0.75rem 0.85rem !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Avatar del usuario: más pequeño */
+    .premium-table td .rounded-circle {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 0.75rem !important;
+        margin-right: 0.5rem !important;
+    }
+
+    /* Nombre completo: truncar si es muy largo */
+    .premium-table td .fw-semibold {
+        max-width: 120px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+        vertical-align: bottom;
+    }
+
+    /* Botones de acción: área táctil mínima 44px */
+    .action-btn {
+        width: 44px !important;
+        height: 44px !important;
+    }
+
+    /* ── Formulario de crear/editar usuario ── */
+    .config-container .row > [class*="col-"] {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Permisos grid: 1 columna en móvil */
+    .premium-perm-list {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Block cards del workflow: sin hover float */
+    .block-card:hover {
+        transform: none !important;
+    }
+
+    .block-card-header {
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        padding: 0.85rem 1rem !important;
+    }
+}

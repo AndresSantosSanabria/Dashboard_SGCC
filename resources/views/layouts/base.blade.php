@@ -28,7 +28,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     {{-- Assets locales: Usamos Vite para un hot-reload rápido en desarrollo y builds ligeros --}}
-    @vite(['resources/css/app.css', 'resources/css/snackbar.css'])
+    @vite(['resources/css/app.css', 'resources/css/snackbar.css', 'resources/css/mobile.css'])
     <link rel="stylesheet" href="{{ asset('css/premium-bi.css') }}">
 
     @stack('styles')

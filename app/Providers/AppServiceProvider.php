@@ -9,6 +9,9 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use App\Models\CuentaCobro;
 use App\Observers\CuentaCobroObserver;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('public.consultation', function (Request $request) {
+            return Limit::perMinute(5)->by($request->ip());
+        });
+
         // Soporte para hosting en subcarpetas en producción 
         // Detecta el APP_URL del archivo .env y fuerza a Laravel a usarlo como base.
         if (config('app.url') && config('app.url') !== 'http://localhost') {

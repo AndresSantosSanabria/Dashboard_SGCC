@@ -12,12 +12,51 @@
 
 @section('page-content')
     <div class="dashboard-wrapper">
+        {{-- Fixed Mobile Header --}}
+        <div class="mobile-header d-lg-none">
+            <i class="bi bi-list"></i>
+            <span class="m-title">Analítica</span>
+            <i class="bi bi-bell"></i>
+        </div>
+
         <!-- Header Decor -->
         <div class="header-bg"></div>
 
         <div class="container-fluid py-4 contents-container">
+
+            {{-- ═══ MOBILE HERO (oculto en desktop) ═══ --}}
+            @php
+                $cuentasConBrecha = isset($cuentas) ? $cuentas->filter(fn($c) => (($c->numero_pagos_totales ?? 0) - ($c->radicadas_bi ?? 0)) > 0)->count() : 0;
+            @endphp
+            <div id="mobile-analytics-hero" class="d-lg-none">
+                <p class="mhero-label">VALOR TOTAL RP</p>
+                <h3 class="mhero-amount">${{ number_format($montoTotal, 0, ',', '.') }}</h3>
+                <p class="mhero-date">
+                    @if(request('fecha_desde') && request('fecha_hasta'))
+                        {{ \Carbon\Carbon::parse(request('fecha_desde'))->translatedFormat('d F, Y') }}
+                    @else
+                        {{ \Carbon\Carbon::now()->translatedFormat('d \\d\\e F, Y') }}
+                    @endif
+                </p>
+                <div class="mhero-chips">
+                    <a href="{{ route('analitica') }}"
+                       class="mhero-chip {{ !request()->hasAny(['estado','contrato','supervisor','responsable']) ? 'mhero-chip-active' : '' }}">
+                        Todos los contratos
+                    </a>
+                    <a href="{{ route('analitica', ['estado' => 'En proceso']) }}"
+                       class="mhero-chip {{ request('estado') == 'En proceso' ? 'mhero-chip-active' : '' }}">
+                        En proceso
+                    </a>
+                    @if($cuentasConBrecha > 0)
+                        <a href="#" class="mhero-chip {{ request('brecha') ? 'mhero-chip-active' : '' }}">
+                            Con brecha
+                        </a>
+                    @endif
+                </div>
+            </div>
+
             <!-- Dashboard UI Header (Not captured in PDF) -->
-            <div class="d-flex justify-content-between align-items-end mb-5 header-content flex-wrap gap-4">
+            <div class="d-none d-lg-flex justify-content-between align-items-end mb-5 header-content flex-wrap gap-4">
                 <div>
                     <h2 class="animate-in">Tablero Analítico</h2>
                     <p class="header-subtitle animate-in">Inteligencia de Negocio — Gestión de Cuentas de Cobro</p>
@@ -50,20 +89,56 @@
             </div>
 
             <div id="filterSection" class="filter-bar mb-4 animate-in">
+                <div class="mobile-filter-row d-lg-none">
+                    <div class="mfr-card-select">
+                        <span class="mfr-label">Supervisor</span>
+                        <select name="supervisor" form="filterForm" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Todos</option>
+                            @foreach ($supervisores as $s)
+                                <option value="{{ $s->id }}" {{ request('supervisor') == $s->id ? 'selected' : '' }}>
+                                    {{ $s->nombre_completo }}</option>
+                            @endforeach
+                        </select>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+
+                    <div class="mfr-card-select">
+                        <span class="mfr-label">Estado</span>
+                        <select name="estado" form="filterForm" onchange="document.getElementById('filterForm').submit()">
+                            <option value="">Todos</option>
+                            @foreach ($bloques as $b)
+                                @php $ests = $todosLosEstados[$b->codigo] ?? collect(); @endphp
+                                @foreach ($ests as $e)
+                                    <option value="{{ $e->nombre }}" {{ request('estado') == $e->nombre ? 'selected' : '' }}>
+                                        {{ $e->nombre }}</option>
+                                @endforeach
+                            @endforeach
+                        </select>
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+
+                    <button type="submit" form="filterForm" class="mfr-btn mfr-btn-submit">
+                        <i class="bi bi-funnel-fill"></i>
+                    </button>
+                    <button type="button" onclick="document.getElementById('btnReset').click()" class="mfr-btn mfr-btn-reset">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
+                </div>
+
                 <form action="{{ route('analitica') }}" method="GET" class="row g-3 align-items-end" id="filterForm">
                     <input type="hidden" name="fecha_desde" id="fecha_desde" value="{{ request('fecha_desde') }}">
                     <input type="hidden" name="fecha_hasta" id="fecha_hasta" value="{{ request('fecha_hasta') }}">
-                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6 analitica-filter-secondary">
                         <label class="form-label">N° Contrato</label>
                         <input type="text" name="contrato" class="form-control" placeholder="Ej: 119-2025"
                             value="{{ request('contrato') }}">
                     </div>
-                    <div class="col-xl-1 col-lg-3 col-md-4 col-6">
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6 analitica-filter-secondary">
                         <label class="form-label">N° Cuenta</label>
                         <input type="text" name="numero_cuenta" class="form-control" placeholder="Ej: 1"
                             value="{{ request('numero_cuenta') }}">
                     </div>
-                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6 analitica-filter-desktop-only">
                         <label class="form-label">Supervisor</label>
                         <select name="supervisor" class="form-select">
                             <option value="">Todos</option>
@@ -74,7 +149,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6 analitica-filter-secondary">
                         <label class="form-label">Responsable</label>
                         <select name="responsable" class="form-select">
                             <option value="">Todos</option>
@@ -85,7 +160,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-6 analitica-filter-desktop-only">
                         <label class="form-label">Estado</label>
                         <div class="analitica-estado-picker" id="estadoPicker">
                             <button type="button" class="analitica-picker-btn" id="estadoPickerBtn">
@@ -110,8 +185,7 @@
                                             <div class="analitica-picker-submenu">
                                                 @foreach ($estadosDelBloque as $est)
                                                     <div class="analitica-picker-item {{ request('estado') == $est->nombre ? 'is-active' : '' }}"
-                                                        data-value="{{ $est->nombre }}"
-                                                        data-label="{{ $est->nombre }}">
+                                                        data-value="{{ $est->nombre }}" data-label="{{ $est->nombre }}">
                                                         {{ $est->nombre }}
                                                     </div>
                                                 @endforeach
@@ -122,24 +196,26 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-xl-2 col-lg-3 col-md-4 col-6">
-                        <label class="form-label">% Avance</label>
-                        <div class="px-1">
-                            <div id="rangeSlider" class="mt-2"></div>
-                            <input type="hidden" name="porcentaje_min" id="minVal"
-                                value="{{ request('porcentaje_min', 0) }}">
-                            <input type="hidden" name="porcentaje_max" id="maxVal"
-                                value="{{ request('porcentaje_max', 100) }}">
-                        </div>
-                    </div>
-                    <div class="col-xl-1 col-lg-4 col-md-4 col-12">
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-filter flex-grow-1" title="Aplicar filtros">
-                                <i class="bi bi-funnel"></i>
-                            </button>
-                            <button type="button" id="btnReset" class="btn btn-reset" title="Limpiar filtros">
-                                <i class="bi bi-arrow-counterclockwise"></i>
-                            </button>
+                    <div class="col-xl-2 col-lg-6 col-md-6 col-12 analitica-filter-secondary">
+                        <div class="d-flex align-items-end gap-3">
+                            <div class="flex-grow-1">
+                                <label class="form-label">% Avance</label>
+                                <div class="px-1">
+                                    <div id="rangeSlider" class="mt-2"></div>
+                                    <input type="hidden" name="porcentaje_min" id="minVal"
+                                        value="{{ request('porcentaje_min', 0) }}">
+                                    <input type="hidden" name="porcentaje_max" id="maxVal"
+                                        value="{{ request('porcentaje_max', 100) }}">
+                                </div>
+                            </div>
+                            <div class="d-flex gap-2 mb-1">
+                                <button type="submit" class="btn btn-filter" title="Aplicar filtros" style="height: 48px; width: 48px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                                    <i class="bi bi-funnel"></i>
+                                </button>
+                                <button type="button" id="btnReset" class="btn btn-reset" title="Limpiar filtros" style="height: 48px; width: 48px; padding: 0; display: flex; align-items: center; justify-content: center;">
+                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -153,9 +229,12 @@
                     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-4"
                         style="border-bottom: 3px solid #0f172a !important;">
                         <div class="d-flex align-items-center gap-4">
-                            <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo" style="height: 75px;">
+                            <img src="{{ asset('assets/img/logo-gobernacion.png') }}" alt="Logo"
+                                style="height: 75px;">
                             <div style="border-left: 2px solid #e2e8f0; padding-left: 20px;">
-                                <h2 style="margin:0; color:#0f172a; font-weight:900; letter-spacing: -0.5px; font-size: 26px;">INFORME DE GESTIÓN BI</h2>
+                                <h2
+                                    style="margin:0; color:#0f172a; font-weight:900; letter-spacing: -0.5px; font-size: 26px;">
+                                    INFORME DE GESTIÓN BI</h2>
                                 <p style="margin:0; font-size:13px; color:#64748b; font-weight: 500;">
                                     Secretaría de Tecnologías de la Información y las Comunicaciones
                                 </p>
@@ -163,22 +242,31 @@
                         </div>
                         <div class="d-flex align-items-center gap-4">
                             <div id="pdfIndicators"></div>
-                            <div class="text-end" style="background: #f8fafc; padding: 12px 18px; border-radius: 12px; border: 1px solid #e2e8f0;">
+                            <div class="text-end"
+                                style="background: #f8fafc; padding: 12px 18px; border-radius: 12px; border: 1px solid #e2e8f0;">
                                 <div class="mb-2">
-                                    <p style="margin:0; font-size:9px; font-weight:800; color:#475569; letter-spacing: 1px; text-transform: uppercase;">GENERADO POR</p>
-                                    <p style="margin:0; font-size:13px; color:#0f172a; font-weight: 700;">{{ Auth::user()->nombre_completo }}</p>
+                                    <p
+                                        style="margin:0; font-size:9px; font-weight:800; color:#475569; letter-spacing: 1px; text-transform: uppercase;">
+                                        GENERADO POR</p>
+                                    <p style="margin:0; font-size:13px; color:#0f172a; font-weight: 700;">
+                                        {{ Auth::user()->nombre_completo }}</p>
                                 </div>
                                 <div class="mb-0">
-                                    <p style="margin:0; font-size:9px; font-weight:800; color:#475569; letter-spacing: 1px; text-transform: uppercase;">CONSULTA AL TENER</p>
-                                    <p style="margin:0; font-size:12px; color:#475569; font-weight: 600;" id="pdfDateDisplay"></p>
+                                    <p
+                                        style="margin:0; font-size:9px; font-weight:800; color:#475569; letter-spacing: 1px; text-transform: uppercase;">
+                                        CONSULTA AL TENER</p>
+                                    <p style="margin:0; font-size:12px; color:#475569; font-weight: 600;"
+                                        id="pdfDateDisplay"></p>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="pdf-report-metadata mb-4 d-flex gap-4 p-3" style="background: #f1f5f9; border-radius: 8px; font-size: 11px; color: #475569;">
+
+                    <div class="pdf-report-metadata mb-4 d-flex gap-4 p-3"
+                        style="background: #f1f5f9; border-radius: 8px; font-size: 11px; color: #475569;">
                         <div><strong>Filtros aplicados:</strong> <span id="pdfAppliedFilters">Ninguno</span></div>
-                        <div class="ms-auto"><strong>Fecha de Reporte:</strong> {{ \Carbon\Carbon::now()->translatedFormat('d F, Y h:i A') }}</div>
+                        <div class="ms-auto"><strong>Fecha de Reporte:</strong>
+                            {{ \Carbon\Carbon::now()->translatedFormat('d F, Y h:i A') }}</div>
                     </div>
                 </div>
 
@@ -196,11 +284,11 @@
                     </div>
                     <div class="kpi-card kpi-amber animate-in">
                         <div class="kpi-accent"></div>
-                        <div class="kpi-icon-wrap"><i class="bi bi-hourglass-split"></i></div>
+                        <div class="kpi-icon-wrap" style="color: #f59e0b;"><i class="bi bi-clock-fill"></i></div>
                         <div class="kpi-value">{{ number_format($cuentasTramite) }}</div>
-                        <div class="kpi-label">En Proceso</div>
-                        <div class="kpi-trend" style="color: #b77e00;">
-                            <i class="bi bi-arrow-right-circle"></i> Trámite activo
+                        <div class="kpi-label">En proceso</div>
+                        <div class="kpi-trend">
+                            Trámite activo
                         </div>
                     </div>
                     <div class="kpi-card kpi-green animate-in">
@@ -214,30 +302,25 @@
                     </div>
                     <div class="kpi-card kpi-red animate-in">
                         <div class="kpi-accent"></div>
-                        <div class="kpi-icon-wrap"><i class="bi bi-exclamation-circle-fill"></i></div>
+                        <div class="kpi-icon-wrap" style="color: #ef4444;"><i class="bi bi-record-circle"></i></div>
                         <div class="kpi-value">{{ number_format(max(0, $pagosTotales - $cuentasRadicadas)) }}</div>
-                        <div class="kpi-label">Faltantes por radicar</div>
-                        <div class="kpi-trend text-govco-red">
-                            <i class="bi bi-info-circle"></i> Brecha de ejecución
+                        <div class="kpi-label">Faltantes</div>
+                        <div class="kpi-trend">
+                            Brecha ejecución
                         </div>
                     </div>
                     <div class="kpi-card kpi-indigo animate-in">
                         <div class="kpi-accent"></div>
-                        <div class="kpi-icon-wrap"><i class="bi bi-bullseye"></i></div>
+                        <div class="kpi-icon-wrap" style="color: #6366f1;"><i class="bi bi-clock"></i></div>
                         <div class="kpi-value">{{ number_format($pagosTotales) }}</div>
-                        <div class="kpi-label">Meta Total</div>
+                        <div class="kpi-label">Meta total</div>
                     </div>
 
                     <div class="kpi-card kpi-teal animate-in">
                         <div class="kpi-accent"></div>
-                        <div class="kpi-icon-wrap"><i class="bi bi-speedometer"></i></div>
+                        <div class="kpi-icon-wrap" style="color: #14b8a6;"><i class="bi bi-activity"></i></div>
                         <div class="kpi-value">{{ number_format($avanceGlobal, 1) }}%</div>
-                        <div class="kpi-label">Progreso Global</div>
-                        <div class="mt-2">
-                            <div class="progress-slim">
-                                <div class="progress-bar" style="width: {{ min($avanceGlobal, 100) }}%"></div>
-                            </div>
-                        </div>
+                        <div class="kpi-label">Progreso global</div>
                     </div>
                 </div>
 
@@ -257,6 +340,22 @@
                             </div>
                             <div class="card-body d-flex align-items-center">
                                 <div id="donutChart"></div>
+                                {{-- Mobile Legend --}}
+                                <div class="mobile-chart-legend d-lg-none" id="mobileDonutLegend">
+                                    {{-- Populated via JS --}}
+                                </div>
+                            </div>
+                            {{-- Mobile Progress Row --}}
+                            <div class="card-footer bg-transparent border-0 d-lg-none pt-0">
+                                <div class="m-pipeline-item">
+                                    <div class="m-pipeline-header">
+                                        <span class="text-white" style="font-size: 0.75rem">Progreso</span>
+                                        <span id="mobileGlobalProgressVal" style="color: #10b981; font-weight: 700; font-size: 0.75rem">--%</span>
+                                    </div>
+                                    <div class="m-pipeline-bar-bg" style="height: 4px;">
+                                        <div class="m-pipeline-bar-fill" id="mobileGlobalProgressBar" style="background: #10b981; width: 0%"></div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -274,7 +373,11 @@
                                     CONTRATOS</span>
                             </div>
                             <div class="card-body">
-                                <div id="gapChart"></div>
+                                <div id="gapChart" class="d-none d-lg-block"></div>
+                                {{-- Mobile Pipeline Bars --}}
+                                <div class="mobile-pipeline-row d-lg-none" id="mobilePipelineBars">
+                                    {{-- Populated via JS --}}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -283,27 +386,92 @@
                 <!-- ===== ROW 2: Demora + Actividad ===== -->
                 <div class="section-title animate-in">Análisis de Tiempos y Operación</div>
                 <div class="row g-3 mb-4">
-                    <div class="col-lg-6 animate-in">
+                    <div class="col-12 animate-in">
                         <div class="card h-100 card-premium">
                             <div class="card-header bg-transparent border-0">
                                 <h6>
                                     <span class="chart-icon" style="background:rgba(245,158,11,.1); color:#d97706;">
                                         <i class="bi bi-clock-history"></i>
                                     </span>
-                                    Demora Promedio por Etapa
+                                    Tiempo Real por Etapa
                                     <i class="bi bi-info-circle text-muted ms-1" style="font-size:.75rem"
                                         data-bs-toggle="tooltip"
-                                        title="Promedio de horas que permanecen los contratos en cada bloque antes de avanzar."></i>
+                                        title="Tiempo real acumulado por etapa, basado en el historial y flujo en vivo."></i>
                                 </h6>
-                                <span class="chart-badge" style="background:rgba(245,158,11,.06); color:#d97706;">TIEMPO
-                                    EN HORAS Y MINUTOS</span>
+                                 <div class="d-flex align-items-center gap-2">
+                                    <span class="chart-badge" style="background:rgba(245,158,11,.06); color:#d97706;">TIEMPO EN HORAS Y MINUTOS</span>
+                                </div>
                             </div>
                             <div class="card-body">
-                                <div id="delayChart"></div>
+                                <!-- Filtros Específicos -->
+                                <div class="row g-2 mb-3 align-items-end">
+                                    <div class="col-md-5">
+                                        <label class="form-label small fw-bold">Filtrar por Etapa</label>
+                                        <select id="filterEtapa" class="form-select form-select-sm">
+                                            <option value="">Todas las etapas</option>
+                                            @foreach($etapasDisponibles as $etapa)
+                                                <option value="{{ $etapa }}">{{ $etapa }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label small fw-bold">Filtrar por Usuario</label>
+                                        <select id="filterUsuario" class="form-select form-select-sm">
+                                            <option value="">Equipo Completo</option>
+                                            @foreach($usuariosMetricas as $u)
+                                                <option value="{{ $u->id }}">{{ $u->nombre_completo }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <label class="form-label d-none">Vista</label>
+                                        <button type="button" id="btnToggleView" class="btn btn-primary-dark w-100" title="Alternar entre promedio de equipo y detalle por usuario">
+                                            <i class="bi bi-person-lines-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Tarjetas Resumen Mini -->
+                                <div class="row g-2 mb-3">
+                                    <div class="col-4">
+                                        <div class="mini-summary-card">
+                                            <div class="m-label">Tiempo Total</div>
+                                            <div class="m-value" id="kpi-general">{{ $chartData['demora_usuario_etapa']['kpis']['general'] }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="mini-summary-card">
+                                            <div class="m-label text-danger">Mayor Demora</div>
+                                            <div class="m-value small" id="kpi-lenta" style="font-size: 0.7rem;">{{ $chartData['demora_usuario_etapa']['kpis']['lenta'] }}</div>
+                                        </div>
+                                    </div>
+                                    <div class="col-4">
+                                        <div class="mini-summary-card">
+                                            <div class="m-label text-success">Menor Demora</div>
+                                            <div class="m-value small" id="kpi-rapida" style="font-size: 0.7rem;">{{ $chartData['demora_usuario_etapa']['kpis']['rapida'] }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mobile-time-analysis-grid d-lg-none">
+                                    <div class="m-time-card">
+                                        <div class="m-time-card-label">TIEMPO TOTAL</div>
+                                        <div class="m-time-card-value" id="m-kpi-total">--</div>
+                                    </div>
+                                    <div class="m-time-card m-time-card-active">
+                                        <div class="m-time-card-label">MAYOR DEMORA</div>
+                                        <div class="m-time-card-value" id="m-kpi-lenta">--</div>
+                                        <span class="m-time-card-sub" id="m-kpi-lenta-sub">--</span>
+                                    </div>
+                                    <div class="m-time-card">
+                                        <div class="m-time-card-label">MENOR DEMORA</div>
+                                        <div class="m-time-card-value" id="m-kpi-rapida">--</div>
+                                        <span class="m-time-card-sub" id="m-kpi-rapida-sub">--</span>
+                                    </div>
+                                </div>
+                                <div id="delayChart" style="min-height: 350px;"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="col-lg-6 animate-in">
+                    <div class="col-12 animate-in">
                         <div class="card h-100 card-premium">
                             <div class="card-header bg-transparent border-0">
                                 <h6>
@@ -344,7 +512,7 @@
                         </button>
                     </div>
                     <div class="card-body px-3 pb-3 pt-0">
-                        <div class="table-responsive">
+                        <div class="table-responsive d-none d-lg-block">
                             <table id="alertTable" class="table table-premium table-hover align-middle mb-0">
                                 <thead>
                                     <tr>
@@ -369,18 +537,29 @@
                                 </tbody>
                             </table>
                         </div>
+
+                        {{-- Mobile Contract List --}}
+                        <div class="mobile-contract-list d-lg-none" id="mobileContractList">
+                            @include('Analitica.componentes.lista_contratos_mobile', ['cuentas' => $cuentas])
+                        </div>
                     </div>
                 </div>
                 <!-- PDF Footer (Visible solo en captura) -->
-                <div id="pdfFooter" class="d-none mt-5 pt-4 border-top" style="border-top: 1px solid #e2e8f0 !important;">
-                    <div class="d-flex justify-content-between align-items-center" style="font-size: 10px; color: #94a3b8;">
-                        <div>© {{ date('Y') }} Gobernación de Cundinamarca - Sistema de Gestión de Cuentas de Cobro</div>
-                        <div class="text-end">Este documento es un reporte automático generado desde la plataforma BI institucional.</div>
+                <div id="pdfFooter" class="d-none mt-5 pt-4 border-top"
+                    style="border-top: 1px solid #e2e8f0 !important;">
+                    <div class="d-flex justify-content-between align-items-center"
+                        style="font-size: 10px; color: #94a3b8;">
+                        <div>© {{ date('Y') }} Gobernación de Cundinamarca - Sistema de Gestión de Cuentas de Cobro
+                        </div>
+                        <div class="text-end">Este documento es un reporte automático generado desde la plataforma BI
+                            institucional.</div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- Se eliminó el modal de gestión manual por solicitud del usuario -->
 
     <script>
         window.chartData = @json($chartData);

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Traits\Auditable;
+use App\Traits\HasBusinessDays;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -15,7 +16,7 @@ class CuentaCobro extends Model
      * Este modelo actúa como una Máquina de Estados. Controla en qué punto del 
      * proceso se encuentra cada trámite de pago y quién es el responsable hoy.
      */
-    use Auditable, HasFactory, SoftDeletes;
+    use Auditable, HasFactory, SoftDeletes, HasBusinessDays;
 
     protected $table = 'cuentas_cobro';
 

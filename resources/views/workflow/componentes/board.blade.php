@@ -10,7 +10,19 @@
             </div>
             <div class="selector-info">
                 <div class="selector-title">{{ $block['nombre'] }}</div>
-                <div class="selector-count">{{ count(collect($block['columnas'])->pluck('cuentas')->flatten(1)) }} Casos</div>
+                <div class="selector-count">
+                    {{ 
+                        count(
+                            collect($block['columnas'])
+                                ->filter(function($col) {
+                                    $nombre = strtoupper($col['nombre'] ?? '');
+                                    return $nombre !== 'SIN TRAMITE' && $nombre !== 'SIN TRÁMITE';
+                                })
+                                ->pluck('cuentas')
+                                ->flatten(1)
+                        ) 
+                    }} Casos
+                </div>
             </div>
         </div>
     @endforeach
@@ -27,9 +39,19 @@
                         <span>{{ $block['nombre'] }}</span>
                     </div>
                     <div class="d-flex align-items-center gap-3">
-                        <span
-                            class="badge bg-light text-dark shadow-sm">{{ count(collect($block['columnas'])->pluck('cuentas')->flatten(1)) }}
-                            Cuentas</span>
+                        <span class="badge bg-light text-dark shadow-sm">
+                            {{ 
+                                count(
+                                    collect($block['columnas'])
+                                        ->filter(function($col) {
+                                            $nombre = strtoupper($col['nombre'] ?? '');
+                                            return $nombre !== 'SIN TRAMITE' && $nombre !== 'SIN TRÁMITE';
+                                        })
+                                        ->pluck('cuentas')
+                                        ->flatten(1)
+                                ) 
+                            }} Cuentas
+                        </span>
                         <button class="btn-collapse" onclick="toggleBlockVisibility(this, '{{ $key }}')">
                             <i class="fas fa-chevron-up"></i>
                         </button>
@@ -72,10 +94,9 @@
                                         $fechaInicioReal = $transicionActual?->fecha_transicion 
                                             ?? ($estadoBloqueActual?->fecha_ingreso_bloque ?? $cuenta->created_at);
 
-                                        // 2. Tiempo ya registrado en logs cerrados (pero SOLO los de la instancia actual de este estado)
+                                        // 2. Tiempo ya registrado en logs cerrados (instancia actual o histórica de este estado)
                                         $tiempoLogueado = \App\Models\TaskTimeLog::where('cuenta_cobro_id', $cuenta->id)
                                             ->where('estado_id', $cuenta->estado_actual_id)
-                                            ->where('start_time', '>=', \Carbon\Carbon::parse($fechaInicioReal)->subSeconds(5)) // Margen de 5s por desincronización DB-Servidor
                                             ->whereNotNull('end_time')
                                             ->sum('duracion_segundos');
 
@@ -87,7 +108,7 @@
                                             ? $businessTime->getWorkingSecondsBetween($cuenta->fecha_ultimo_cambio_estado, now())
                                             : 0;
 
-                                        $elapsedSeconds = $volatil;
+                                        $elapsedSeconds = $tiempoLogueado + $volatil;
                                     @endphp
                                     <div class="account-card" 
                                         style="border-left-color: {{ $cuenta->estadoActual?->color_hex ?? '#6366f1' }};"

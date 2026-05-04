@@ -16,13 +16,16 @@ body {
 
 /* 2. NAVEGACIÓN (Sidebar Architecture) */
 #sidebar {
-    width: 250px;
-    min-width: 250px;
-    max-width: 250px;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
     overflow-x: hidden;
     font-size: 0.9rem;
     white-space: nowrap;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.1);
 }
 
 #sidebar.collapsed {
@@ -47,12 +50,31 @@ body {
 }
 
 #sidebar .nav-link {
-    padding: 0.7rem 1.1rem;
-    border-radius: 12px;
-    margin: 4px 0;
-    transition: all 0.25s ease;
+    padding: 0.85rem 1.25rem;
+    border-radius: 14px;
+    margin: 6px 12px;
+    transition: var(--transition);
     display: flex;
     align-items: center;
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+#sidebar .nav-link i {
+    font-size: 1.1rem;
+    opacity: 0.8;
+}
+
+#sidebar .nav-link.active {
+    background: rgba(99, 102, 241, 0.15) !important;
+    color: #818cf8 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-left: 3px solid #6366f1;
+}
+
+#sidebar .nav-link:hover:not(.active) {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff !important;
+    transform: translateX(4px);
 }
 
 #sidebar .sidebar-text {

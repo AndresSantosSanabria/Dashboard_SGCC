@@ -32,7 +32,10 @@ class CuentaCobroObserver
         $bloqueCambiado = $cuenta->isDirty('bloque_actual_id')
             && $cuenta->getOriginal('bloque_actual_id') != $cuenta->bloque_actual_id;
 
-        if ($estadoCambiado || $bloqueCambiado) {
+        $responsableCambiado = $cuenta->isDirty('responsable_actual_id')
+            && $cuenta->getOriginal('responsable_actual_id') != $cuenta->responsable_actual_id;
+
+        if ($estadoCambiado || $bloqueCambiado || $responsableCambiado) {
             // Cierra el contador volátil y acumula en el contador persistente.
             // NO genera dirty en el modelo para tiempo_total_proceso_segundos,
             // ya que la escritura se hace vía DB::table directamente.
@@ -49,12 +52,14 @@ class CuentaCobroObserver
      */
     public function updated(CuentaCobro $cuenta): void
     {
-        if ($cuenta->wasChanged('estado_actual_id') || $cuenta->wasChanged('bloque_actual_id')) {
+        if ($cuenta->wasChanged('estado_actual_id') || $cuenta->wasChanged('bloque_actual_id') || $cuenta->wasChanged('responsable_actual_id')) {
             // Abre el cronómetro del estado entrante.
             $this->timeService->onStateOpened($cuenta);
 
             // Despacha el Job de monitoreo de estancamiento para el NUEVO estado.
-            $this->dispatchStagnationCheck($cuenta);
+            if ($cuenta->wasChanged('estado_actual_id') || $cuenta->wasChanged('bloque_actual_id')) {
+                $this->dispatchStagnationCheck($cuenta);
+            }
         }
     }
 
@@ -94,12 +99,18 @@ class CuentaCobroObserver
             $delayMinutos = (int) ($limiteHoras * 60);
 
             if ($delayMinutos > 0) {
+                // CALCULO DE DELAY EN TIEMPO REAL:
+                // Si el límite son 2 horas laborales y son las 5 PM (cierre 6 PM), 
+                // el Job debe ejecutarse mañana a las 7 AM.
+                $businessTime = app(\App\Services\BusinessTimeService::class);
+                $fechaAlerta = $businessTime->addBusinessSeconds(now(), $delayMinutos * 60);
+                
                 CheckStagnationJob::dispatch($cuenta->id, $cuenta->estado_actual_id)
-                    ->delay(now()->addMinutes($delayMinutos));
+                    ->delay($fechaAlerta);
 
-                Log::debug("[Observer] CheckStagnationJob despachado. " .
+                Log::debug("[Observer] CheckStagnationJob despachado con TIEMPO LABORAL. " .
                     "CuentaId={$cuenta->id}, Estado={$cuenta->estado_actual_id}, " .
-                    "Delay={$delayMinutos}min");
+                    "Alerta programada para: {$fechaAlerta}");
             }
         } catch (\Exception $e) {
             Log::error("[Observer] Error despachando CheckStagnationJob: " . $e->getMessage());
