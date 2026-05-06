@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\Contratista;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class SecurityMigrationSeeder extends Seeder
@@ -17,41 +16,46 @@ class SecurityMigrationSeeder extends Seeder
     {
         $this->command->info('Iniciando migración de seguridad para Contratistas...');
 
-        // Usamos un cursor para manejar grandes volúmenes de datos sin agotar la memoria
         $contratistas = Contratista::all();
-        $total = $contratistas->count();
-        $count = 0;
+        $total        = $contratistas->count();
+        $count        = 0;
+        $errors       = 0;
 
-        DB::transaction(function () use ($contratistas, &$count, $total) {
-            foreach ($contratistas as $contratista) {
-                try {
-                    // El Property Hook de PHP 8.4 en el modelo Contratista
-                    // se encarga de cifrar el NIT y generar el blind index al asignar.
-                    // El getter detecta si no está cifrado y lo devuelve en texto plano,
-                    // y el setter lo cifra automáticamente.
-                    $plainNit = $contratista->nit;
-                    
-                    // Re-asignamos para disparar el Property Hook (Set)
-                    $contratista->nit = $plainNit;
+        $this->command->info("Total de contratistas a procesar: {$total}");
 
-                    // El cast 'encrypted' en los demás campos también se aplicará al guardar
-                    // si los datos actuales están en texto plano.
-                    $contratista->save();
-                    
-                    $count++;
-                    if ($count % 50 === 0) {
-                        $this->command->getOutput()->write('.');
-                    }
-                } catch (\Exception $e) {
-                    $this->command->error("\nError procesando Contratista ID {$contratista->id}: " . $e->getMessage());
-                    Log::error("Error en SecurityMigrationSeeder", [
-                        'id' => $contratista->id,
-                        'error' => $e->getMessage()
-                    ]);
+        foreach ($contratistas as $contratista) {
+            try {
+                // El getter del Property Hook detecta si el valor ya está cifrado;
+                // si no lo está, devuelve el texto plano.
+                $plainNit = $contratista->nit;
+
+                // Re-asignamos para disparar el setter (cifra + blind index).
+                $contratista->nit = $plainNit;
+
+                // Los casts 'encrypted' del modelo cifran los demás campos al guardar.
+                $contratista->save();
+
+                $count++;
+                if ($count % 50 === 0) {
+                    $this->command->getOutput()->write('.');
                 }
+            } catch (\Exception $e) {
+                $errors++;
+                $this->command->error(
+                    "\nError procesando Contratista ID {$contratista->id}: " . $e->getMessage()
+                );
+                Log::error('Error en SecurityMigrationSeeder', [
+                    'id'    => $contratista->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
-        });
+        }
 
-        $this->command->info("\n✅ Proceso finalizado. $count de $total contratistas actualizados con éxito.");
+        $this->command->newLine();
+        $this->command->info("Proceso finalizado. {$count} de {$total} actualizados con éxito.");
+
+        if ($errors > 0) {
+            $this->command->warn("{$errors} contratista(s) fallaron. Revisa el log para detalles.");
+        }
     }
 }
