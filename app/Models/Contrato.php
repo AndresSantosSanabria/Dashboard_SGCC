@@ -115,6 +115,26 @@ class Contrato extends Model
     }
 
     /**
+     * Cuenta activa: La que está actualmente en el workflow (no finalizada).
+     */
+    public function cuentaActual()
+    {
+        return $this->hasOne(CuentaCobro::class, 'contrato_id')
+            ->where('finalizada', false)
+            ->latest('id');
+    }
+
+    /**
+     * Última cuenta terminada: La que cerró el ciclo más reciente.
+     */
+    public function ultimaCuentaFinalizada()
+    {
+        return $this->hasOne(CuentaCobro::class, 'contrato_id')
+            ->where('finalizada', true)
+            ->latest('id');
+    }
+
+    /**
      * Seguimientos Normalizados (Nuevo Esquema 3NF)
      * Estos métodos acceden a la información de ejecución mensual sin sobrecargar 
      * la tabla principal de contratos con columnas extras.

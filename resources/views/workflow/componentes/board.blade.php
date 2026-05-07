@@ -132,7 +132,7 @@
                                             <div class="small fw-600 text-muted" style="font-size: 0.7rem;">
                                                 <i class="bi bi-stack me-1"></i>Cuenta {{ $cuenta->numero_cuenta }}
                                             </div>
-                                            @if ($cuenta->estadoActual && $cuenta->estadoActual->contabiliza_tiempo)
+                                            @if ($cuenta->estadoActual && $cuenta->estadoActual->contabiliza_tiempo && !($cuenta->estadoActual->bloque_id == ($ultimoBloqueId ?? 6) && $cuenta->estadoActual->es_final))
                                                 @php
                                                     $minutosTranscurridos = $elapsedSeconds / 60;
                                                     $timerAlertClass = '';

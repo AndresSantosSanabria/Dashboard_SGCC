@@ -192,6 +192,7 @@
                             <th colspan="3" class="text-center" style="background: #ECFDF5; color: #065F46;">GESTIÓN</th>
                             <th colspan="36" class="text-center" style="background: #F1F5F9;">EJECUCIÓN MENSUAL</th>
                             <th colspan="6" class="text-center" style="background: #EEF2FF; color: #3730A3;">CIERRE CONTRACTUAL</th>
+                            <th class="text-center" style="background: #F8FAFC; color: #475569;">OPERACIÓN</th>
                             <th colspan="6" class="text-center" style="background: #F8FAFC;">EQUIPO RESPONSABLE</th>
                         </tr>
                         <tr>
@@ -235,6 +236,8 @@
                             <th class="col-narrow-saas text-center">REPOS.</th>
                             <th class="col-narrow-saas text-center">LIQ. S.</th>
                             <th class="col-narrow-saas text-center" style="border-right: 2px solid #E2E8F0">LIQ. I.</th>
+
+                            <th class="text-center" style="width: 150px; min-width: 150px; background: #fdfdfd; font-weight: 800; border-right: 2px solid #E2E8F0">TRÁMITE SIGUIENTE</th>
 
                             <th class="col-md-saas text-end">SALDO RT.</th>
                             <th class="col-md-saas">OBS. RAZÓN</th>
@@ -724,6 +727,52 @@
                 document.getElementById('stat-sec-vacio').innerText = parseInt(data.stats.sec_vacio).toLocaleString();
                 document.getElementById('stat-total-con-seg').innerText = parseInt(data.stats.total).toLocaleString();
             } catch (e) { console.error(e); }
+        }
+
+        async function crearSiguienteCuenta(contratoId, numeroCuenta, contratoNo) {
+            const { value: confirm } = await Swal.fire({
+                title: `¿Iniciar Cuenta #${numeroCuenta}?`,
+                text: `Se creará un nuevo trámite para el contrato ${contratoNo} heredando sus datos básicos.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#0F172A',
+                confirmButtonText: 'Sí, iniciar trámite',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (confirm) {
+                try {
+                    const res = await window.apiFetch("{{ route('seguimiento.crear-siguiente') }}", {
+                        method: 'POST',
+                        body: JSON.stringify({ contrato_id: contratoId })
+                    });
+                    
+                    if (res.ok) {
+                        const data = await res.json();
+                        window.showSnackbar(data.message, 'success');
+                        applyAdvancedFilters();
+                        
+                        // Opcional: Redirigir al workflow para ver la nueva cuenta
+                        Swal.fire({
+                            title: '¡Trámite Creado!',
+                            text: '¿Deseas ir al tablero de control para gestionar esta cuenta?',
+                            icon: 'success',
+                            showCancelButton: true,
+                            confirmButtonText: 'Ir al Tablero',
+                            cancelButtonText: 'Permanecer aquí'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = "{{ route('workflow.index') }}";
+                            }
+                        });
+                    } else {
+                        const data = await res.json();
+                        window.showSnackbar(data.message || 'Error al crear la cuenta', 'error');
+                    }
+                } catch (e) {
+                    window.showSnackbar('Error de conexión', 'error');
+                }
+            }
         }
 
         function openEditModal(c) {

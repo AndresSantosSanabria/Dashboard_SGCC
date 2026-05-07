@@ -244,6 +244,27 @@
         @endforeach
 
         {{-- Resultados --}}
+        <td class="text-center" style="border-right: 2px solid #E2E8F0; background: #fdfdfd;">
+            @if($c->es_proceso_completado)
+                <div class="d-flex flex-column align-items-center">
+                    <span class="badge bg-success text-white border-0 py-2 px-3 rounded-pill extra-small fw-800 shadow-sm">
+                        <i class="bi bi-check-all me-1"></i> COMPLETADO
+                    </span>
+                    <span class="extra-small text-muted mt-1">Todas las cuentas tramitadas</span>
+                </div>
+            @elseif($c->puede_iniciar_siguiente)
+                <button class="btn btn-sm btn-primary w-100 fw-800 rounded-pill shadow-sm py-2 d-flex align-items-center justify-content-center gap-2 animate-pulse-soft" 
+                        onclick="crearSiguienteCuenta({{ $c->id }}, {{ $c->siguiente_numero_cuenta }}, '{{ $c->numero_contrato }}')">
+                    <i class="bi bi-play-circle-fill"></i> SIGUIENTE #{{ $c->siguiente_numero_cuenta }}
+                </button>
+            @else
+                <div class="d-flex flex-column align-items-center">
+                    <span class="badge bg-light text-primary border py-2 px-3 rounded-pill extra-small fw-bold">EN TRÁMITE #{{ $c->cuentaActual->numero_cuenta ?? 1 }}</span>
+                    <span class="extra-small text-muted mt-1">{{ $c->cuentaActual->estadoActual->nombre ?? 'N/A' }}</span>
+                </div>
+            @endif
+        </td>
+
         <td class="fw-bold text-danger text-end font-monospace">
             ${{ number_format($c->saldo, 0, ',', '.') }}
         </td>

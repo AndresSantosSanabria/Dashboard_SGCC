@@ -168,9 +168,10 @@ class WorkflowController extends Controller
         $workflow = [];
         foreach ($bloques as $bloque) {
             $columnas = [];
+            $ultimoBloqueId = BloqueWorkflow::orderBy('orden', 'desc')->value('id');
             foreach ($bloque->estados as $estado) {
-                // No mostrar visualmente la columna de devoluciones en el bloque Finalizada (B6)
-                if ($bloque->id == 6 && $estado->tipo === 'DEVUELTO') continue;
+                // No mostrar visualmente la columna de devoluciones en el bloque Finalizada
+                if ($bloque->id == $ultimoBloqueId && $estado->tipo === 'DEVUELTO') continue;
                     $columnas[$estado->id] = [
                         'nombre' => $estado->nombre,
                         'tipo' => $estado->tipo,
@@ -201,7 +202,8 @@ class WorkflowController extends Controller
         // RESPUESTA AJAX: Para el refresco parcial del tablero sin recargar.
         if ($request->ajax()) {
             $businessTime = $this->businessTime;
-            return view('workflow.componentes.board', compact('workflow', 'canEdit', 'businessTime', 'umbralCritico', 'umbralInformativo'));
+            $ultimoBloqueId = $bloques->sortByDesc('orden')->first()->id ?? 6;
+            return view('workflow.componentes.board', compact('workflow', 'canEdit', 'businessTime', 'umbralCritico', 'umbralInformativo', 'ultimoBloqueId'));
         }
 
         $supervisores = Supervisor::orderBy('nombres')->get();
@@ -213,7 +215,8 @@ class WorkflowController extends Controller
             ->filter(fn($u) => $u->puedeSerResponsableSap() || $u->puedeSerResponsableFac());
 
         $businessTime = $this->businessTime;
-        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados', 'responsables', 'canEdit', 'bloques', 'todosLosEstados', 'businessTime', 'umbralCritico', 'umbralInformativo'));
+        $ultimoBloqueId = $bloques->sortByDesc('orden')->first()->id ?? 6;
+        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados', 'responsables', 'canEdit', 'bloques', 'todosLosEstados', 'businessTime', 'umbralCritico', 'umbralInformativo', 'ultimoBloqueId'));
     }
 
     /**
@@ -324,6 +327,15 @@ class WorkflowController extends Controller
 
         $cuenta = CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
 
+        // REGLA DE "LIMBO" (Solo Lectura): 
+        // Si la cuenta ya está finalizada, impedimos retrocesos o cambios manuales.
+        if ($cuenta->finalizada && !Auth::user()->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Esta cuenta ya ha sido finalizada (Cierre de Ciclo) y se encuentra en modo solo lectura. No permite movimientos adicionales.'
+            ], 422);
+        }
+
         // 1. VALIDACIÓN DE TRANSICIÓN: 
         // No permitimos saltos "al azar"; solo los definidos en la tabla 'transiciones_permitidas'.
         $transicion = TransicionPermitida::where('estado_origen_id', $cuenta->estado_actual_id)
@@ -398,7 +410,8 @@ class WorkflowController extends Controller
         $estadoEfectivo = $auto ? EstadoWorkflow::findOrFail($auto->estado_destino_id) : $estadoDestino;
 
         $esCambioDeBloque = $cuenta->bloque_actual_id != $estadoEfectivo->bloque_id;
-        $esBloqueFinal = $estadoEfectivo->bloque_id == 6;
+        $ultimoBloqueId = BloqueWorkflow::orderBy('orden', 'desc')->value('id');
+        $esBloqueFinal = $estadoEfectivo->bloque_id == $ultimoBloqueId;
 
         // Una devolución se identifica por el flag permite_devolucion (configurado en BD)
         // o por el orden del bloque (si retrocede a un bloque anterior)
@@ -478,6 +491,16 @@ class WorkflowController extends Controller
         ]);
 
         $cuenta = CuentaCobro::findOrFail($cuentaId);
+
+        // REGLA DE "LIMBO" (Solo Lectura): 
+        // Si la cuenta ya está finalizada, impedimos retrocesos o cambios manuales.
+        if ($cuenta->finalizada && !Auth::user()->isAdmin()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Esta cuenta ya ha sido finalizada (Cierre de Ciclo) y se encuentra en modo solo lectura. No permite movimientos adicionales.'
+            ], 422);
+        }
+
         $estadoDestinoId = $request->estado_destino_id;
         $estadoOriginal = EstadoWorkflow::find($estadoDestinoId);
 
@@ -591,8 +614,9 @@ class WorkflowController extends Controller
         // D. LÓGICA DE ASIGNACIÓN AUTOMÁTICA (RECEPTOR B6):
         // Si el estado de destino pertenece al Bloque 6 (Finalizado), buscamos el receptor 
         // configurado con menos carga de trabajo actual para mantener un balance.
-        if ($estadoDestino->bloque_id == 6) {
-            $receptorIdeal = Usuario::getReceptorMenosCargadoBloque6();
+        $ultimoBloqueId = BloqueWorkflow::orderBy('orden', 'desc')->value('id');
+        if ($estadoDestino->bloque_id == $ultimoBloqueId) {
+            $receptorIdeal = Usuario::getReceptorMenosCargadoBloqueFinal();
             if ($receptorIdeal) {
                 $responsableId = $receptorIdeal->id;
             }
@@ -660,8 +684,10 @@ class WorkflowController extends Controller
         // NO tocar tiempo_total_proceso_segundos aquí: el Observer lo maneja.
         $cuenta->fecha_ultimo_cambio_estado = null;
 
-        // Finalización: Si llega al estado de éxito del bloque 6, la cuenta sale del radar operativo.
-        if ($estadoDestino->bloque_id == 6 && $estadoDestino->tipo == 'APROBADO') {
+        $ultimoBloqueId = BloqueWorkflow::orderBy('orden', 'desc')->value('id');
+
+        // Finalización: Si llega al estado de éxito del bloque final, la cuenta sale del radar operativo.
+        if ($estadoDestino->bloque_id == $ultimoBloqueId && ($estadoDestino->tipo === 'APROBADO' || $estadoDestino->tipo === 'FINAL' || $estadoDestino->es_final)) {
             $cuenta->finalizada = true;
             $cuenta->numero_facturas_radicadas++; // Incremento contable automático
         } else {

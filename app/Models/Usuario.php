@@ -255,7 +255,7 @@ class Usuario extends Authenticatable
     /**
      * Scope para los usuarios marcados como receptores automáticos del bloque 6 (Finalizado).
      */
-    public function scopeReceptoresBloque6($query)
+    public function scopeReceptoresBloqueFinal($query)
     {
         return $query->where('es_activo', true)
             ->where(function ($q) {
@@ -269,14 +269,15 @@ class Usuario extends Authenticatable
     }
 
     /**
-     * Obtiene el usuario ideal para recibir un contrato en bloque 6 según carga de trabajo.
+     * Obtiene el usuario ideal para recibir un contrato en el bloque final según carga de trabajo.
      */
-    public static function getReceptorMenosCargadoBloque6()
+    public static function getReceptorMenosCargadoBloqueFinal()
     {
-        return self::receptoresBloque6()
-            ->withCount(['cuentasCobroAsignadas' => function ($q) {
-                // Contamos solo las cuentas que están actualmente en el bloque 6
-                $q->where('bloque_actual_id', 6);
+        $ultimoBloqueId = BloqueWorkflow::orderBy('orden', 'desc')->value('id') ?? 6;
+        return self::receptoresBloqueFinal()
+            ->withCount(['cuentasCobroAsignadas' => function ($q) use ($ultimoBloqueId) {
+                // Contamos solo las cuentas que están actualmente en el bloque final
+                $q->where('bloque_actual_id', $ultimoBloqueId);
             }])
             ->orderBy('cuentas_cobro_asignadas_count', 'asc')
             ->first();

@@ -16,6 +16,8 @@ use App\Models\PlanillaSeguridadSocial;
 use App\Models\Alerta;
 use App\Models\RegistroPresupuestal;
 use App\Models\Documento;
+use App\Models\EstadoWorkflow;
+use App\Models\BloqueWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +39,7 @@ class SeguimientoController extends Controller
     private function getFilteredContratos(Request $request)
     {
         // 1. CARGA BASE CON RELACIONES
-        $query = Contrato::with(['contratista', 'supervisor', 'modalidad', 'planta', 'concepto']);
+        $query = Contrato::with(['contratista', 'supervisor', 'modalidad', 'planta', 'concepto', 'cuentaActual', 'ultimaCuentaFinalizada']);
 
         // Filtros de búsqueda: Optimizamos usando subconsultas para contratistas
         if ($request->filled('numero_contrato')) {
@@ -538,6 +540,108 @@ class SeguimientoController extends Controller
     }
 
     /**
+     * Inicia automáticamente la siguiente cuenta de cobro para un contrato.
+     * Crea un nuevo registro en cuentas_cobro heredando datos y posicionándolo al inicio.
+     */
+    public function crearSiguienteCuenta(Request $request)
+    {
+        $request->validate([
+            'contrato_id' => 'required|exists:contratos,id',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Cargamos el contrato con sus relaciones para validar el estado actual
+            $contrato = Contrato::with(['cuentaActual', 'ultimaCuentaFinalizada'])->findOrFail($request->contrato_id);
+
+            // 1. Validar que no haya una cuenta activa (para evitar duplicidad de procesos)
+            if ($contrato->cuentaActual) {
+                return response()->json([
+                    'success' => false, 
+                    'message' => 'Ya existe un trámite en curso (#'.$contrato->cuentaActual->numero_cuenta.') para este contrato.'
+                ], 422);
+            }
+
+            // 2. Determinar el siguiente número de cuenta
+            $siguienteNumero = 1;
+            $ultimaCta = $contrato->ultimaCuentaFinalizada;
+            if ($ultimaCta) {
+                $siguienteNumero = (int)$ultimaCta->numero_cuenta + 1;
+            }
+
+            // 3. Validar si ya alcanzó el tope de pagos configurado (si existe)
+            if ($ultimaCta && $ultimaCta->numero_pagos_totales > 0 && $siguienteNumero > $ultimaCta->numero_pagos_totales) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'El contrato ya ha completado el total de pagos configurados ('.$ultimaCta->numero_pagos_totales.').'
+                ], 422);
+            }
+
+            // 4. Obtener el estado inicial del workflow por configuración (es_inicial = true)
+            $estadoInicial = EstadoWorkflow::where('es_inicial', true)->where('es_activo', true)->first();
+            
+            // Fallback si no hay marca de inicial: primer estado del primer bloque
+            if (!$estadoInicial) {
+                $primerBloque = BloqueWorkflow::orderBy('orden', 'asc')->first();
+                if ($primerBloque) {
+                    $estadoInicial = EstadoWorkflow::where('bloque_id', $primerBloque->id)
+                        ->where('es_activo', true)
+                        ->first();
+                }
+            }
+
+            if (!$estadoInicial) {
+                throw new \Exception("No se ha configurado un estado inicial válido para el workflow.");
+            }
+
+            // 5. Crear el nuevo registro de Cuenta de Cobro heredando datos clave
+            $nuevaCuenta = CuentaCobro::create([
+                'contrato_id'               => $contrato->id,
+                'numero_cuenta'             => $siguienteNumero,
+                'valor_cobro'               => $ultimaCta->valor_cobro ?? 0,
+                'numero_pagos_totales'      => $ultimaCta->numero_pagos_totales ?? 0,
+                'numero_facturas_radicadas' => $ultimaCta ? ($ultimaCta->numero_facturas_radicadas + 1) : 1,
+                'bloque_actual_id'          => $estadoInicial->bloque_id,
+                'estado_actual_id'          => $estadoInicial->id,
+                'finalizada'                => false,
+                'fecha_radicacion'          => now(),
+                'responsable_actual_id'     => Auth::id(), // El que inicia el trámite
+            ]);
+
+            // 6. Registrar en el historial para trazabilidad
+            HistorialWorkflow::create([
+                'cuenta_cobro_id'   => $nuevaCuenta->id,
+                'estado_origen_id'  => null, // Indica creación
+                'estado_destino_id' => $estadoInicial->id,
+                'usuario_accion_id' => Auth::id(),
+                'fecha_transicion'  => now(),
+                'comentario'        => "Trámite iniciado automáticamente desde el dashboard de seguimiento para la cuenta #{$siguienteNumero}.",
+                'tipo_accion'       => 'CREACION_AUTOMATICA'
+            ]);
+
+            // 7. Auditoría manual
+            Contrato::logManualAudit($contrato->id, 'CREATE', "Nueva Cuenta #{$siguienteNumero} creada desde seguimiento", 'cuentas_cobro');
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Trámite para la cuenta #{$siguienteNumero} iniciado con éxito.",
+                'id' => $nuevaCuenta->id
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Error en crearSiguienteCuenta: " . $e->getMessage());
+            return response()->json([
+                'success' => false, 
+                'message' => 'No se pudo crear la cuenta: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * @param Contrato|object $c
      */
     private function hydrateContratoData(object $c)
@@ -562,5 +666,29 @@ class SeguimientoController extends Controller
         else $c->global_status = 'VACÍO';
 
         $c->perc_cumplimiento = min(100, $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0);
+
+        // Lógica para "Trámite Siguiente Cuenta"
+        $c->puede_iniciar_siguiente = false;
+        $c->siguiente_numero_cuenta = 1;
+        $c->es_proceso_completado = false;
+
+        if (!$c->cuentaActual) {
+            // Si no hay cuenta activa, miramos la última finalizada
+            if ($c->ultimaCuentaFinalizada) {
+                $totalPagos = (int)($c->ultimaCuentaFinalizada->numero_pagos_totales ?? 0);
+                $siguiente = (int)$c->ultimaCuentaFinalizada->numero_cuenta + 1;
+                
+                if ($totalPagos > 0 && $siguiente > $totalPagos) {
+                    $c->es_proceso_completado = true;
+                } else {
+                    $c->puede_iniciar_siguiente = true;
+                    $c->siguiente_numero_cuenta = $siguiente;
+                }
+            } else {
+                // Si nunca ha tenido cuentas, puede iniciar la #1
+                $c->puede_iniciar_siguiente = true;
+                $c->siguiente_numero_cuenta = 1;
+            }
+        }
     }
 }
