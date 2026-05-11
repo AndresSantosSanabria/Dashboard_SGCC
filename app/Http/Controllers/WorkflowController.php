@@ -209,10 +209,9 @@ class WorkflowController extends Controller
         $supervisores = Supervisor::orderBy('nombres')->get();
         $estados = EstadoWorkflow::where('es_activo', true)->select('nombre')->distinct()->get();
         $todosLosEstados = EstadoWorkflow::where('es_activo', true)->with('bloque')->get()->groupBy('bloque.codigo');
-        $responsables = Usuario::where('es_activo', true)
+        $responsables = Usuario::responsablesWorkflow()
             ->orderBy('primer_nombre')
-            ->get()
-            ->filter(fn($u) => $u->puedeSerResponsableSap() || $u->puedeSerResponsableFac());
+            ->get();
 
         $businessTime = $this->businessTime;
         $ultimoBloqueId = $bloques->sortByDesc('orden')->first()->id ?? 6;
@@ -262,48 +261,99 @@ class WorkflowController extends Controller
      */
     public function getEstadosDisponibles(int $cuentaId)
     {
-        $cuenta = CuentaCobro::with(['estadoActual', 'bloqueActual'])->findOrFail($cuentaId);
+        try {
+            $cuenta = CuentaCobro::with(['estadoActual' => function($q) {
+                $q->withTrashed();
+            }, 'bloqueActual'])->findOrFail($cuentaId);
 
-        // Get allowed transitions from current state
-        $query = TransicionPermitida::where('estado_origen_id', $cuenta->estado_actual_id)
-            ->where('es_activa', true)
-            ->with(['estadoDestino:id,nombre,codigo,tipo,color_hex,bloque_id', 'estadoDestino.bloque:id,nombre']);
+            // ── REGLA DE ASIGNACIÓN ESTRICTA (Mano de Dios) ──────────────────────────
+            /** @var Usuario $user */
+            $user = Auth::user();
+            if (!$user->puedeMoverCualquierCuenta() && $cuenta->responsable_actual_id !== $user->id) {
+                return response()->json([
+                    'success' => true,
+                    'estado_actual' => [
+                        'id' => $cuenta->estado_actual_id,
+                        'nombre' => $cuenta->estadoActual?->nombre ?? 'Estado Desconocido',
+                        'tipo' => $cuenta->estadoActual?->tipo ?? 'N/A',
+                    ],
+                    'estados_disponibles' => [],
+                    'readonly' => true,
+                    'message' => 'Solo el responsable asignado puede realizar movimientos.'
+                ]);
+            }
 
-        // ── REGLA VISUAL ESPECIAL: Sin Tramite → Solo En Revision ────────────────
-        if ($cuenta->estadoActual?->codigo === 'REV1_SIN') {
-            $query->whereHas('estadoDestino', function($q) {
-                $q->where('codigo', 'REV1_REV');
-            });
+            // Get allowed transitions from current state
+            $query = TransicionPermitida::where('estado_origen_id', $cuenta->estado_actual_id)
+                ->where('es_activa', true)
+                ->with(['estadoDestino' => function($q) {
+                    $q->withTrashed();
+                }, 'estadoDestino.bloque']);
+
+            // ── REGLA VISUAL ESPECIAL: Sin Tramite → Solo En Revision ────────────────
+            if ($cuenta->estadoActual?->codigo === 'REV1_SIN') {
+                $query->whereHas('estadoDestino', function($q) {
+                    $q->where('codigo', 'REV1_REV');
+                });
+            }
+            // ──────────────────────────────────────────────────────────────────────
+
+            $estadosDisponibles = $query->get()
+                ->filter(function ($transicion) use ($cuenta) {
+                    // No permitir transiciones a estados eliminados
+                    return $transicion->estado_destino_id != $cuenta->estado_actual_id 
+                        && $transicion->estadoDestino 
+                        && !$transicion->estadoDestino->trashed();
+                })
+                ->map(function ($transicion) {
+                    return [
+                        'id' => $transicion->estadoDestino->id,
+                        'nombre' => $transicion->estadoDestino->nombre,
+                        'tipo' => $transicion->estadoDestino->tipo,
+                        'color' => $transicion->estadoDestino->color_hex ?? $this->getColorPorTipo($transicion->estadoDestino->tipo),
+                        'bloque_id' => $transicion->estadoDestino->bloque_id,
+                        'bloque_nombre' => $transicion->estadoDestino->bloque->nombre ?? '',
+                        'requiere_comentario' => $transicion->requiere_comentario,
+                    ];
+                })
+                ->values();
+
+            // FALLBACK DE EMERGENCIA: Si el estado actual está ELIMINADO, permitimos saltar 
+            // a cualquier estado ACTIVO del mismo bloque para "rescatar" la cuenta.
+            if ($estadosDisponibles->isEmpty() && $cuenta->estadoActual?->trashed()) {
+                $estadosDisponibles = EstadoWorkflow::where('bloque_id', $cuenta->bloque_actual_id)
+                    ->where('es_activo', true)
+                    ->whereNull('deleted_at')
+                    ->get()
+                    ->map(function($e) {
+                        return [
+                            'id' => $e->id,
+                            'nombre' => "🔄 Rescatar a: " . $e->nombre,
+                            'tipo' => $e->tipo,
+                            'color' => $e->color_hex ?? $this->getColorPorTipo($e->tipo),
+                            'bloque_id' => $e->bloque_id,
+                            'bloque_nombre' => $e->bloque->nombre ?? '',
+                            'requiere_comentario' => true,
+                        ];
+                    });
+            }
+
+            return response()->json([
+                'success' => true,
+                'estado_actual' => [
+                    'id' => $cuenta->estado_actual_id,
+                    'nombre' => $cuenta->estadoActual?->nombre ?? 'Estado Desconocido',
+                    'tipo' => $cuenta->estadoActual?->tipo ?? 'N/A',
+                ],
+                'estados_disponibles' => $estadosDisponibles,
+            ]);
+        } catch (\Exception $e) {
+            Log::error("[Workflow] Error en getEstadosDisponibles para Cuenta $cuentaId: " . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cargar los estados disponibles: ' . $e->getMessage()
+            ], 500);
         }
-        // ──────────────────────────────────────────────────────────────────────
-
-        $estadosDisponibles = $query->get()
-            ->filter(function ($transicion) use ($cuenta) {
-                // No tiene sentido transicionar al mismo estado en el que ya estamos
-                return $transicion->estado_destino_id != $cuenta->estado_actual_id;
-            })
-            ->map(function ($transicion) {
-                return [
-                    'id' => $transicion->estadoDestino->id,
-                    'nombre' => $transicion->estadoDestino->nombre,
-                    'tipo' => $transicion->estadoDestino->tipo,
-                    'color' => $transicion->estadoDestino->color_hex ?? $this->getColorPorTipo($transicion->estadoDestino->tipo),
-                    'bloque_id' => $transicion->estadoDestino->bloque_id,
-                    'bloque_nombre' => $transicion->estadoDestino->bloque->nombre ?? '',
-                    'requiere_comentario' => $transicion->requiere_comentario,
-                ];
-            })
-            ->values(); // Resetear índices tras el filter
-
-        return response()->json([
-            'success' => true,
-            'estado_actual' => [
-                'id' => $cuenta->estadoActual->id,
-                'nombre' => $cuenta->estadoActual->nombre,
-                'tipo' => $cuenta->estadoActual->tipo,
-            ],
-            'estados_disponibles' => $estadosDisponibles,
-        ]);
     }
 
     /**
@@ -336,6 +386,20 @@ class WorkflowController extends Controller
             ], 422);
         }
 
+        // 1.a REGLA DE ASIGNACIÓN ESTRICTA (Mano de Dios):
+        // Si el usuario no tiene permiso global, solo puede mover lo que tiene asignado a su nombre.
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->puedeMoverCualquierCuenta()) {
+            if ($cuenta->responsable_actual_id !== $user->id) {
+                $responsableNombre = $cuenta->responsableActual?->nombre_completo ?? 'Nadie (Sin asignar)';
+                return response()->json([
+                    'success' => false,
+                    'message' => "No tiene permisos para mover este contrato. Actualmente está asignado a: {$responsableNombre}."
+                ], 403);
+            }
+        }
+
         // 1. VALIDACIÓN DE TRANSICIÓN: 
         // No permitimos saltos "al azar"; solo los definidos en la tabla 'transiciones_permitidas'.
         $transicion = TransicionPermitida::where('estado_origen_id', $cuenta->estado_actual_id)
@@ -343,7 +407,7 @@ class WorkflowController extends Controller
             ->where('es_activa', true)
             ->first();
 
-        if (! $transicion) {
+        if (! $transicion && !$cuenta->estadoActual?->trashed()) {
             $this->logWorkflowAudit('WORKFLOW_TRANSITION_REJECTED', $cuenta, [
                 'motivo' => 'Transición no permitida por el motor de reglas',
                 'estado_origen_id' => $cuenta->estado_actual_id,
@@ -493,12 +557,24 @@ class WorkflowController extends Controller
         $cuenta = CuentaCobro::findOrFail($cuentaId);
 
         // REGLA DE "LIMBO" (Solo Lectura): 
-        // Si la cuenta ya está finalizada, impedimos retrocesos o cambios manuales.
         if ($cuenta->finalizada && !Auth::user()->isAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Esta cuenta ya ha sido finalizada (Cierre de Ciclo) y se encuentra en modo solo lectura. No permite movimientos adicionales.'
             ], 422);
+        }
+
+        // 1.a REGLA DE ASIGNACIÓN ESTRICTA (Mano de Dios):
+        /** @var Usuario $user */
+        $user = Auth::user();
+        if (!$user->puedeMoverCualquierCuenta()) {
+            if ($cuenta->responsable_actual_id !== $user->id) {
+                $responsableNombre = $cuenta->responsableActual?->nombre_completo ?? 'Nadie (Sin asignar)';
+                return response()->json([
+                    'success' => false,
+                    'message' => "No tiene permisos para gestionar este contrato. Actualmente está asignado a: {$responsableNombre}."
+                ], 403);
+            }
         }
 
         $estadoDestinoId = $request->estado_destino_id;

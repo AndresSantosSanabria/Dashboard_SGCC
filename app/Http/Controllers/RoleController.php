@@ -75,6 +75,9 @@ class RoleController extends Controller
         if ($request->has('acceder_notificaciones')) {
             $systemPermissions['acceder_notificaciones'] = $request->boolean('acceder_notificaciones');
         }
+        if ($request->boolean('mover_todo_workflow')) {
+            $systemPermissions['mover_todo_workflow'] = true;
+        }
 
         // Handle Blocks
         if ($request->has('bloques_all')) {
@@ -290,6 +293,9 @@ class RoleController extends Controller
             }
             if ($request->has('_update_restricciones') || $request->has('acceder_notificaciones')) {
                 $systemPermissions['acceder_notificaciones'] = $request->boolean('acceder_notificaciones');
+            }
+            if ($request->has('_update_restricciones') || $request->has('mover_todo_workflow')) {
+                $systemPermissions['mover_todo_workflow'] = $request->boolean('mover_todo_workflow');
             }
 
             // 3. Workflow

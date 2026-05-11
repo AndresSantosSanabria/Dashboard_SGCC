@@ -152,6 +152,11 @@ class Usuario extends Authenticatable
         return $this->tienePermiso('ver_solo_bloques_con_asignacion');
     }
 
+    public function puedeMoverCualquierCuenta(): bool
+    {
+        return $this->isAdmin() || $this->tienePermiso('mover_todo_workflow');
+    }
+
     public function bloquesPermitidos()
     {
         if ($this->isAdmin()) {
@@ -248,6 +253,23 @@ class Usuario extends Authenticatable
                     $sq->where('slug', 'responsable_bloque_' . $bloqueCodigo);
                 })->orWhereHas('rol.permisos', function ($sq) use ($bloqueCodigo) {
                     $sq->where('slug', 'responsable_bloque_' . $bloqueCodigo);
+                });
+            });
+    }
+
+    /**
+     * Scope para todos los usuarios que son responsables de AL MENOS un bloque del workflow.
+     */
+    public function scopeResponsablesWorkflow($query)
+    {
+        return $query->where('es_activo', true)
+            ->where(function ($q) {
+                $q->whereHas('individualPermissions', function ($sq) {
+                    $sq->where('slug', 'like', 'responsable_bloque_%')
+                      ->orWhereIn('slug', ['responsable_sap', 'responsable_facturacion', 'receptor_automatico_bloque_6']);
+                })->orWhereHas('rol.permisos', function ($sq) {
+                    $sq->where('slug', 'like', 'responsable_bloque_%')
+                      ->orWhereIn('slug', ['responsable_sap', 'responsable_facturacion', 'receptor_automatico_bloque_6']);
                 });
             });
     }

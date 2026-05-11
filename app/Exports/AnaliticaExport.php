@@ -29,7 +29,7 @@ class AnaliticaExport
             ->whereIn('usuario_id', $usuariosIds)
             // Filtro de fechas aplicado a cuando se registró el tiempo
             ->whereBetween('updated_at', [$fechaInicioParsed, $fechaFinParsed])
-            ->with(['cuentaCobro.contrato']);
+            ->with(['cuentaCobro.contrato.contratista']);
 
         // Para evitar problemas de memoria, usamos chunk
         $logsQuery->chunk(1000, function($logs) use (&$gestiones) {
@@ -54,7 +54,7 @@ class AnaliticaExport
         });
 
         // 2. Obtener tiempos volátiles actuales (cuentas activas) (IGUAL AL DASHBOARD)
-        $abiertosQuery = CuentaCobro::with(['contrato'])
+        $abiertosQuery = CuentaCobro::with(['contrato.contratista'])
             ->where('finalizada', false)
             ->whereNotNull('fecha_ultimo_cambio_estado')
             ->whereIn('responsable_actual_id', $usuariosIds);
@@ -110,8 +110,8 @@ class AnaliticaExport
             $cuenta = $gestion['cuenta'];
             $row['N° Contrato'] = $cuenta->contrato->numero_contrato ?? 'N/A';
             $row['N° Cuenta'] = $cuenta->numero_cuenta ?? 'N/A';
-            $row['Contratista'] = $cuenta->contrato->nombre_contratista ?? 'N/A';
-            $row['Identificación'] = $cuenta->contrato->identificacion_contratista ?? 'N/A';
+            $row['Contratista'] = $cuenta->contratista->nombre_completo ?? 'N/A';
+            $row['Identificación'] = $cuenta->contratista->nit ?? 'N/A';
 
             $estadoObj = $estadosMap->get($gestion['estado_id']);
             $bloqueNombre = $estadoObj && $estadoObj->bloque ? $estadoObj->bloque->nombre : 'Sin bloque';

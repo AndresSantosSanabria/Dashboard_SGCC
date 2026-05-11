@@ -166,8 +166,11 @@ document.addEventListener('DOMContentLoaded', function () {
                     bar: { 
                         horizontal: true, 
                         borderRadius: 6, 
-                        barHeight: isGrouped ? '80%' : '50%',
-                        dataLabels: { position: 'top' }
+                        barHeight: isGrouped ? '80%' : '55%',
+                        distributed: !isGrouped, // Colores por etapa si es vista general
+                        dataLabels: { 
+                            position: 'top',
+                        } 
                     } 
                 },
                 colors: [P.accent, P.teal, P.indigo, P.amber, P.orange, P.red, P.green],
@@ -183,18 +186,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: labelColor } } },
                 tooltip: {
                     theme: 'dark',
+                    shared: false,
+                    intersect: true,
                     y: {
                         formatter: val => formatMinutosLabel(val, true)
                     }
                 },
                 dataLabels: {
-                    enabled: !isGrouped,
-                    formatter: val => formatMinutosLabel(val),
-                    style: { fontSize: '10px', fontWeight: 700, colors: ['#fff'] },
-                    offsetX: -6
+                    enabled: true,
+                    formatter: function(val, opt) {
+                        return formatMinutosLabel(val);
+                    },
+                    style: { fontSize: '10px', fontWeight: 700, colors: [titleColor] },
+                    offsetX: 45, // Ajuste para que no se corte al final de la barra
                 },
                 grid: { borderColor: gridColor, strokeDashArray: 4 },
-                legend: { show: !isMobile, position: 'top', horizontalAlign: 'left', fontSize: '12px' }
+                legend: { show: isGrouped, position: 'top', horizontalAlign: 'left', fontSize: '12px' }
             });
             charts.delay.render();
             
@@ -385,8 +392,44 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // ==============================
-    // AJAX REFRESH
+    // REACTIVITY & LOADING ENGINE
     // ==============================
+    function getChartSkeleton() {
+        return `<div class="skeleton-chart animate-pulse"></div>`;
+    }
+
+    function setGlobalLoading(isLoading) {
+        const containers = [
+            '#donutChart', '#gapChart', '#delayChart', '#timelineChart', 
+            '#timeTableContainer', '#tableBody', '#bottleneckContainer'
+        ];
+
+        if (isLoading) {
+            if (captureArea) captureArea.classList.add('is-updating');
+            
+            // Inyectar skeletons en contenedores críticos para evitar colapso de altura
+            document.querySelectorAll('.card-premium .card-body').forEach(body => {
+                const chart = body.querySelector('[id$="Chart"]');
+                if (chart) {
+                    chart.style.opacity = '0.3';
+                    // No vaciamos para mantener la altura, solo bajamos opacidad
+                }
+            });
+
+            // Skeletons específicos para tablas y listas
+            const tableBody = document.getElementById('tableBody');
+            if (tableBody) tableBody.style.opacity = '0.5';
+            
+        } else {
+            if (captureArea) captureArea.classList.remove('is-updating');
+            document.querySelectorAll('.card-premium .card-body [id$="Chart"]').forEach(chart => {
+                chart.style.opacity = '1';
+            });
+            const tableBody = document.getElementById('tableBody');
+            if (tableBody) tableBody.style.opacity = '1';
+        }
+    }
+
     async function refreshDashboard() {
         const formData = new FormData(filterForm);
         const params   = new URLSearchParams(formData);
@@ -396,31 +439,57 @@ document.addEventListener('DOMContentLoaded', function () {
         if (filterEtapa && filterEtapa.value) params.append('f_etapa', filterEtapa.value);
         if (filterUsuario && filterUsuario.value) params.append('f_usuario', filterUsuario.value);
 
-        if (captureArea) captureArea.classList.add('loading');
+        // Estado inicial de carga
+        setGlobalLoading(true);
 
         try {
             const response = await window.apiFetch(filterForm.action + '?' + params.toString());
-            const data     = await response.json();
+            if (!response.ok) throw new Error('Error en la respuesta del servidor');
+            
+            const data = await response.json();
 
+            // 1. Actualizar KPIs Numéricos (Global)
             updateKPIs(data);
+
+            // 2. Re-renderizar Gráficos con nuevas transiciones
             initCharts(data.chartData);
+
+            // 3. Actualizar Listados y Tablas
             updateTable(data.tableHtml, data.mobileTableHtml);
 
-            // Update user metrics cards if available
-            if (data.chartData.demora_usuario_etapa) {
-                const du = data.chartData.demora_usuario_etapa;
-                document.getElementById('kpi-general').textContent = du.kpis.general;
-                document.getElementById('kpi-lenta').textContent = du.kpis.lenta;
-                document.getElementById('kpi-rapida').textContent = du.kpis.rapida;
+            // 4. Actualizar Componentes Premium (Tiempos desglosados)
+            const timeTable = document.getElementById('timeTableContainer');
+            if (timeTable && data.timeTableHtml) {
+                timeTable.innerHTML = data.timeTableHtml;
             }
 
+            const bottleneck = document.getElementById('bottleneckContainer');
+            if (bottleneck && data.bottleneckHtml) {
+                bottleneck.innerHTML = data.bottleneckHtml;
+            }
+
+            // 5. KPIs de Demora
+            if (data.chartData.demora_usuario_etapa) {
+                const du = data.chartData.demora_usuario_etapa;
+                const kpiGen = document.getElementById('kpi-general');
+                const kpiLen = document.getElementById('kpi-lenta');
+                const kpiRap = document.getElementById('kpi-rapida');
+                
+                if (kpiGen) kpiGen.textContent = du.kpis.general;
+                if (kpiLen) kpiLen.textContent = du.kpis.lenta;
+                if (kpiRap) kpiRap.textContent = du.kpis.rapida;
+            }
+
+            // Actualizar URL sin recargar para mantener historial
             const newUrl = window.location.pathname + '?' + params.toString();
             window.history.pushState({ path: newUrl }, '', newUrl);
+
         } catch (error) {
-            console.error('Error refreshing dashboard:', error);
-            window.showSnackbar('Error al actualizar los datos. Intente de nuevo.', 'error');
+            console.error('Dashboard Update Error:', error);
+            window.showSnackbar('No se pudieron sincronizar los datos. Reintente.', 'error');
         } finally {
-            if (captureArea) captureArea.classList.remove('loading');
+            // Finalizar carga con un pequeño delay para suavizar la transición
+            setTimeout(() => setGlobalLoading(false), 300);
         }
     }
 
@@ -456,6 +525,11 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('filterForm').addEventListener('submit', function (e) {
         e.preventDefault();
         refreshDashboard();
+    });
+
+    // Auto-refresh on select change
+    document.querySelectorAll('#filterForm select').forEach(sel => {
+        sel.addEventListener('change', () => refreshDashboard());
     });
 
     $('#btnReset').on('click', function () {

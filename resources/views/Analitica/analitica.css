@@ -39,6 +39,12 @@
     --radius-xs: 8px;
     
     --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* GOV.CO Colors Fallback */
+    --govco-blue: #004884;
+    --govco-blue-dark: #003366;
+    --govco-blue-light: #336699;
+    --govco-light: #f8fafc;
 }
 
 /* ===== BASE ===== */
@@ -542,33 +548,45 @@
 .btn-filter {
     background: linear-gradient(135deg, var(--govco-blue) 0%, var(--govco-blue-dark) 100%);
     border: none;
-    color: white;
-    font-size: 0.82rem;
+    color: white !important;
+    font-size: 0.9rem;
     font-weight: 600;
-    border-radius: var(--radius-xs);
+    border-radius: var(--radius-sm);
     transition: var(--transition);
-    padding: 8px 20px;
+    padding: 0 15px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0, 72, 132, 0.2);
 }
 
 .btn-filter:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 72, 132, 0.3);
-    color: white;
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, var(--accent) 0%, var(--primary) 100%);
+    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    color: white !important;
 }
 
 .btn-reset {
-    background: transparent;
+    background: #fff;
     border: 1px solid var(--border-subtle);
     color: var(--text-secondary);
-    font-size: 0.82rem;
-    font-weight: 500;
-    border-radius: var(--radius-xs);
+    font-size: 0.9rem;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
     transition: var(--transition);
 }
 
 .btn-reset:hover {
-    background: var(--govco-light);
-    color: var(--text-primary);
+    background: #f1f5f9;
+    color: var(--danger);
+    border-color: var(--danger);
+    transform: rotate(-10deg);
 }
 
 /* ===== RANGE SLIDER ===== */
@@ -1678,6 +1696,85 @@
         border: none !important;
         border-radius: 20px;
         margin: 0 0.5rem 1.5rem;
+    }
+
+    /* ===== LOADING STATES & SKELETONS ===== */
+    .skeleton-shimmer {
+        background: linear-gradient(90deg, #f8fafc 25%, #f1f5f9 50%, #f8fafc 75%);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite linear;
+        border-radius: 8px;
+        min-height: 20px;
+    }
+
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    .is-loading-component {
+        position: relative;
+        pointer-events: none;
+    }
+
+    .is-loading-component::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(2px);
+        z-index: 10;
+        border-radius: inherit;
+        animation: fadeIn 0.3s ease;
+    }
+
+    .card-premium.is-loading .card-body {
+        min-height: 200px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .skeleton-chart {
+        width: 100%;
+        height: 300px;
+        border-radius: 12px;
+        background: #f8fafc;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .skeleton-chart::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+        animation: shimmer 1.5s infinite;
+    }
+
+    /* Evitar saltos de scroll */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    .dashboard-wrapper {
+        min-height: 120vh; /* Asegura espacio para que no suba el footer */
+    }
+
+    /* Transiciones suaves para el contenido */
+    #captureArea > div {
+        transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    #captureArea.is-updating > div {
+        opacity: 0.7;
+        filter: grayscale(0.2);
     }
 
     .card-premium .card-header h6 {

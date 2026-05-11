@@ -1,4 +1,4 @@
-@extends('layouts.app')
+﻿﻿﻿﻿﻿@extends('layouts.app')
 
 @section('title', 'Dashboard Ejecutivo SECOP — SGCC')
 
@@ -237,7 +237,6 @@
                             <th class="col-narrow-saas text-center">LIQ. S.</th>
                             <th class="col-narrow-saas text-center" style="border-right: 2px solid #E2E8F0">LIQ. I.</th>
 
-                            <th class="text-center" style="width: 150px; min-width: 150px; background: #fdfdfd; font-weight: 800; border-right: 2px solid #E2E8F0">TRÁMITE SIGUIENTE</th>
 
                             <th class="col-md-saas text-end">SALDO RT.</th>
                             <th class="col-md-saas">OBS. RAZÓN</th>
@@ -724,56 +723,12 @@
                 document.getElementById('stat-val-total').innerText = parseInt(data.stats.total).toLocaleString();
                 document.getElementById('stat-sec-cerrado').innerText = parseInt(data.stats.sec_cerrado).toLocaleString();
                 document.getElementById('stat-sec-ejecucion').innerText = parseInt(data.stats.sec_ejecucion).toLocaleString();
-                document.getElementById('stat-sec-vacio').innerText = parseInt(data.stats.sec_vacio).toLocaleString();
+                document.getElementById('stat-sec-vacio').innerText = data.stats.sec_vacio.toLocaleString();
                 document.getElementById('stat-total-con-seg').innerText = parseInt(data.stats.total).toLocaleString();
             } catch (e) { console.error(e); }
         }
 
-        async function crearSiguienteCuenta(contratoId, numeroCuenta, contratoNo) {
-            const { value: confirm } = await Swal.fire({
-                title: `¿Iniciar Cuenta #${numeroCuenta}?`,
-                text: `Se creará un nuevo trámite para el contrato ${contratoNo} heredando sus datos básicos.`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#0F172A',
-                confirmButtonText: 'Sí, iniciar trámite',
-                cancelButtonText: 'Cancelar'
-            });
 
-            if (confirm) {
-                try {
-                    const res = await window.apiFetch("{{ route('seguimiento.crear-siguiente') }}", {
-                        method: 'POST',
-                        body: JSON.stringify({ contrato_id: contratoId })
-                    });
-                    
-                    if (res.ok) {
-                        const data = await res.json();
-                        window.showSnackbar(data.message, 'success');
-                        applyAdvancedFilters();
-                        
-                        // Opcional: Redirigir al workflow para ver la nueva cuenta
-                        Swal.fire({
-                            title: '¡Trámite Creado!',
-                            text: '¿Deseas ir al tablero de control para gestionar esta cuenta?',
-                            icon: 'success',
-                            showCancelButton: true,
-                            confirmButtonText: 'Ir al Tablero',
-                            cancelButtonText: 'Permanecer aquí'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                window.location.href = "{{ route('workflow.index') }}";
-                            }
-                        });
-                    } else {
-                        const data = await res.json();
-                        window.showSnackbar(data.message || 'Error al crear la cuenta', 'error');
-                    }
-                } catch (e) {
-                    window.showSnackbar('Error de conexión', 'error');
-                }
-            }
-        }
 
         function openEditModal(c) {
             document.getElementById('mTitle').innerText = 'Ficha de Contrato #' + c.numero_contrato;

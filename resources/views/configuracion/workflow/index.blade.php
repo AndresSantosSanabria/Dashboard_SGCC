@@ -441,7 +441,12 @@
                                 if (res.success) {
                                     window.showSnackbar('✅ ' + res.message, 'success');
                                     setTimeout(() => location.reload(), 800);
+                                } else {
+                                    window.showSnackbar('❌ ' + res.message, 'error');
                                 }
+                            })
+                            .catch(err => {
+                                window.showSnackbar('❌ Error de comunicación con el servidor', 'error');
                             });
                     }
                 });

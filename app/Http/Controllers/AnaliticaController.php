@@ -41,80 +41,11 @@ class AnaliticaController extends Controller
         Contrato::logManualAudit(null, 'READ', 'El usuario consultó el panel de analítica y estadísticas', 'analitica');
 
         // 1. QUERY DE FILTROS — sin selects todavía, solo WHEREs.
-        // Así podemos clonarla para KPIs (solo agregados) y para la tabla (con columnas extra)
-        // sin que MySQL mezcle columnas individuales con funciones de agrupación (error 1140).
-        $filterQuery = CuentaCobro::query();
+        $filterQuery = $this->applyGeneralFilters(CuentaCobro::query(), $request);
 
-        if ($request->filled('contrato')) {
-            $filterQuery->whereHas('contrato', function ($q) use ($request) {
-                $q->where('numero_contrato', 'like', '%' . $request->contrato . '%');
-            });
-        }
-
-        if ($request->filled('numero_cuenta')) {
-            $filterQuery->where('cuentas_cobro.numero_cuenta', 'like', '%' . $request->numero_cuenta . '%');
-        }
-
-        if ($request->filled('supervisor')) {
-            $filterQuery->whereHas('contrato', function ($q) use ($request) {
-                $q->where('supervisor_id', $request->supervisor);
-            });
-        }
-
-        if ($request->filled('responsable') || $request->filled('f_usuario')) {
-            $responsableId = $request->filled('f_usuario') ? $request->f_usuario : $request->responsable;
-            $filterQuery->where('cuentas_cobro.responsable_actual_id', $responsableId);
-        }
-
-        if ($request->filled('estado') || $request->filled('f_etapa')) {
-            $estadoNombre = $request->filled('f_etapa') ? $request->f_etapa : $request->estado;
-            $filterQuery->whereHas('estadoActual', function ($q) use ($estadoNombre) {
-                $q->where('nombre', $estadoNombre);
-            });
-        }
-
-        // 1.1 Procesamiento de fechas con Carbon para asegurar el rango completo (00:00:00 a 23:59:59)
+        // 1.1 Procesamiento de fechas (reutilizado de los filtros centrales para lógica específica de KPIs)
         $desde = $request->filled('fecha_desde') ? Carbon::parse($request->fecha_desde)->startOfDay() : null;
         $hasta = $request->filled('fecha_hasta') ? Carbon::parse($request->fecha_hasta)->endOfDay() : null;
-
-        // CORRECCIÓN SEMÁNTICA: El filtro de fecha NO debe buscar cuándo se CREÓ la cuenta
-        // (fecha_radicacion / created_at pueden ser de semanas atrás), sino cuándo tuvo ACTIVIDAD.
-        // Una cuenta activa hoy aparece en historial_workflow con fecha_transicion de hoy.
-        // Estrategia: sub-query de IDs que tuvieron al menos una transición en el rango → whereIn.
-        if ($desde || $hasta) {
-            $actividadQuery = DB::table('historial_workflow')
-                ->select('cuenta_cobro_id')
-                ->distinct();
-
-            if ($desde) {
-                $actividadQuery->whereRaw('fecha_transicion::timestamp >= ?', [$desde]);
-            }
-            if ($hasta) {
-                $actividadQuery->whereRaw('fecha_transicion::timestamp <= ?', [$hasta]);
-            }
-
-            // También incluir cuentas cuyo campo fecha_ultimo_cambio_estado cae en el rango
-            // (cubre el estado actual que aún no tiene transición de cierre).
-            $estadoActivoQuery = DB::table('cuentas_cobro')
-                ->select('id')
-                ->whereNotNull('fecha_ultimo_cambio_estado')
-                ->where('finalizada', false);
-
-            if ($desde) {
-                $estadoActivoQuery->whereRaw('fecha_ultimo_cambio_estado::timestamp >= ?', [$desde]);
-            }
-            if ($hasta) {
-                $estadoActivoQuery->whereRaw('fecha_ultimo_cambio_estado::timestamp <= ?', [$hasta]);
-            }
-
-            // Unión de ambas fuentes de actividad
-            $idsConActividad = $actividadQuery->pluck('cuenta_cobro_id')
-                ->merge($estadoActivoQuery->pluck('id'))
-                ->unique()
-                ->values();
-
-            $filterQuery->whereIn('cuentas_cobro.id', $idsConActividad);
-        }
 
         if ($request->filled('porcentaje_min') || $request->filled('porcentaje_max')) {
             $filterQuery->where(function ($q) use ($request) {
@@ -197,12 +128,18 @@ class AnaliticaController extends Controller
                 'chartData' => $chartData,
                 'tableHtml' => view('Analitica.componentes.tabla_contratos', compact('cuentas'))->render(),
                 'mobileTableHtml' => view('Analitica.componentes.lista_contratos_mobile', compact('cuentas'))->render(),
+                'timeTableHtml' => view('Analitica.componentes.tabla_tiempos', ['datos' => $chartData['demora_usuario_etapa']])->render(),
+                'bottleneckHtml' => view('Analitica.componentes.alerta_bottleneck', ['bottleneck' => $chartData['demora_usuario_etapa']['bottleneck']])->render(),
             ]);
         }
 
         // Carga inicial de catálogos para los selects de filtro
         $supervisores = Supervisor::where('es_activo', true)->limit(50)->get();
-        $responsables = Usuario::where('es_activo', true)->limit(50)->get();
+        
+        // Filtro de Usuarios: Solo aquellos que son responsables de algún bloque del workflow
+        $queryResponsables = Usuario::responsablesWorkflow();
+
+        $responsables = (clone $queryResponsables)->get();
         
         // Datos para el selector premium multinivel
         $bloques = BloqueWorkflow::orderBy('orden')->get();
@@ -227,9 +164,7 @@ class AnaliticaController extends Controller
             'bloques' => $bloques,
             'todosLosEstados' => $todosLosEstados,
             'chartData' => $chartData,
-            'usuariosMetricas' => Usuario::whereHas('rol', function($q) {
-                $q->whereNotIn('nombre', ['Administrador', 'Visualizador']);
-            })->get(),
+            'usuariosMetricas' => $queryResponsables->get(),
             'etapasDisponibles' => BloqueWorkflow::orderBy('orden')->pluck('nombre')->toArray()
         ]);
     }
@@ -399,130 +334,132 @@ class AnaliticaController extends Controller
      */
     private function getDemoraUsuarioEtapaData(Request $request, $desde = null, $hasta = null)
     {
-        $mapBloques = [
-            1 => 'Estado tras primera revisión',
-            2 => 'Enviada a ingresos',
-            3 => 'En facturación',
-            4 => 'Firma secretario',
-            5 => 'Radicada en hacienda',
-            6 => 'Finalizada',
-        ];
-
-        // 1. Mapeo de Estados a Bloques
-        $estadosMap = EstadoWorkflow::all()->pluck('bloque_id', 'id')->toArray();
-        $noAdmins = Usuario::where('rol_id', '!=', 1)->pluck('id')->toArray();
-
+        $mapBloques = BloqueWorkflow::orderBy('orden')->pluck('nombre', 'id')->toArray();
+        $estadosConfig = EstadoWorkflow::all()->keyBy('id');
+        
         // 2. Obtener todos los logs de tiempo cerrados
-        $logsQuery = \App\Models\TaskTimeLog::where('duracion_segundos', '>', 0)
-            ->whereIn('usuario_id', $noAdmins);
+        $logsQuery = \App\Models\TaskTimeLog::where('duracion_segundos', '>', 0);
+
+        // Aplicar filtros generales a los logs
+        $logsQuery->whereHas('cuentaCobro', function($q) use ($request, $desde, $hasta) {
+            $this->applyGeneralFilters($q, $request, $desde, $hasta, true);
+        });
 
         if ($request->filled('f_usuario')) {
             $logsQuery->where('usuario_id', $request->f_usuario);
         }
 
-        // Aplicar filtrado por rango de fecha (basado en el cierre del log)
-        if ($desde) {
-            $logsQuery->whereRaw('end_time::timestamp >= ?', [$desde]);
-        }
-        if ($hasta) {
-            $logsQuery->whereRaw('end_time::timestamp <= ?', [$hasta]);
-        }
-
         $logs = $logsQuery->with(['usuario'])->get();
-
         $consolidado = collect();
 
         foreach ($logs as $log) {
-            $bloqueId = $estadosMap[$log->estado_id] ?? null;
+            $config = $estadosConfig[$log->estado_id] ?? null;
+            if (!$config || !$config->afecta_indicadores || !$config->contabiliza_tiempo) continue;
+            
+            $bloqueId = $config->bloque_id;
             if (!$bloqueId || !isset($mapBloques[$bloqueId])) continue;
 
             $consolidado->push([
                 'usuario_id' => $log->usuario_id,
                 'usuario_nombre' => $log->usuario->nombre_completo ?? 'Desconocido',
-                'etapa' => $mapBloques[$bloqueId],
+                'bloque' => $mapBloques[$bloqueId],
+                'bloque_id' => $bloqueId,
+                'estado' => $config->nombre,
                 'minutos' => round($log->duracion_segundos / 60, 2)
             ]);
         }
 
         // 3. Obtener tiempos actuales (cuentas activas)
         $abiertosQuery = \App\Models\CuentaCobro::where('finalizada', false)
-            ->whereNotNull('fecha_ultimo_cambio_estado')
-            ->whereHas('estadoActual', fn($q) => $q->where('afecta_indicadores', true))
-            ->whereIn('responsable_actual_id', $noAdmins);
+            ->whereNotNull('fecha_ultimo_cambio_estado');
+
+        $this->applyGeneralFilters($abiertosQuery, $request);
 
         if ($request->filled('f_usuario')) {
             $abiertosQuery->where('responsable_actual_id', $request->f_usuario);
-        }
-
-        // CORRECCIÓN: Para la gráfica de tiempos, el criterio de fecha relevante es
-        // `fecha_ultimo_cambio_estado` — el momento en que la cuenta ENTRÓ a su estado actual.
-        // Usar fecha_radicacion/created_at excluía cuentas como CINDY KATHERINE que fue radicada
-        // el 1 de Mayo pero lleva 35m activa HOY en "EN ESPERA FIRMA OG".
-        if ($desde) {
-            $abiertosQuery->whereRaw('fecha_ultimo_cambio_estado::timestamp >= ?', [$desde]);
-        }
-        if ($hasta) {
-            $abiertosQuery->whereRaw('fecha_ultimo_cambio_estado::timestamp <= ?', [$hasta]);
         }
 
         $abiertos = $abiertosQuery->with(['responsableActual', 'estadoActual'])->get();
         $businessTime = app(\App\Services\BusinessTimeService::class);
 
         foreach ($abiertos as $cuenta) {
-            $bloqueId = $cuenta->estadoActual->bloque_id ?? ($estadosMap[$cuenta->estado_actual_id] ?? null);
+            $config = $cuenta->estadoActual;
+            if (!$config || !$config->afecta_indicadores || !$config->contabiliza_tiempo) continue;
+
+            $bloqueId = $config->bloque_id;
             if (!$bloqueId || !isset($mapBloques[$bloqueId])) continue;
 
             $volatil = $businessTime->getWorkingSecondsBetween($cuenta->fecha_ultimo_cambio_estado, now());
-
-            if ($volatil <= 0) {
-                $volatil = abs(now()->diffInSeconds($cuenta->fecha_ultimo_cambio_estado));
-            }
+            if ($volatil <= 0) $volatil = abs(now()->diffInSeconds($cuenta->fecha_ultimo_cambio_estado));
 
             $consolidado->push([
                 'usuario_id' => $cuenta->responsable_actual_id,
                 'usuario_nombre' => $cuenta->responsableActual->nombre_completo ?? 'Desconocido',
-                'etapa' => $mapBloques[$bloqueId],
+                'bloque' => $mapBloques[$bloqueId],
+                'bloque_id' => $bloqueId,
+                'estado' => $config->nombre,
                 'minutos' => round($volatil / 60, 2)
             ]);
         }
 
         if ($request->filled('f_etapa')) {
-            $consolidado = $consolidado->where('etapa', $request->f_etapa);
+            $consolidado = $consolidado->where('bloque', $request->f_etapa);
         }
 
-        // 4. Agrupación Final
-        $metricasFinales = $consolidado->groupBy(fn($item) => $item['usuario_id'] . '-' . $item['etapa'])->map(function($group) {
-            $first = $group->first();
+        // 4. Agrupación Final por Bloque y sus Estados
+        $tiempoEquipo = $consolidado->groupBy('bloque')->map(function ($group, $bloqueNombre) {
+            $estadosDetalle = $group->groupBy('estado')->map(function ($subgroup, $estadoNombre) {
+                return [
+                    'nombre' => $estadoNombre,
+                    'minutos' => (float) $subgroup->sum('minutos'),
+                    'label' => $this->formatMinutos($subgroup->sum('minutos'))
+                ];
+            })->values()->sortByDesc('minutos')->values();
+
+            $totalMinutos = $group->sum('minutos');
+
             return [
-                'usuario_id' => $first['usuario_id'],
-                'usuario_nombre' => $first['usuario_nombre'],
-                'etapa' => $first['etapa'],
-                'minutos_totales' => $group->sum('minutos')
+                'etapa' => $bloqueNombre, // Mantenemos el nombre de campo para compatibilidad
+                'bloque_id' => $group->first()['bloque_id'],
+                'minutos_totales' => (float) $totalMinutos,
+                'estados' => $estadosDetalle
             ];
         });
 
-        $tiempoEquipo = $metricasFinales->groupBy('etapa')->map(function ($group, $etapa) {
-            return [
-                'etapa' => $etapa,
-                'minutos_totales' => $group->sum('minutos_totales')
-            ];
+        // Ordenamos los bloques según el flujo real del workflow
+        $ordenBloques = array_keys($mapBloques);
+        $tiempoEquipo = $tiempoEquipo->sortBy(function($item) use ($ordenBloques) {
+            return array_search($item['bloque_id'], $ordenBloques);
         })->values();
 
-        $porUsuario = $metricasFinales->groupBy('usuario_id')->map(function ($group, $userId) {
+        // Métricas por usuario (mantenemos estructura básica para la gráfica superior)
+        $porUsuario = $consolidado->groupBy('usuario_id')->map(function ($group, $userId) {
             $first = $group->first();
+            $totalUserMin = $group->sum('minutos');
+            
+            // Si el usuario no tiene tiempo real acumulado en esta selección, lo ignoramos
+            if ($totalUserMin <= 0) return null;
+
             return [
                 'usuario' => $first['usuario_nombre'],
-                'datos' => $group->map(fn($m) => ['etapa' => $m['etapa'], 'minutos' => $m['minutos_totales']])->values()
+                'datos' => $group->groupBy('bloque')->map(fn($g, $b) => ['etapa' => $b, 'minutos' => $g->sum('minutos')])->values()
             ];
-        })->values();
+        })->filter()->values();
 
-        $tiempoGeneralMinutos = $metricasFinales->sum('minutos_totales') ?? 0;
+        // El Tiempo General debe ser la suma de todos los minutos procesados en el consolidado
+        $tiempoGeneralMinutos = $consolidado->sum('minutos');
+        
         $etapaLenta = $tiempoEquipo->sortByDesc('minutos_totales')->first();
         $etapaRapida = $tiempoEquipo->sortBy('minutos_totales')->first();
 
         return [
-            'tiempoEquipo' => $tiempoEquipo->values(),
+            'tiempoEquipo' => $tiempoEquipo,
             'porUsuario' => $porUsuario->values(),
+            'bottleneck' => $etapaLenta ? [
+                'etapa' => $etapaLenta['etapa'],
+                'minutos' => $etapaLenta['minutos_totales'],
+                'label' => $this->formatMinutos($etapaLenta['minutos_totales'])
+            ] : null,
             'kpis' => [
                 'general' => $this->formatMinutos($tiempoGeneralMinutos),
                 'lenta' => $etapaLenta ? $etapaLenta['etapa'] . ' (' . $this->formatMinutos($etapaLenta['minutos_totales']) . ')' : 'N/A',
@@ -531,11 +468,77 @@ class AnaliticaController extends Controller
         ];
     }
 
-    private function formatMinutos($totalMinutos)
+    public function formatMinutos($totalMinutos)
     {
         $horas = floor($totalMinutos / 60);
         $minutos = round($totalMinutos % 60);
         return "{$horas}h {$minutos}m";
     }
 
+    /**
+     * CENTRALIZADOR DE FILTROS: Aplica la lógica de búsqueda a cualquier query de Cuentas de Cobro o relacionado.
+     */
+    protected function applyGeneralFilters($query, Request $request, $desde = null, $hasta = null, $skipStateFilter = false)
+    {
+        if ($request->filled('contrato')) {
+            $query->whereHas('contrato', function ($q) use ($request) {
+                $q->where('numero_contrato', 'like', '%' . $request->contrato . '%');
+            });
+        }
+
+        if ($request->filled('numero_cuenta')) {
+            // Buscamos coincidencia exacta o parcial en el número de cuenta
+            $query->where('numero_cuenta', 'like', '%' . $request->numero_cuenta . '%');
+        }
+
+        if ($request->filled('supervisor')) {
+            $query->whereHas('contrato', function ($q) use ($request) {
+                $q->where('supervisor_id', $request->supervisor);
+            });
+        }
+
+        // Responsable (Sincronizado entre filtro top y filtro específico de módulo)
+        $responsableId = $request->filled('f_usuario') ? $request->f_usuario : $request->responsable;
+        if ($responsableId) {
+            $query->where('cuentas_cobro.responsable_actual_id', $responsableId);
+        }
+
+        // Estado / Etapa (Sincronizado)
+        // Omitimos este filtro si estamos buscando LOGS históricos, ya que un log de "Revisión"
+        // debe aparecer aunque la cuenta ya esté en "Facturación".
+        if (!$skipStateFilter) {
+            $estadoNombre = $request->filled('f_etapa') ? $request->f_etapa : $request->estado;
+            if ($estadoNombre) {
+                $query->whereHas('estadoActual', function ($q) use ($estadoNombre) {
+                    $q->where('nombre', $estadoNombre);
+                });
+            }
+        }
+
+        // Filtro de Porcentaje (Slider)
+        if ($request->filled('porcentaje_min') || $request->filled('porcentaje_max')) {
+            $query->where(function ($q) use ($request) {
+                $sql = 'CASE WHEN numero_pagos_totales > 0 THEN (numero_facturas_radicadas * 100.0 / numero_pagos_totales) ELSE 0 END';
+                $min = $request->input('porcentaje_min', 0);
+                $max = $request->input('porcentaje_max', 100);
+                $q->whereRaw("$sql >= ?", [$min])->whereRaw("$sql <= ?", [$max]);
+            });
+        }
+
+        if ($desde || $hasta) {
+            $actividadQuery = DB::table('historial_workflow')->select('cuenta_cobro_id')->distinct();
+            if ($desde) $actividadQuery->whereRaw('fecha_transicion::timestamp >= ?', [$desde]);
+            if ($hasta) $actividadQuery->whereRaw('fecha_transicion::timestamp <= ?', [$hasta]);
+
+            // Para la actividad "abierta", no filtramos por finalizada aquí si ya lo hace la query base
+            $estadoActivoQuery = DB::table('cuentas_cobro')->select('id')->whereNotNull('fecha_ultimo_cambio_estado');
+            if ($desde) $estadoActivoQuery->whereRaw('fecha_ultimo_cambio_estado::timestamp >= ?', [$desde]);
+            if ($hasta) $estadoActivoQuery->whereRaw('fecha_ultimo_cambio_estado::timestamp <= ?', [$hasta]);
+
+            $idsFiltrados = $actividadQuery->pluck('cuenta_cobro_id')->merge($estadoActivoQuery->pluck('id'))->unique();
+            $query->whereIn('cuentas_cobro.id', $idsFiltrados);
+        }
+
+        return $query;
+    }
 }

@@ -111,13 +111,22 @@
                                         </label>
                                     </div>
 
-                                    <div class="form-check custom-check">
+                                    <div class="form-check mb-4 custom-check">
                                         <input class="form-check-input" type="checkbox" name="acceder_notificaciones"
                                             id="acceder_notificaciones" value="1"
                                             {{ old('acceder_notificaciones', '1') == '1' ? 'checked' : '' }}>
                                         <label class="form-check-label fw-bold d-block" for="acceder_notificaciones">
                                             Panel de Notificaciones Activo
                                             <span class="d-block text-muted fw-normal extra-small">Habilita la campana de alertas y el centro de mensajes.</span>
+                                        </label>
+                                    </div>
+
+                                    <div class="form-check custom-check">
+                                        <input class="form-check-input" type="checkbox" name="mover_todo_workflow"
+                                            id="mover_todo_workflow" value="1" {{ old('mover_todo_workflow') ? 'checked' : '' }}>
+                                        <label class="form-check-label fw-bold d-block" for="mover_todo_workflow">
+                                            Mano de Dios (Control Total)
+                                            <span class="d-block text-danger fw-bold extra-small">PERMISO CRÍTICO: Permite mover cualquier cuenta aunque no esté asignada al usuario.</span>
                                         </label>
                                     </div>
                                 </div>

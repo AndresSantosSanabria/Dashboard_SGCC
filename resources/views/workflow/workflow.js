@@ -140,11 +140,13 @@ document.addEventListener('show.bs.modal', function (event) {
                     statusButtons.appendChild(btn);
                 });
                 statusButtons.dataset.loaded = 'true';
+            } else {
+                statusButtons.innerHTML = `<span class="text-warning small"><i class="fas fa-exclamation-triangle me-1"></i> ${data.message || 'Error al cargar'}</span>`;
             }
         })
         .catch(err => {
             console.error('[Workflow] Error al cargar estados:', err);
-            statusButtons.innerHTML = '<span class="text-danger small"><i class="fas fa-exclamation-circle me-1"></i>Error al cargar estados</span>';
+            statusButtons.innerHTML = '<span class="text-danger small"><i class="fas fa-exclamation-circle me-1"></i>Error de conexión</span>';
         });
 });
 

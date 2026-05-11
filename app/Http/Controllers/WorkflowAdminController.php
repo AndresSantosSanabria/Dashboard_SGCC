@@ -214,12 +214,14 @@ class WorkflowAdminController extends Controller
         try {
             if ($estado->trashed()) {
                 $estado->restore();
+                $this->regenerarTransiciones();
                 Contrato::logManualAudit($estado, 'RESTORE', "Restaurado estado de workflow: {$estado->nombre}", 'estados_workflow');
-                return response()->json(['success' => true, 'message' => 'Estado restaurado']);
+                return response()->json(['success' => true, 'message' => 'Estado restaurado y transiciones sincronizadas']);
             } else {
                 $estado->delete();
+                $this->regenerarTransiciones();
                 Contrato::logManualAudit($estado, 'DELETE', "Eliminado lógico de estado de workflow: {$estado->nombre}", 'estados_workflow');
-                return response()->json(['success' => true, 'message' => 'Estado eliminado (borrado lógico)']);
+                return response()->json(['success' => true, 'message' => 'Estado eliminado (borrado lógico) y transiciones sincronizadas']);
             }
         } catch (\Exception $e) {
             Contrato::logException($e, 'estados_workflow', ['operacion' => 'destroy', 'id' => $id]);
@@ -238,9 +240,11 @@ class WorkflowAdminController extends Controller
         $estado->es_activo = !$estado->es_activo;
         $estado->save();
 
+        $this->regenerarTransiciones();
+
         return response()->json([
             'success' => true,
-            'message' => $estado->es_activo ? 'Estado activado' : 'Estado desactivado',
+            'message' => $estado->es_activo ? 'Estado activado y transiciones sincronizadas' : 'Estado desactivado y transiciones sincronizadas',
             'es_activo' => $estado->es_activo
         ]);
     }
