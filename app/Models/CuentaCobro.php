@@ -285,4 +285,27 @@ class CuentaCobro extends Model
     {
         $this->attributes['numero_cuenta'] = (empty($value) || $value <= 0) ? 1 : $value;
     }
+
+    /**
+     * MÉTODO ANTI-BUG: Obtiene el tiempo transcurrido en el estado actual.
+     * 
+     * SIEMPRE usa el helper protegido que filtra por sesión actual,
+     * previniendo la herencia de tiempos en flujos cíclicos.
+     * 
+     * Retorna: segundos de tiempo laboral acumulado
+     */
+    public function getElapsedSeconds(): int
+    {
+        return TaskTimeLog::getElapsedTimeForCurrentState($this);
+    }
+
+    /**
+     * Versión formateada del tiempo transcurrido (ej: "1h 30m").
+     */
+    public function getElapsedTimeFormatted(): string
+    {
+        $segundos = $this->getElapsedSeconds();
+        $businessTime = app(\App\Services\BusinessTimeService::class);
+        return $businessTime->formatInterval($segundos);
+    }
 }

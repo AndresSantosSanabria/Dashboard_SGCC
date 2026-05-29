@@ -657,19 +657,9 @@ class WorkflowController extends Controller
 
         $tiempoSegundos = 0;
         if ($estadoOrigen && ($estadoOrigen->contabiliza_tiempo ?? true)) {
-            $businessTime = app(BusinessTimeService::class);
-            
-            // TIEMPO REAL: Sumamos logs cerrados + el tiempo que lleva el cronómetro abierto ahora
-            $tiempoLogueado = \App\Models\TaskTimeLog::where('cuenta_cobro_id', $cuenta->id)
-                ->where('estado_id', $estadoOrigenId)
-                ->whereNotNull('end_time')
-                ->sum('duracion_segundos');
-
-            $volatil = $cuenta->fecha_ultimo_cambio_estado
-                ? $businessTime->getWorkingSecondsBetween($cuenta->fecha_ultimo_cambio_estado, now())
-                : 0;
-
-            $tiempoSegundos = (int) ($tiempoLogueado + $volatil);
+            // ANTI-BUG: Usa el helper que filtra automáticamente por sesión actual del estado
+            // Esto previene la herencia de tiempos en flujos cíclicos
+            $tiempoSegundos = \App\Models\TaskTimeLog::getElapsedTimeForCurrentState($cuenta);
         }
 
         // C. DETECCIÓN DE DEVOLUCIONES:

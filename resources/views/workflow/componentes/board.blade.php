@@ -94,21 +94,9 @@
                                         $fechaInicioReal = $transicionActual?->fecha_transicion 
                                             ?? ($estadoBloqueActual?->fecha_ingreso_bloque ?? $cuenta->created_at);
 
-                                        // 2. Tiempo ya registrado en logs cerrados (instancia actual o histórica de este estado)
-                                        $tiempoLogueado = \App\Models\TaskTimeLog::where('cuenta_cobro_id', $cuenta->id)
-                                            ->where('estado_id', $cuenta->estado_actual_id)
-                                            ->whereNotNull('end_time')
-                                            ->sum('duracion_segundos');
-
-                                        // 3. Tiempo "volátil" (solo si el timer está corriendo ahora)
-                                        //    Si fecha_ultimo_cambio_estado es NULL => el timer está parado o 
-                                        //    fue insertado manualmente sin este campo. Fallback a fechaInicioReal.
-                                        $fechaInicioVolatil = $cuenta->fecha_ultimo_cambio_estado ?? $fechaInicioReal;
-                                        $volatil = $fechaInicioVolatil
-                                            ? $businessTime->getWorkingSecondsBetween($fechaInicioVolatil, now())
-                                            : 0;
-
-                                        $elapsedSeconds = $tiempoLogueado + $volatil;
+                                        // 2. Usa el helper ANTI-BUG que filtra automáticamente por sesión actual
+                                        // Esto previene la herencia de tiempos cuando la cuenta regresa a un estado
+                                        $elapsedSeconds = \App\Models\TaskTimeLog::getElapsedTimeForCurrentState($cuenta);
                                     @endphp
                                     <div class="account-card" 
                                         style="border-left-color: {{ $cuenta->estadoActual?->color_hex ?? '#6366f1' }};"
