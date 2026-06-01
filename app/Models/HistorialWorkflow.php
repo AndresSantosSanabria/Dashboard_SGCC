@@ -20,7 +20,7 @@ class HistorialWorkflow extends Model
         'estado_destino_id',
         'usuario_accion_id',
         'fecha_transicion',
-        'tiempo_en_estado_anterior_minutos',
+        'tiempo_en_estado_anterior_segundos',
         'accion',
         'comentarios',
         'documentos_adjuntos',
@@ -29,7 +29,7 @@ class HistorialWorkflow extends Model
 
     protected $casts = [
         'fecha_transicion' => 'datetime',
-        'tiempo_en_estado_anterior_minutos' => 'integer',
+        'tiempo_en_estado_anterior_segundos' => 'integer',
         'documentos_adjuntos' => 'array',
         'metadata' => 'array',
     ];
@@ -86,12 +86,12 @@ class HistorialWorkflow extends Model
     // Accessor para tiempo formateado (en base a horas laborales configuradas)
     public function getTiempoFormateadoAttribute()
     {
-        if (!$this->tiempo_en_estado_anterior_minutos) {
+        if (!$this->tiempo_en_estado_anterior_segundos) {
             return null;
         }
 
-        // El campo almacena segundos de tiempo laboral (aunque se llame _minutos por compatibilidad).
-        $segundos = $this->tiempo_en_estado_anterior_minutos;
+        // El campo almacena segundos de tiempo laboral de manera estricta.
+        $segundos = $this->tiempo_en_estado_anterior_segundos;
 
         $businessTime = app(\App\Services\BusinessTimeService::class);
         return $businessTime->formatInterval($segundos);

@@ -20,11 +20,9 @@ use Illuminate\Support\Collection;
 class ImportService
 {
     /**
-     * PHP 8.4 Property Hook for allowed extensions.
+     * Supported spreadsheet file extensions.
      */
-    public array $allowedExtensions {
-        get => ['xlsx', 'xls', 'csv', 'xlsm'];
-    }
+    public array $allowedExtensions = ['xlsx', 'xls', 'csv', 'xlsm'];
 
     /**
      * Processes the Excel import.

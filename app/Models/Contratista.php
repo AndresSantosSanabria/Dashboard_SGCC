@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Traits\Auditable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Contratista extends Model
 {
@@ -39,20 +40,34 @@ class Contratista extends Model
     ];
 
     /**
-     * PHP 8.4 Property Hook for NIT with Blind Index.
-     * Automatically updates the blind index when NIT is set.
+     * Decrypts NIT on read and keeps the blind index updated on write.
      */
-    public string $nit {
-        get {
-            $value = $this->attributes['nit'] ?? '';
-            try {
-                return decrypt($value);
-            } catch (\Exception $e) {
-                return $value; // Return as is if not encrypted (e.g. during migration)
-            }
+    public function getNitAttribute($value)
+    {
+        if ($value === null || $value === '') {
+            return $value;
         }
-        set {
-            $this->attributes['nit'] = encrypt($value);
+
+        try {
+            return decrypt($value);
+        } catch (\Throwable $e) {
+            return $value; // Return as is if not encrypted (e.g. during migration)
+        }
+    }
+
+    public function setNitAttribute($value): void
+    {
+        if ($value === null || $value === '') {
+            $this->attributes['nit'] = $value;
+            if (Schema::hasColumn($this->table, 'nit_blind_index')) {
+                $this->attributes['nit_blind_index'] = null;
+            }
+
+            return;
+        }
+
+        $this->attributes['nit'] = encrypt($value);
+        if (Schema::hasColumn($this->table, 'nit_blind_index')) {
             $this->attributes['nit_blind_index'] = $this->generateBlindIndex($value);
         }
     }
@@ -73,7 +88,18 @@ class Contratista extends Model
      */
     public function scopeWhereNit($query, string $nit)
     {
-        return $query->where('nit_blind_index', $this->generateBlindIndex($nit));
+        if (Schema::hasColumn($this->table, 'nit_blind_index')) {
+            return $query->where('nit_blind_index', $this->generateBlindIndex($nit));
+        }
+
+        // Fallback seguro para entornos donde la migración de blind index aún no existe.
+        // Como el NIT puede estar cifrado, no podemos filtrar por SQL directo;
+        // cargamos los registros y comparamos en memoria para evitar el error fatal.
+        $matchingIds = $query->get()->filter(function (self $contratista) use ($nit) {
+            return (string) $contratista->nit === (string) $nit;
+        })->pluck('id');
+
+        return $query->whereIn('id', $matchingIds);
     }
 
     // Accessors

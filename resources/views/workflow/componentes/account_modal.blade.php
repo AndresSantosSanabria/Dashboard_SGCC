@@ -83,16 +83,30 @@
                     </span>
                 </div>
                 <div class="timeline-container" id="timeline{{ $cuenta->id }}">
-                    @foreach ($cuenta->historialWorkflow->sortBy([['fecha_transicion', 'desc'], ['id', 'desc']]) as $index => $hist)
+                    @php
+                        $timelineCompleta = collect($cuenta->timeline_completa)
+                            ->sortByDesc(function ($evento) {
+                                $fecha = data_get($evento, 'fecha');
+                                return $fecha ? $fecha->timestamp : 0;
+                            })
+                            ->values();
+                    @endphp
+
+                    @forelse ($timelineCompleta as $evento)
                         @php
-                            $tipoDestino = $hist->estadoDestino?->tipo ?? 'INICIAL';
-                            $colorClass = match ($tipoDestino) {
-                                'APROBADO', 'FINAL' => 'bg-success-timeline',
-                                'DEVUELTO' => 'bg-danger-timeline',
-                                'EN_PROCESO' => 'bg-warning-timeline',
-                                'INICIAL' => 'bg-info-timeline',
-                                default => 'bg-secondary-timeline',
-                            };
+                            $fecha = data_get($evento, 'fecha');
+                            $fechaFin = data_get($evento, 'fecha_fin');
+                            $fuente = data_get($evento, 'fuente', 'historial');
+                            $tipo = data_get($evento, 'tipo', 'transicion');
+                            $estadoDestino = data_get($evento, 'estado_destino', []);
+                            $estadoOrigen = data_get($evento, 'estado_origen', []);
+                            $bloque = data_get($evento, 'bloque', []);
+                            $usuario = data_get($evento, 'usuario_accion.nombre', 'Sistema');
+                            $comentarios = data_get($evento, 'comentarios');
+                            $tiempoFormateado = data_get($evento, 'tiempo_formateado');
+                            $esReconstruido = (bool) data_get($evento, 'reconstruido', false);
+                            $tipoDestino = data_get($estadoDestino, 'tipo', 'INICIAL');
+                            $colorHex = data_get($estadoDestino, 'color_hex') ?? '#6c757d';
                             $icon = match ($tipoDestino) {
                                 'APROBADO', 'FINAL' => 'fa-check',
                                 'DEVUELTO' => 'fa-times',
@@ -100,11 +114,18 @@
                                 'INICIAL' => 'fa-play',
                                 default => 'fa-circle',
                             };
+                            $badgeClass = match ($tipoDestino) {
+                                'APROBADO', 'FINAL' => 'bg-success-timeline',
+                                'DEVUELTO' => 'bg-danger-timeline',
+                                'EN_PROCESO' => 'bg-warning-timeline',
+                                'INICIAL' => 'bg-info-timeline',
+                                default => 'bg-secondary-timeline',
+                            };
                         @endphp
                         <div class="timeline-item">
                             <div class="timeline-marker-wrapper">
                                 <div class="timeline-marker"
-                                    style="background-color: {{ $hist->estadoDestino?->color_hex ?? '#6c757d' }}; box-shadow: 0 4px 10px {{ $hist->estadoDestino?->color_hex }}44;">
+                                    style="background-color: {{ $colorHex }}; box-shadow: 0 4px 10px {{ $colorHex }}44;">
                                     <i class="fas {{ $icon }}"></i>
                                 </div>
                                 @if (!$loop->last)
@@ -113,56 +134,74 @@
                             </div>
                             <div class="timeline-content">
                                 <div class="timeline-header">
-                                    <div class="timeline-title">
-                                        {{ $hist->estadoDestino?->nombre }}
+                                    <div class="timeline-title d-flex align-items-center flex-wrap gap-2">
+                                        <span>{{ $tipo === 'bloque' ? ($bloque['nombre'] ?? 'Bloque') : ($estadoDestino['nombre'] ?? 'Estado') }}</span>
+                                        @if ($esReconstruido)
+                                            <span class="badge bg-light text-dark border">Reconstruido</span>
+                                        @else
+                                            <span class="badge {{ $badgeClass }}">{{ $fuente === 'historial' ? 'Transición' : 'Bloque' }}</span>
+                                        @endif
                                     </div>
                                     <div class="timeline-date">Fecha:
-                                        {{ $hist->fecha_transicion->format('d/m/Y - H:i A') }}
+                                        {{ $fecha ? $fecha->format('d/m/Y - H:i A') : 'N/A' }}
+                                        @if ($fechaFin)
+                                            <span class="text-muted">hasta {{ $fechaFin->format('d/m/Y - H:i A') }}</span>
+                                        @endif
                                     </div>
                                 </div>
-                                @if ($hist->estadoOrigen)
-                                    <div class="timeline-transition">
-                                        <div class="mb-1">
+
+                                <div class="timeline-transition">
+                                    <div class="mb-1 d-flex flex-wrap align-items-center gap-2">
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="fas fa-layer-group me-1"></i>
+                                            {{ $bloque['nombre'] ?? ($tipo === 'bloque' ? 'Bloque' : data_get($estadoOrigen, 'nombre', 'Bloque')) }}
+                                        </span>
+                                        @if ($tipo === 'transicion')
                                             <span class="badge bg-light text-dark border">
-                                                <i class="fas fa-layer-group me-1"></i>
-                                                Bloque
-                                                {{ $hist->estadoOrigen->bloque->codigo ?? $hist->estadoOrigen->bloque_id }}
-                                                <i class="fas fa-arrow-right mx-1"></i>
-                                                Bloque
-                                                {{ $hist->estadoDestino->bloque->codigo ?? $hist->estadoDestino->bloque_id }}
+                                                <i class="fas fa-sign-out-alt me-1"></i>
+                                                Destino: {{ $estadoDestino['nombre'] ?? 'N/A' }}
                                             </span>
-                                        </div>
-                                        <div class="small">
-                                            <span class="text-muted">Estado:</span>
-                                            {{ $hist->estadoOrigen->nombre }}
-                                            <i class="fas fa-arrow-right mx-1 text-muted"></i>
-                                            {{ $hist->estadoDestino->nombre }}
-                                        </div>
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="fas fa-clock me-1"></i>
+                                                Duración: {{ $tiempoFormateado ?? '0s' }}
+                                            </span>
+                                        @else
+                                            <span class="badge bg-light text-dark border">
+                                                <i class="fas fa-info-circle me-1"></i>
+                                                Estado actual {{ $estadoDestino['nombre'] ?? 'N/A' }}
+                                            </span>
+                                        @endif
                                     </div>
-                                @endif
-                                <div class="timeline-meta">
-                                    <div class="timeline-meta-item"><img
-                                            src="https://ui-avatars.com/api/?name={{ urlencode($hist->usuarioAccion?->primer_nombre ?? 'S') }}&size=24&background=random"
-                                            alt="avatar"
-                                            style="width: 24px; height: 24px; border-radius: 50%; margin-right: 5px;"><span>{{ $hist->usuarioAccion?->primer_nombre ?? 'Sistema' }}
-                                            (Usuario)
-                                        </span></div>
-                                    @if ($hist->tiempo_formateado)
-                                        <div class="timeline-meta-item">
-                                            <i class="far fa-clock"></i><span>Tiempo:
-                                                {{ $hist->tiempo_formateado }}</span>
+                                    @if ($tipo !== 'transicion')
+                                        <div class="small">
+                                            <span class="text-muted">Referencia:</span> {{ $estadoOrigen['nombre'] ?? 'Inicio del flujo' }}
                                         </div>
                                     @endif
                                 </div>
-                                @if ($hist->comentarios)
-                                    <div class="timeline-comment"><i class="fas fa-comment me-2"></i><span
-                                            class="timeline-comment-text">Comentario:
-                                            {{ $hist->comentarios }}</span>
+
+                                <div class="timeline-meta">
+                                    <div class="timeline-meta-item">
+                                        <img
+                                            src="https://ui-avatars.com/api/?name={{ urlencode(explode(' ', $usuario)[0] ?? 'S') }}&size=24&background=random"
+                                            alt="avatar"
+                                            style="width: 24px; height: 24px; border-radius: 50%; margin-right: 5px;">
+                                        <span>{{ $usuario }} ({{ $fuente === 'historial' ? 'Usuario' : 'Registro' }})</span>
+                                    </div>
+                                </div>
+
+                                @if ($comentarios)
+                                    <div class="timeline-comment">
+                                        <i class="fas fa-comment me-2"></i>
+                                        <span class="timeline-comment-text">Comentario: {{ $comentarios }}</span>
                                     </div>
                                 @endif
                             </div>
                         </div>
-                    @endforeach
+                    @empty
+                        <div class="text-center py-4 text-muted small border rounded bg-white">
+                            No hay información histórica suficiente para reconstruir la línea de tiempo.
+                        </div>
+                    @endforelse
                 </div>
             </div>
             <div class="modal-footer justify-content-between">

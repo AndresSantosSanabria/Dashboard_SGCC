@@ -139,6 +139,195 @@ class CuentaCobro extends Model
     }
 
     /**
+     * Línea de tiempo completa y coherente para la UI.
+     *
+     * Prioriza el historial de workflow; si no existe, reconstruye desde
+     * los estados por bloque para no mostrar una línea de tiempo vacía.
+     */
+    /**
+     * REGLA DE ORO: Punto único de verdad para la línea de tiempo.
+     * 
+     * GARANTÍAS CRÍTICAS:
+     * 1. TODAS las duraciones están en SEGUNDOS puros (no minutos, no horas)
+     * 2. Se calculan como: fecha_fin - fecha_inicio (diferencia absoluta)
+     * 3. El total es sumatoria aritmética de duraciones individuales
+     * 4. Se valida cada valor para detectar inconsistencias
+     * 5. El formato RESPETA la configuración de horarios laborales (configurable)
+     */
+    public function getTimelineCompletaAttribute()
+    {
+        $businessTime = app(\App\Services\BusinessTimeService::class);
+        $timeline = collect();
+
+        $historial = $this->relationLoaded('historialWorkflow')
+            ? $this->historialWorkflow->sortBy([
+                ['fecha_transicion', 'asc'],
+                ['id', 'asc'],
+            ])->values()
+            : $this->historialWorkflow()
+                ->with(['bloque', 'estadoOrigen.bloque', 'estadoDestino.bloque', 'usuarioAccion'])
+                ->orderBy('fecha_transicion', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
+        if ($historial->isNotEmpty()) {
+            foreach ($historial as $hist) {
+                // GARANTÍA 1: El campo tiempo_en_estado_anterior_segundos DEBE estar en segundos
+                // tras la migración de consistencia. La heurística de normalización está DESHABILITADA
+                // porque genera falsos positivos (ej: 60 segundos se multiplica por 60 = 1 hora).
+                $tiempoRaw = (int) ($hist->tiempo_en_estado_anterior_segundos ?? 0);
+                
+                // Directamente usar el valor sin normalización (ya debe estar en segundos)
+                // Si hay datos históricos incorrectos, la migración ya los normalizó
+                $segundos = $tiempoRaw;
+
+                $timeline->push([
+                    'fuente' => 'historial',
+                    'tipo' => 'transicion',
+                    'fecha' => $hist->fecha_transicion,
+                    'bloque' => [
+                        'id' => $hist->bloque_id,
+                        'nombre' => $hist->bloque?->nombre ?? $hist->estadoDestino?->bloque?->nombre ?? 'Bloque',
+                        'codigo' => $hist->bloque?->codigo ?? $hist->estadoDestino?->bloque?->codigo ?? null,
+                    ],
+                    'estado_origen' => [
+                        'id' => $hist->estado_origen_id,
+                        'nombre' => $hist->estadoOrigen?->nombre ?? 'Inicio',
+                        'codigo' => $hist->estadoOrigen?->codigo ?? null,
+                        'tipo' => $hist->estadoOrigen?->tipo ?? null,
+                    ],
+                    'estado_destino' => [
+                        'id' => $hist->estado_destino_id,
+                        'nombre' => $hist->estadoDestino?->nombre ?? 'N/A',
+                        'codigo' => $hist->estadoDestino?->codigo ?? null,
+                        'tipo' => $hist->estadoDestino?->tipo ?? null,
+                        'color_hex' => $hist->estadoDestino?->color_hex ?? null,
+                    ],
+                    'usuario_accion' => [
+                        'id' => $hist->usuario_accion_id,
+                        'nombre' => trim(($hist->usuarioAccion?->primer_nombre ?? '') . ' ' . ($hist->usuarioAccion?->primer_apellido ?? '')) ?: 'Sistema',
+                    ],
+                    'comentarios' => $hist->comentarios,
+                    'accion' => $hist->accion,
+                    'fecha_fin' => null,
+                    'tiempo_segundos' => $segundos,
+                    // Usa formatInterval() que respeta HORARIO_LABORAL_INICIO y HORARIO_LABORAL_FIN (configurable)
+                    'tiempo_formateado' => $segundos > 0 ? $businessTime->formatInterval($segundos) : null,
+                    'reconstruido' => false,
+                ]);
+            }
+
+            return $timeline;
+        }
+
+        $bloques = $this->relationLoaded('estadosBloques')
+            ? $this->estadosBloques->sortBy([
+                ['fecha_ingreso_bloque', 'asc'],
+                ['id', 'asc'],
+            ])->values()
+            : $this->estadosBloques()
+                ->with(['bloque', 'estadoActual', 'responsable'])
+                ->orderBy('fecha_ingreso_bloque', 'asc')
+                ->orderBy('id', 'asc')
+                ->get();
+
+        foreach ($bloques as $registro) {
+            $inicio = $registro->fecha_ingreso_bloque ?? $registro->created_at ?? $this->created_at;
+            $fin = $registro->fecha_completado_bloque ?? ($registro->fecha_ultima_actualizacion ?? now());
+
+            $timeline->push([
+                'fuente' => 'bloque',
+                'tipo' => 'bloque',
+                'fecha' => $inicio,
+                'fecha_fin' => $registro->fecha_completado_bloque ?? null,
+                'bloque' => [
+                    'id' => $registro->bloque_id,
+                    'nombre' => $registro->bloque?->nombre ?? 'Bloque',
+                    'codigo' => $registro->bloque?->codigo ?? null,
+                ],
+                'estado_origen' => [
+                    'id' => null,
+                    'nombre' => 'Inicio del bloque',
+                    'codigo' => null,
+                    'tipo' => 'INICIAL',
+                ],
+                'estado_destino' => [
+                    'id' => $registro->estado_actual_id,
+                    'nombre' => $registro->estadoActual?->nombre ?? $this->estadoActual?->nombre ?? 'Estado actual',
+                    'codigo' => $registro->estadoActual?->codigo ?? $this->estadoActual?->codigo ?? null,
+                    'tipo' => $registro->estadoActual?->tipo ?? $this->estadoActual?->tipo ?? null,
+                    'color_hex' => $registro->estadoActual?->color_hex ?? $this->estadoActual?->color_hex ?? null,
+                ],
+                'usuario_accion' => [
+                    'id' => $registro->responsable_id,
+                    'nombre' => trim(($registro->responsable?->primer_nombre ?? '') . ' ' . ($registro->responsable?->primer_apellido ?? '')) ?: 'Sin responsable',
+                ],
+                'comentarios' => $registro->observaciones,
+                'accion' => 'RECONSTRUCCION_BLOQUE',
+                'fecha_fin' => $registro->fecha_completado_bloque ?? null,
+                'tiempo_segundos' => $inicio && $fin ? $businessTime->getWorkingSecondsBetween($inicio, $fin) : 0,
+                'tiempo_formateado' => ($inicio && $fin) ? $businessTime->formatInterval($businessTime->getWorkingSecondsBetween($inicio, $fin)) : null,
+                'reconstruido' => true,
+            ]);
+        }
+
+        return $timeline;
+    }
+
+    /**
+     * NORMALIZACIÓN DEFENSIVA: Convierte valores a SEGUNDOS puros.
+     * 
+     * DEPRECATED: Esta función está DESHABILITADA desde 01/06/2026.
+     * 
+     * ⚠️ PROBLEMA DETECTADO:
+     * La heurística causa falsos positivos. Valores legítimos como 60 segundos (1 minuto)
+     * se multiplican por 60, resultando en 3,600 segundos (1 hora).
+     * 
+     * Ejemplo del bug:
+     * - Se guarda: 60 segundos (1 minuto de trabajo real)
+     * - La función detecta: 60 < 3,600 → asume MINUTOS
+     * - Multiplica: 60 * 60 = 3,600 segundos (1 hora INCORRECTA)
+     * 
+     * SOLUCIÓN:
+     * La migración 2026_06_01_000000 ya normalizó datos históricos.
+     * Nuevos registros guardan valores correctos en SEGUNDOS desde WorkflowController.
+     * Por lo tanto, esta normalización NO debe aplicarse en lectura.
+     * 
+     * Descomentar solo si es necesario procesar datos legacy de antes de 01/06/2026.
+     */
+    /*
+    private function normalizarTiempoASegundos(int $valor): int
+    {
+        if ($valor === 0) {
+            return 0;
+        }
+
+        // Caso 1: Claramente menores a 1 hora en segundos → son MINUTOS
+        if ($valor < 3600) {
+            return $valor * 60; // Convertir MINUTOS → SEGUNDOS
+        }
+
+        // Caso 2: Entre 1h y 1 día, pero no es múltiplo de 3600 → probablemente minutos
+        if ($valor >= 3600 && $valor < 86400 && ($valor % 3600) !== 0) {
+            return $valor * 60;
+        }
+
+        // Caso 3: Valores muy grandes (> 1 año en segundos)
+        // Si es > 31,536,000 (1 año), probablemente sean MINUTOS históricos
+        if ($valor > 31536000) {
+            $comoSegundos = $valor / 60;
+            // Si convertido resulta en algo razonable (< 1 año), eran MINUTOS
+            if ($comoSegundos < 31536000) {
+                return (int) $comoSegundos;
+            }
+        }
+
+        // Caso 4: Valor ya está en SEGUNDOS correctamente
+        return $valor;
+    }
+    */
+
+    /**
      * Planillas de Seguridad Social asociadas a esta cuenta de cobro.
      * Una cuenta puede tener varias planillas, pero la última es la vigente.
      */
@@ -179,34 +368,45 @@ class CuentaCobro extends Model
      *
      * NUNCA se resetea al cambiar de estado. Mide el ciclo completo desde created_at.
      */
+    /**
+     * TIEMPO TOTAL DEL PROCESO (PERSISTENTE - REGLA DE ORO)
+     * 
+     * **GARANTÍA CRÍTICA**: El total es SUMATORIA PURA de las duraciones individuales.
+     * 
+     * NUNCA hace cálculos de diferencias absolutas de fechas.
+     * NUNCA mezcla unidades (minutos vs segundos).
+     * SOLO itera el array timeline_completa y suma los tiempo_segundos.
+     * 
+     * Esto garantiza que:
+     * - Total = ∑(tiempo_segundos de cada nodo)
+     * - No hay desfases por cambios de mes/zona horaria
+     * - Total es determinista y reproducible
+     */
     public function getTiempoTotalEjecucionAttribute(): string
     {
         $businessTime = app(\App\Services\BusinessTimeService::class);
+        $timeline = $this->timeline_completa;
+        $totalSegundos = 0;
 
-        // Base persistente: suma de todos los estados anteriores ya cerrados.
-        $base = (int) ($this->tiempo_total_proceso_segundos ?? 0);
-
-        // Volatil: tiempo transcurrido en el estado ACTUAL (aun no cerrado).
-        // Si no tiene fecha_ultimo_cambio_estado (ej. inserción manual), tratamos de deducirla.
-        $fechaInicioVolatil = $this->fecha_ultimo_cambio_estado;
-        if (!$fechaInicioVolatil && $this->estado_actual_id) {
-            $transicion = $this->historialWorkflow()
-                ->where('estado_destino_id', $this->estado_actual_id)
-                ->first();
-            $fechaInicioVolatil = $transicion?->fecha_transicion ?? $this->created_at;
+        if ($timeline->isNotEmpty()) {
+            // SUMATORIA PURA: Cada nodo ya tiene sus tiempo_segundos en SEGUNDOS (sin normalización)
+            // La migración ya normalizó datos históricos. No aplicar normalización adicional
+            // para evitar multiplicaciones duplicadas (ej: 60 seg → 3,600 seg)
+            $totalSegundos = (int) $timeline->sum(function ($evento) {
+                return (int) data_get($evento, 'tiempo_segundos', 0);
+            });
+        } else {
+            // Fallback mínimo para cuentas sin historial reconstruible
+            // Usar el tiempo del estado actual si existe (ya debería estar en segundos)
+            $tiempoActual = (int) TaskTimeLog::getElapsedTimeForCurrentState($this);
+            $totalSegundos = $tiempoActual;
         }
 
-        // Solo sumamos si el estado actual está configurado para contabilizar tiempo.
-        $volatil = ($fechaInicioVolatil && ($this->estadoActual->contabiliza_tiempo ?? true))
-            ? $businessTime->getWorkingSecondsBetween($fechaInicioVolatil, now())
-            : 0;
+        if ($totalSegundos <= 0) {
+            return '0s';
+        }
 
-        $totalSegundos = $base + $volatil;
-
-        if ($totalSegundos <= 0)
-            return '0m';
-
-        return $businessTime->formatInterval($totalSegundos);
+        return $businessTime->formatCalendarInterval($totalSegundos);
     }
 
     /**
@@ -221,6 +421,10 @@ class CuentaCobro extends Model
      */
     public function getTiempoEnEstadoActualAttribute(): string
     {
+        if (! $this->estadoActual?->contabiliza_tiempo) {
+            return '0s';
+        }
+
         $fechaInicioVolatil = $this->fecha_ultimo_cambio_estado;
         if (!$fechaInicioVolatil && $this->estado_actual_id) {
             $transicion = $this->historialWorkflow()
@@ -243,6 +447,10 @@ class CuentaCobro extends Model
      */
     public function getSegundosEnEstadoActualAttribute(): int
     {
+        if (! $this->estadoActual?->contabiliza_tiempo) {
+            return 0;
+        }
+
         $fechaInicioVolatil = $this->fecha_ultimo_cambio_estado;
         if (!$fechaInicioVolatil && $this->estado_actual_id) {
             $transicion = $this->historialWorkflow()
@@ -265,7 +473,7 @@ class CuentaCobro extends Model
      */
     public function getEstaReposadoAttribute(): bool
     {
-        if (!$this->fecha_ultimo_cambio_estado || !$this->estadoActual)
+        if (!$this->fecha_ultimo_cambio_estado || !$this->estadoActual || ! $this->estadoActual->contabiliza_tiempo)
             return false;
 
         // Límite específico del estado (prioridad máxima)

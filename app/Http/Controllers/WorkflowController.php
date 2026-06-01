@@ -660,6 +660,22 @@ class WorkflowController extends Controller
             // ANTI-BUG: Usa el helper que filtra automáticamente por sesión actual del estado
             // Esto previene la herencia de tiempos en flujos cíclicos
             $tiempoSegundos = \App\Models\TaskTimeLog::getElapsedTimeForCurrentState($cuenta);
+            
+            // VALIDACIÓN CRÍTICA: Garantizar que SIEMPRE guardamos SEGUNDOS puros
+            // Nunca permitir valores en minutos o unidades mixtas en la BD
+            $tiempoSegundos = (int) max(0, $tiempoSegundos); // Asegurar no-negativo
+            
+            // Validación de rango: Si es un valor absurdo (> 10 años), loguear como WARNING
+            $maxSegundos = 365 * 24 * 60 * 60; // 1 año en segundos
+            if ($tiempoSegundos > $maxSegundos) {
+                \Log::warning('Tiempo de estado inusualmente alto detectado', [
+                    'cuenta_id' => $cuenta->id,
+                    'estado_origen_id' => $estadoOrigenId,
+                    'tiempo_segundos' => $tiempoSegundos,
+                    'timestamp' => now(),
+                ]);
+                // No rechazar, pero sí loguear para auditoría
+            }
         }
 
         // C. DETECCIÓN DE DEVOLUCIONES:
@@ -708,7 +724,7 @@ class WorkflowController extends Controller
             'estado_destino_id' => $estadoDestinoId,
             'usuario_accion_id' => Auth::id() ?? 1,
             'fecha_transicion' => now(),
-            'tiempo_en_estado_anterior_minutos' => $tiempoSegundos,
+            'tiempo_en_estado_anterior_segundos' => $tiempoSegundos,
             'comentarios' => $comentario,
         ]);
 

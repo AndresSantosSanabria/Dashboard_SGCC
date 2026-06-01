@@ -134,7 +134,7 @@
                                                     <span class="timer-badge {{ $timerAlertClass }}" data-elapsed="{{ $elapsedSeconds }}" 
                                                           style="{{ $timerAlertClass ? 'padding: 3px 8px; border-radius: 6px; font-weight: 700;' : '' }}">
                                                         <i class="bi {{ $timerAlertClass ? 'bi-exclamation-octagon-fill' : 'bi-clock-history' }}"></i>
-                                                        <span class="elapsed-time">{{ $businessTime->formatInterval($elapsedSeconds) }}</span>
+                                                        <span class="elapsed-time">{{ $businessTime->formatCalendarInterval($elapsedSeconds) }}</span>
                                                     </span>
                                                     <div class="extra-small text-muted mt-1" style="font-size: 0.6rem; opacity: 0.8;">
                                                         Total: {{ $cuenta->tiempo_total_ejecucion }}

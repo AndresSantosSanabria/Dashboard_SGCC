@@ -272,16 +272,16 @@ class AnaliticaController extends Controller
                      ->join('estados_workflow as ew', 'hw.estado_origen_id', '=', 'ew.id')
                      ->where('ew.afecta_indicadores', true)
                      ->where('ew.contabiliza_tiempo', true)
-                     ->where('hw.tiempo_en_estado_anterior_minutos', '>', 0);
+                     ->where('hw.tiempo_en_estado_anterior_segundos', '>', 0);
             })
-            ->selectRaw('bw.id, bw.nombre as bloque, bw.orden, COALESCE(AVG(hw.tiempo_en_estado_anterior_minutos), 0) as promedio_minutos')
+            ->selectRaw('bw.id, bw.nombre as bloque, bw.orden, COALESCE(AVG(hw.tiempo_en_estado_anterior_segundos), 0) as promedio_segundos')
             ->groupBy('bw.id', 'bw.nombre', 'bw.orden')
             ->orderBy('bw.orden')
             ->get();
 
         return $promedios->map(fn($row) => [
             'bloque'         => $row->bloque,
-            'promedio_horas' => round($row->promedio_minutos / 3600, 2),
+            'promedio_horas' => round($row->promedio_segundos / 3600, 2),
         ])->values()->toArray();
     }
 

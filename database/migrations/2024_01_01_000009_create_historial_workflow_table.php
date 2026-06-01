@@ -20,7 +20,7 @@ return new class extends Migration
             $table->foreignId('estado_destino_id')->constrained('estados_workflow');
             $table->foreignId('usuario_accion_id')->constrained('usuarios');
             $table->timestamp('fecha_transicion')->useCurrent();
-            $table->integer('tiempo_en_estado_anterior_minutos')->nullable();
+            $table->integer('tiempo_en_estado_anterior_segundos')->nullable();
             $table->string('accion', 50)->nullable()->comment('APROBAR, RECHAZAR, DEVOLVER, PASAR_BLOQUE');
             $table->text('comentarios')->nullable();
             $table->json('documentos_adjuntos')->nullable();

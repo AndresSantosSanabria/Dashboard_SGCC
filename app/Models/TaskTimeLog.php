@@ -52,14 +52,21 @@ class TaskTimeLog extends Model
      */
     public function scopeForCurrentStateSession($query, int $cuentaId, int $estadoId)
     {
-        // Obtener la última entrada a este estado desde el historial
+        // Obtener la última entrada "real" a este estado desde el historial.
+        // Ignoramos transiciones no-op (origen == destino), porque pueden
+        // desplazar artificialmente el corte y reiniciar el contador visual.
         $ultimaEntrada = HistorialWorkflow::where('cuenta_cobro_id', $cuentaId)
             ->where('estado_destino_id', $estadoId)
+            ->whereColumn('estado_origen_id', '!=', 'estado_destino_id')
             ->orderBy('fecha_transicion', 'desc')
             ->value('fecha_transicion');
 
-        // Si no hay historial, es la primera entrada (usar created_at)
-        $fechaCorte = $ultimaEntrada ?? CuentaCobro::find($cuentaId)?->created_at;
+        // Si no hay historial, no inventamos una fecha: evitamos heredar tiempo viejo.
+        $fechaCorte = $ultimaEntrada;
+
+        if (! $fechaCorte) {
+            return $query->whereRaw('1 = 0');
+        }
 
         return $query->where('cuenta_cobro_id', $cuentaId)
             ->where('estado_id', $estadoId)
@@ -80,19 +87,54 @@ class TaskTimeLog extends Model
             return 0;
         }
 
+        if ($cuenta->estadoActual && ! $cuenta->estadoActual->contabiliza_tiempo) {
+            return 0;
+        }
+
+        // Si existe un timestamp de entrada al estado actual, esa es la fuente de verdad.
+        // Es más estable que reconstruir por historial cuando hay transiciones no-op.
+        if ($cuenta->fecha_ultimo_cambio_estado) {
+            $businessTime = app(\App\Services\BusinessTimeService::class);
+            return $businessTime->getWorkingSecondsBetween(
+                $cuenta->fecha_ultimo_cambio_estado,
+                now()
+            );
+        }
+
         // Logs cerrados SOLO de esta sesión actual del estado
         $tiempoLogueado = self::forCurrentStateSession($cuenta->id, $cuenta->estado_actual_id)
             ->whereNotNull('end_time')
             ->sum('duracion_segundos') ?? 0;
 
-        // Tiempo volátil: desde el cambio de estado hasta ahora
+        // Tiempo volátil: desde el log abierto actual hasta ahora.
+        // Si no hay log abierto, usamos la última entrada real al estado.
         $volatil = 0;
-        if ($cuenta->fecha_ultimo_cambio_estado) {
+        $logAbierto = self::where('cuenta_cobro_id', $cuenta->id)
+            ->where('estado_id', $cuenta->estado_actual_id)
+            ->whereNull('end_time')
+            ->orderByDesc('start_time')
+            ->first();
+
+        if ($logAbierto?->start_time) {
             $businessTime = app(\App\Services\BusinessTimeService::class);
             $volatil = $businessTime->getWorkingSecondsBetween(
-                $cuenta->fecha_ultimo_cambio_estado,
+                $logAbierto->start_time,
                 now()
             );
+        } elseif ($cuenta->estado_actual_id) {
+            $ultimaEntrada = HistorialWorkflow::where('cuenta_cobro_id', $cuenta->id)
+                ->where('estado_destino_id', $cuenta->estado_actual_id)
+                ->whereColumn('estado_origen_id', '!=', 'estado_destino_id')
+                ->orderBy('fecha_transicion', 'desc')
+                ->value('fecha_transicion');
+
+            if ($ultimaEntrada) {
+                $businessTime = app(\App\Services\BusinessTimeService::class);
+                $volatil = $businessTime->getWorkingSecondsBetween(
+                    $ultimaEntrada,
+                    now()
+                );
+            }
         }
 
         return (int) ($tiempoLogueado + $volatil);

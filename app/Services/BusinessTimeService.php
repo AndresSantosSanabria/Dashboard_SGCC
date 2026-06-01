@@ -247,6 +247,43 @@ class BusinessTimeService
     }
 
     /**
+     * Formatea segundos en tiempo calendario estándar.
+     *
+     * A diferencia de formatInterval(), este helper usa días de 24h para que
+     * la línea de tiempo del negocio sea legible para usuarios finales.
+     */
+    public function formatCalendarInterval(int $totalSeconds): string
+    {
+        if ($totalSeconds <= 0) {
+            return '0s';
+        }
+
+        $secondsPerDay = 86400;
+        $d = intdiv($totalSeconds, $secondsPerDay);
+        $rem = $totalSeconds % $secondsPerDay;
+        $h = intdiv($rem, 3600);
+        $rem %= 3600;
+        $m = intdiv($rem, 60);
+        $s = $rem % 60;
+
+        $parts = [];
+        if ($d > 0) {
+            $parts[] = "{$d}d";
+        }
+        if ($h > 0 || ($d > 0 && ($m > 0 || $s > 0))) {
+            $parts[] = "{$h}h";
+        }
+        if ($m > 0 || (($d > 0 || $h > 0) && $s > 0)) {
+            $parts[] = "{$m}m";
+        }
+        if ($s > 0 || empty($parts)) {
+            $parts[] = "{$s}s";
+        }
+
+        return implode(' ', $parts);
+    }
+
+    /**
      * Obtiene los festivos de Colombia para un año específico (Ley Emiliani).
      */
     public function getColombianHolidays(int $year): array

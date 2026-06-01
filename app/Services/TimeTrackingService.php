@@ -119,6 +119,14 @@ class TimeTrackingService
         // Refrescar para asegurar que tenemos el estado real de la DB
         $cuenta->refresh();
 
+        $estadoActual = $cuenta->estadoActual ?? \App\Models\EstadoWorkflow::find($cuenta->estado_actual_id);
+
+        // Regla de negocio: estados como "Sin trámite" no arrancan el conteo.
+        if ($estadoActual && ! $estadoActual->contabiliza_tiempo) {
+            $cuenta->fecha_ultimo_cambio_estado = null;
+            return;
+        }
+
         // Si ya tiene fecha_ultimo_cambio_estado, el inicio ya fue registrado (no duplicar)
         if ($cuenta->fecha_ultimo_cambio_estado !== null) {
             Log::debug("[TimeTracking] Estado ya iniciado para cuenta {$cuenta->id}. Saliendo.");
