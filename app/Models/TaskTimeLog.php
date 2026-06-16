@@ -87,6 +87,10 @@ class TaskTimeLog extends Model
             return 0;
         }
 
+        if ($cuenta->estaPausadaPorSupervisorReturn()) {
+            return 0;
+        }
+
         if ($cuenta->estadoActual && ! $cuenta->estadoActual->contabiliza_tiempo) {
             return 0;
         }

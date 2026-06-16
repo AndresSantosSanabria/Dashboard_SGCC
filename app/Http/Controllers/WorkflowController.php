@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 class WorkflowController extends Controller
 {
@@ -195,6 +196,7 @@ class WorkflowController extends Controller
         }
 
         $canEdit = $user->puedeEditarWorkflow();
+        $soportaPausaGestionSupervisor = Schema::hasColumn('cuentas_cobro', 'pausa_gestion_supervisor_desde');
 
         $umbralCritico = (int) \App\Models\Configuracion::getValor('ALERTA_ESTANCAMIENTO_MINUTOS', 20);
         $umbralInformativo = (int) \App\Models\Configuracion::getValor('ALERTA_ESTANCAMIENTO_PREAVISO_MINUTOS', 10);
@@ -215,7 +217,7 @@ class WorkflowController extends Controller
 
         $businessTime = $this->businessTime;
         $ultimoBloqueId = $bloques->sortByDesc('orden')->first()->id ?? 6;
-        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados', 'responsables', 'canEdit', 'bloques', 'todosLosEstados', 'businessTime', 'umbralCritico', 'umbralInformativo', 'ultimoBloqueId'));
+        return view('workflow.workflow', compact('workflow', 'supervisores', 'estados', 'responsables', 'canEdit', 'bloques', 'todosLosEstados', 'businessTime', 'umbralCritico', 'umbralInformativo', 'ultimoBloqueId', 'soportaPausaGestionSupervisor'));
     }
 
     /**
@@ -552,6 +554,7 @@ class WorkflowController extends Controller
             'responsable_id'    => 'required|exists:usuarios,id',
             'bloque_id'         => 'nullable|exists:bloques_workflow,id',
             'comentario'        => 'nullable|string|max:500',
+            'es_devolucion_supervisor' => 'nullable|boolean',
         ]);
 
         $cuenta = CuentaCobro::findOrFail($cuentaId);
@@ -579,6 +582,7 @@ class WorkflowController extends Controller
 
         $estadoDestinoId = $request->estado_destino_id;
         $estadoOriginal = EstadoWorkflow::find($estadoDestinoId);
+        $esDevolucionSupervisor = $request->boolean('es_devolucion_supervisor');
 
         // 1. LÓGICA DE CAMBIO DE BLOQUE FORZADO:
         // Si el usuario seleccionó un bloque diferente al que corresponde el estado de destino original.
@@ -601,12 +605,27 @@ class WorkflowController extends Controller
         }
 
         $estadoDestino = EstadoWorkflow::findOrFail($estadoDestinoId);
+        $bloqueDestino = BloqueWorkflow::find($request->bloque_id ?: $estadoDestino->bloque_id);
+
+        if ($esDevolucionSupervisor && (! $bloqueDestino || $bloqueDestino->codigo !== 'REV1')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La devolución a supervisor solo está disponible para el Bloque 1.',
+            ], 422);
+        }
 
         DB::beginTransaction();
         try {
             // 2. EJECUCIÓN DE LA TRANSICIÓN:
             // Este método ya gestiona el historial, cronómetros y cambio de responsable en la cuenta.
-            $this->ejecutarTransicion($cuenta, $estadoDestinoId, $request->comentario, false, $request->responsable_id);
+            $this->ejecutarTransicion(
+                $cuenta,
+                $estadoDestinoId,
+                $request->comentario,
+                false,
+                $request->responsable_id,
+                $esDevolucionSupervisor
+            );
 
             // 3. PERSISTENCIA DE RESPONSABLE POR BLOQUE:
             // Aseguramos que el registro de 'estado_bloques_cuentas' refleje quién es el dueño actual de esta fase.
@@ -644,7 +663,14 @@ class WorkflowController extends Controller
      * Orquestador interno que maneja el historial, los tiempos de respuesta, 
      * detecta si es una devolución y gestiona el "Auto-Chaining" (estados automáticos).
      */
-    private function ejecutarTransicion(CuentaCobro $cuenta, int $estadoDestinoId, ?string $comentario = null, bool $esAutomatica = false, ?int $responsableIdForzado = null)
+    private function ejecutarTransicion(
+        CuentaCobro $cuenta,
+        int $estadoDestinoId,
+        ?string $comentario = null,
+        bool $esAutomatica = false,
+        ?int $responsableIdForzado = null,
+        bool $esDevolucionSupervisor = false
+    )
     {
         $estadoOrigenId = $cuenta->estado_actual_id;
         $estadoDestino = EstadoWorkflow::findOrFail($estadoDestinoId);
@@ -708,12 +734,27 @@ class WorkflowController extends Controller
             $responsableId = $responsableIdForzado ?? $this->obtenerResponsablePrevio($cuenta->id, $estadoDestino->bloque_id) ?? $responsableId;
             $this->marcarBloqueComoDevuelto($cuenta->id, $bloqueAnteriorId, $comentario);
 
-            // Enriquecer el comentario si es una devolución
+            $nombreResp = null;
             $respUser = Usuario::find($responsableId);
             if ($respUser) {
                 $nombreResp = trim(($respUser->primer_nombre ?? '') . ' ' . ($respUser->primer_apellido ?? ''));
-                $comentario = "Devuelto a: {$nombreResp}" . ($comentario ? " | {$comentario}" : "");
             }
+
+            $nombreSupervisorContrato = trim($cuenta->contrato?->supervisor?->nombre_completo ?? '');
+            if ($esDevolucionSupervisor) {
+                $comentarioBase = $nombreSupervisorContrato !== ''
+                    ? "Devuelto al supervisor: {$nombreSupervisorContrato}"
+                    : 'Devuelto al supervisor';
+                $comentario = $comentarioBase . ($comentario ? " | {$comentario}" : "");
+            } else {
+                $comentario = $nombreResp
+                    ? "Devuelto a: {$nombreResp}" . ($comentario ? " | {$comentario}" : "")
+                    : $comentario;
+            }
+        }
+
+        if ($cuenta->soportaPausaGestionSupervisor()) {
+            $cuenta->pausa_gestion_supervisor_desde = $esDevolucionSupervisor ? now() : null;
         }
 
         // B. REGISTRO DE HISTORIA (Audit Trail): Punto innegociable para auditorías externas.
@@ -726,6 +767,15 @@ class WorkflowController extends Controller
             'fecha_transicion' => now(),
             'tiempo_en_estado_anterior_segundos' => $tiempoSegundos,
             'comentarios' => $comentario,
+            'metadata' => array_filter([
+                'es_devolucion' => $esDevolucion,
+                'es_devolucion_supervisor' => $esDevolucionSupervisor,
+                'responsable_forzado_id' => $responsableIdForzado,
+                'responsable_destino_id' => $esDevolucion ? $responsableId : null,
+                'responsable_destino_nombre' => $esDevolucion ? ($nombreResp ?? null) : null,
+                'supervisor_destino_nombre' => $esDevolucionSupervisor ? (trim($cuenta->contrato?->supervisor?->nombre_completo ?? '') ?: null) : null,
+                'pausa_gestion_supervisor_desde' => $esDevolucionSupervisor ? now()->toDateTimeString() : null,
+            ], fn ($value) => ! is_null($value)),
         ]);
 
         // B2. REGISTRO EN AUDITORÍA GLOBAL: Toda transición queda trazada en el log centralizado.
@@ -991,6 +1041,72 @@ class WorkflowController extends Controller
             'usuarios' => $usuarios,
             'bloque_codigo' => $bloqueCodigo,
         ]);
+    }
+
+    /**
+     * Devuelve el supervisor por defecto del contrato asociado a la cuenta.
+     */
+    public function getSupervisorPorDefectoDeCuenta(int $cuenta)
+    {
+        $cuentaCobro = CuentaCobro::with('contrato.supervisor')->findOrFail($cuenta);
+        $supervisor = $cuentaCobro->contrato?->supervisor;
+        $usuario = $supervisor ? $this->resolverUsuarioSupervisor($supervisor) : null;
+
+        return response()->json([
+            'success' => true,
+            'cuenta_id' => $cuentaCobro->id,
+            'contrato_id' => $cuentaCobro->contrato_id,
+            'supervisor' => $supervisor ? [
+                'id' => $supervisor->id,
+                'nombres' => $supervisor->nombres,
+                'apellidos' => $supervisor->apellidos,
+                'cargo' => $supervisor->cargo,
+                'email' => $supervisor->email,
+                'nombre_completo' => $supervisor->nombre_completo,
+            ] : null,
+            'supervisor_usuario' => $usuario ? [
+                'id' => $usuario->id,
+                'nombre' => $usuario->nombre_completo,
+                'user' => $usuario->user,
+            ] : null,
+        ]);
+    }
+
+    private function resolverUsuarioSupervisor(Supervisor $supervisor): ?Usuario
+    {
+        $usuariosActivos = Usuario::where('es_activo', true)->get();
+        if ($usuariosActivos->isEmpty()) {
+            return null;
+        }
+
+        $supervisorNombre = $this->normalizarTexto(trim($supervisor->nombres . ' ' . $supervisor->apellidos));
+        $supervisorEmail = $this->normalizarTexto($supervisor->email ?? '');
+
+        return $usuariosActivos->first(function (Usuario $usuario) use ($supervisorNombre, $supervisorEmail) {
+            $candidatos = array_filter([
+                $usuario->user,
+                $usuario->nombre_completo,
+                trim(($usuario->primer_nombre ?? '') . ' ' . ($usuario->primer_apellido ?? '')),
+            ]);
+
+            foreach ($candidatos as $candidato) {
+                $normalizado = $this->normalizarTexto((string) $candidato);
+                if ($normalizado !== '' && ($normalizado === $supervisorNombre || $normalizado === $supervisorEmail)) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+    }
+
+    private function normalizarTexto(?string $texto): string
+    {
+        $texto = (string) $texto;
+        $texto = preg_replace('/\s+/', ' ', trim($texto)) ?? '';
+        $texto = preg_replace('/[^a-z0-9 ]/i', '', $texto) ?? '';
+
+        return mb_strtolower($texto);
     }
 
     /**

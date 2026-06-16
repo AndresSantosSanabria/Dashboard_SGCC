@@ -82,6 +82,12 @@
                     <div class="collapse" id="{{ $collapseId }}">
                         @if(isset($item['estados']) && count($item['estados']) > 0)
                             <div class="bg-light-subtle p-4 border-top">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="fw-bold text-secondary small text-uppercase">Estados del bloque</div>
+                                    @if(!empty($item['tramos']))
+                                        <div class="badge bg-white text-primary border">Tramos por {{ $datos['granularidad_tramo'] ?? 'semana' }}</div>
+                                    @endif
+                                </div>
                                 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
                                     @foreach($item['estados'] as $estado)
                                         @if($estado['minutos'] > 0)
@@ -97,6 +103,26 @@
                                         @endif
                                     @endforeach
                                 </div>
+
+                                @if(!empty($item['tramos']))
+                                    <div class="mt-4">
+                                        <div class="fw-bold text-secondary small text-uppercase mb-3">Tramos temporales</div>
+                                        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                                            @foreach($item['tramos'] as $tramo)
+                                                @if($tramo['minutos'] > 0)
+                                                    <div class="col">
+                                                        <div class="p-3 bg-white border rounded-3 shadow-sm hover-elevate transition-all">
+                                                            <div class="d-flex justify-content-between align-items-center gap-2">
+                                                                <div class="fw-bold text-dark small text-truncate" title="{{ $tramo['etiqueta'] }}">{{ $tramo['etiqueta'] }}</div>
+                                                                <span class="fw-bold text-primary small ms-2">{{ $tramo['label'] }}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                @endif
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         @endif
                     </div>

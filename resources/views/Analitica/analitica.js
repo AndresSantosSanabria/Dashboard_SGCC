@@ -436,8 +436,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const filterEtapa = document.getElementById('filterEtapa');
         const filterUsuario = document.getElementById('filterUsuario');
+        const filterEstadoEtapa = document.getElementById('filterEstadoEtapa');
+        const filterTramoGranularidad = document.getElementById('filterTramoGranularidad');
+        const filterActividadResponsable = document.getElementById('filterActividadResponsable');
+        const filterActividadEstado = document.getElementById('filterActividadEstado');
+        
         if (filterEtapa && filterEtapa.value) params.append('f_etapa', filterEtapa.value);
         if (filterUsuario && filterUsuario.value) params.append('f_usuario', filterUsuario.value);
+        if (filterEstadoEtapa && filterEstadoEtapa.value) params.append('f_estado_etapa', filterEstadoEtapa.value);
+        if (filterTramoGranularidad && filterTramoGranularidad.value) params.append('granularidad_tramo', filterTramoGranularidad.value);
+        if (filterActividadResponsable && filterActividadResponsable.value) params.append('f_act_responsable', filterActividadResponsable.value);
+        if (filterActividadEstado && filterActividadEstado.value) params.append('f_act_estado', filterActividadEstado.value);
 
         // Estado inicial de carga
         setGlobalLoading(true);
@@ -522,6 +531,84 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==============================
     // EVENT LISTENERS
     // ==============================
+    const filterEtapaEl = document.getElementById('filterEtapa');
+    const filterEstadoEtapaEl = document.getElementById('filterEstadoEtapa');
+
+    if (filterEtapaEl && filterEstadoEtapaEl) {
+        filterEtapaEl.addEventListener('change', function() {
+            const selectedEtapa = this.value;
+            const currentEstado = filterEstadoEtapaEl.value;
+            let foundCurrent = false;
+
+            Array.from(filterEstadoEtapaEl.options).forEach(opt => {
+                if (!opt.value) {
+                    opt.style.display = ''; 
+                    return;
+                }
+                const optBloque = opt.getAttribute('data-bloque');
+                if (!selectedEtapa || optBloque === selectedEtapa) {
+                    opt.style.display = '';
+                    if (opt.value === currentEstado) foundCurrent = true;
+                } else {
+                    opt.style.display = 'none';
+                }
+            });
+
+            if (!foundCurrent && currentEstado !== "") {
+                filterEstadoEtapaEl.value = "";
+            }
+        });
+    }
+
+    ['filterEtapa', 'filterEstadoEtapa', 'filterTramoGranularidad', 'filterActividadResponsable', 'filterActividadEstado'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', () => refreshDashboard());
+    });
+
+    const globalQuickTimeFilter = document.getElementById('globalQuickTimeFilter');
+    if (globalQuickTimeFilter) {
+        globalQuickTimeFilter.addEventListener('change', function() {
+            const days = this.value;
+            const fechaDesdeEl = document.getElementById('fecha_desde');
+            const fechaHastaEl = document.getElementById('fecha_hasta');
+            const dateDisplay = document.getElementById('dateDisplay');
+            const fp = document.getElementById('dateRangePicker')?._flatpickr;
+
+            if (days) {
+                const end = new Date();
+                const start = new Date();
+                start.setDate(end.getDate() - parseInt(days));
+
+                const format = (d) => {
+                    const y = d.getFullYear();
+                    const m = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    return `${y}-${m}-${day}`;
+                };
+                
+                fechaDesdeEl.value = format(start);
+                fechaHastaEl.value = format(end);
+
+                if (dateDisplay) {
+                    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                    dateDisplay.textContent = `${start.toLocaleDateString('es-ES', options)} - ${end.toLocaleDateString('es-ES', options)}`;
+                }
+
+                if (fp) {
+                    fp.setDate([start, end], false);
+                }
+            } else {
+                fechaDesdeEl.value = '';
+                fechaHastaEl.value = '';
+                if (dateDisplay) {
+                    dateDisplay.textContent = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+                }
+                if (fp) fp.clear();
+            }
+
+            refreshDashboard();
+        });
+    }
     document.getElementById('filterForm').addEventListener('submit', function (e) {
         e.preventDefault();
         refreshDashboard();
@@ -555,6 +642,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const fp = document.getElementById('dateRangePicker')?._flatpickr;
         if (fp) fp.clear();
+
+        const qf = document.getElementById('globalQuickTimeFilter');
+        if (qf) qf.value = "";
 
         if (slider && slider.noUiSlider) slider.noUiSlider.set([0, 100]);
 
@@ -611,6 +701,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     const displayEnd   = instance.formatDate(selectedDates[1], 'd F, Y');
                     document.getElementById('dateDisplay').textContent = `${displayStart} - ${displayEnd}`;
 
+                    const qf = document.getElementById('globalQuickTimeFilter');
+                    if (qf) qf.value = "";
+
                     refreshDashboard();
                 }
             }
@@ -620,16 +713,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==============================
     // EVENT LISTENERS PARA MÉTRICAS
     // ==============================
-    const filterEtapa = document.getElementById('filterEtapa');
-    const filterUsuario = document.getElementById('filterUsuario');
     const btnToggleView = document.getElementById('btnToggleView');
 
     function refreshDelayChart() {
         refreshDashboard();
     }
 
-    if (filterEtapa) filterEtapa.addEventListener('change', refreshDelayChart);
-    if (filterUsuario) filterUsuario.addEventListener('change', refreshDelayChart);
     if (btnToggleView) {
         btnToggleView.addEventListener('click', function() {
             window.currentDelayView = window.currentDelayView === 'general' ? 'grouped' : 'general';

@@ -45,16 +45,25 @@
                 <div>
                     <h2 class="animate-in">Tablero Analítico</h2>
                     <p class="header-subtitle animate-in">Inteligencia de Negocio — Gestión de Cuentas de Cobro</p>
-                    <div class="header-date-selector animate-in mt-3" id="dateRangePicker">
-                        <i class="bi bi-calendar3"></i>
-                        <span id="dateDisplay">
-                            @if (request('fecha_desde') && request('fecha_hasta'))
-                                {{ \Carbon\Carbon::parse(request('fecha_desde'))->translatedFormat('d F, Y') }} - {{ \Carbon\Carbon::parse(request('fecha_hasta'))->translatedFormat('d F, Y') }}
-                            @else
-                                {{ \Carbon\Carbon::now()->translatedFormat('d \\d\\e F, Y') }}
-                            @endif
-                        </span>
-                        <i class="bi bi-chevron-down ms-1" style="font-size: 0.7rem;"></i>
+                    <div class="d-flex align-items-center gap-3 mt-3">
+                        <div class="header-date-selector animate-in m-0" id="dateRangePicker">
+                            <i class="bi bi-calendar3"></i>
+                            <span id="dateDisplay">
+                                @if (request('fecha_desde') && request('fecha_hasta'))
+                                    {{ \Carbon\Carbon::parse(request('fecha_desde'))->translatedFormat('d F, Y') }} - {{ \Carbon\Carbon::parse(request('fecha_hasta'))->translatedFormat('d F, Y') }}
+                                @else
+                                    {{ \Carbon\Carbon::now()->translatedFormat('d \\d\\e F, Y') }}
+                                @endif
+                            </span>
+                            <i class="bi bi-chevron-down ms-1" style="font-size: 0.7rem;"></i>
+                        </div>
+                        <select id="globalQuickTimeFilter" class="form-select form-select-sm bg-transparent border-0 text-muted shadow-none fw-bold animate-in" style="width: auto; cursor: pointer;">
+                            <option value="">Filtro rápido (fechas)...</option>
+                            <option value="7">Última semana</option>
+                            <option value="15">Últimos 15 días</option>
+                            <option value="30">Último mes</option>
+                            <option value="90">Últimos 3 meses</option>
+                        </select>
                     </div>
                 </div>
 
@@ -181,12 +190,20 @@
                 <div class="row g-3 mb-4">
                     <div class="col-lg-7 animate-in">
                         <div class="card h-100 card-premium">
-                            <div class="card-header bg-transparent border-0 d-flex justify-content-between">
+                            <div class="card-header bg-transparent border-0 d-flex justify-content-between flex-wrap gap-2">
                                 <h6>Tiempo Real por Etapa</h6>
-                                <div class="d-flex gap-2">
+                                <div class="d-flex flex-wrap gap-2">
                                     <select id="filterEtapa" class="form-select form-select-sm" style="width: 150px;">
                                         <option value="">Todas las etapas</option>
                                         @foreach($etapasDisponibles as $etapa) <option value="{{ $etapa }}">{{ $etapa }}</option> @endforeach
+                                    </select>
+                                    <select id="filterEstadoEtapa" class="form-select form-select-sm" style="width: 170px;">
+                                        <option value="">Todos los estados</option>
+                                        @foreach($todosLosEstados as $bloqueEstados)
+                                            @foreach($bloqueEstados as $est)
+                                                <option value="{{ $est->nombre }}" data-bloque="{{ $est->bloque->nombre ?? '' }}">{{ $est->nombre }}</option>
+                                            @endforeach
+                                        @endforeach
                                     </select>
                                     <button type="button" id="btnToggleView" class="btn btn-sm btn-outline-primary"><i class="bi bi-people"></i></button>
                                 </div>
@@ -203,14 +220,39 @@
                     </div>
                     <div class="col-lg-5 animate-in">
                         <div class="card h-100 card-premium">
-                            <div class="card-header bg-transparent border-0"><h6>Actividad Reciente</h6></div>
+                            <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                <h6 class="mb-0">Actividad Reciente</h6>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <select id="filterActividadResponsable" class="form-select form-select-sm" style="width: 120px;">
+                                        <option value="">Responsable</option>
+                                        @foreach ($responsables as $resp)
+                                            <option value="{{ $resp->id }}">{{ $resp->primer_nombre }} {{ $resp->primer_apellido }}</option>
+                                        @endforeach
+                                    </select>
+                                    <select id="filterActividadEstado" class="form-select form-select-sm" style="width: 120px;">
+                                        <option value="">Estado</option>
+                                        @foreach($todosLosEstados as $bloqueEstados)
+                                            @foreach($bloqueEstados as $est)
+                                                <option value="{{ $est->nombre }}">{{ $est->nombre }}</option>
+                                            @endforeach
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
                             <div class="card-body"><div id="timelineChart"></div></div>
                         </div>
                     </div>
                 </div>
 
                 {{-- ═══ ANALISIS DETALLADO (PREMIUM INTEGRATION) ═══ --}}
-                <div class="section-title animate-in mt-5">ANÁLISIS DE TIEMPOS POR ETAPA (NUEVO)</div>
+                <div class="d-flex justify-content-between align-items-center mt-5 mb-3 animate-in">
+                    <div class="section-title mb-0 mt-0">ANÁLISIS DE TIEMPOS POR ETAPA (NUEVO)</div>
+                    <select id="filterTramoGranularidad" class="form-select form-select-sm" style="width: 140px;">
+                        <option value="semana">Semanas</option>
+                        <option value="fecha">Fechas</option>
+                        <option value="mes">Meses</option>
+                    </select>
+                </div>
                 
                 <div class="row mb-4 animate-in">
                     <div class="col-12">

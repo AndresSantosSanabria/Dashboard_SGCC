@@ -148,6 +148,11 @@ class Contrato extends Model
         return $this->hasMany(SeguimientoRequisito::class, 'contrato_id');
     }
 
+    public function seguimientoCamposValores()
+    {
+        return $this->hasMany(SeguimientoCampoValor::class, 'contrato_id');
+    }
+
     // --- SCOPES DE GESTIÓN ---
 
     /**

@@ -105,6 +105,10 @@
                             $comentarios = data_get($evento, 'comentarios');
                             $tiempoFormateado = data_get($evento, 'tiempo_formateado');
                             $esReconstruido = (bool) data_get($evento, 'reconstruido', false);
+                            $esDevolucion = (bool) data_get($evento, 'es_devolucion', false);
+                            $esDevolucionSupervisor = (bool) data_get($evento, 'es_devolucion_supervisor', false);
+                            $responsableDestinoNombre = data_get($evento, 'responsable_destino_nombre');
+                            $supervisorDestinoNombre = data_get($evento, 'supervisor_destino_nombre');
                             $tipoDestino = data_get($estadoDestino, 'tipo', 'INICIAL');
                             $colorHex = data_get($estadoDestino, 'color_hex') ?? '#6c757d';
                             $icon = match ($tipoDestino) {
@@ -138,6 +142,15 @@
                                         <span>{{ $tipo === 'bloque' ? ($bloque['nombre'] ?? 'Bloque') : ($estadoDestino['nombre'] ?? 'Estado') }}</span>
                                         @if ($esReconstruido)
                                             <span class="badge bg-light text-dark border">Reconstruido</span>
+                                        @elseif ($esDevolucion)
+                                            @if ($esDevolucionSupervisor)
+                                                <span class="badge bg-danger text-white">Devuelto al supervisor</span>
+                                                @if ($supervisorDestinoNombre)
+                                                    <span class="badge bg-warning text-dark">Supervisor: {{ $supervisorDestinoNombre }}</span>
+                                                @endif
+                                            @else
+                                                <span class="badge bg-danger text-white">Devuelto al responsable</span>
+                                            @endif
                                         @else
                                             <span class="badge {{ $badgeClass }}">{{ $fuente === 'historial' ? 'Transición' : 'Bloque' }}</span>
                                         @endif
@@ -161,6 +174,17 @@
                                                 <i class="fas fa-sign-out-alt me-1"></i>
                                                 Destino: {{ $estadoDestino['nombre'] ?? 'N/A' }}
                                             </span>
+                                            @if ($esDevolucion && $esDevolucionSupervisor && $supervisorDestinoNombre)
+                                                <span class="badge bg-light text-dark border">
+                                                    <i class="fas fa-user-shield me-1"></i>
+                                                    Supervisor: {{ $supervisorDestinoNombre }}
+                                                </span>
+                                            @elseif ($esDevolucion && $responsableDestinoNombre)
+                                                <span class="badge bg-light text-dark border">
+                                                    <i class="fas fa-user-tag me-1"></i>
+                                                    Responsable: {{ $responsableDestinoNombre }}
+                                                </span>
+                                            @endif
                                             <span class="badge bg-light text-dark border">
                                                 <i class="fas fa-clock me-1"></i>
                                                 Duración: {{ $tiempoFormateado ?? '0s' }}

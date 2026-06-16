@@ -64,7 +64,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/seguimiento/export', [\App\Http\Controllers\SeguimientoController::class, 'export'])->name('seguimiento.export');
     Route::post('/seguimiento/status', [\App\Http\Controllers\SeguimientoController::class, 'updateStatus'])->name('seguimiento.update-status');
     Route::post('/seguimiento/batch-update', [\App\Http\Controllers\SeguimientoController::class, 'batchUpdate'])->name('seguimiento.batch-update');
-
+    Route::post('/seguimiento/agregar-periodo/{contrato}', [\App\Http\Controllers\SeguimientoController::class, 'agregarPeriodo'])->name('seguimiento.agregar-periodo');
+    
     Route::post('/seguimiento/store', [\App\Http\Controllers\SeguimientoController::class, 'store'])->name('seguimiento.store');
     Route::put('/seguimiento/{id}', [\App\Http\Controllers\SeguimientoController::class, 'update'])->name('seguimiento.update');
     Route::delete('/seguimiento/{contrato}', [\App\Http\Controllers\SeguimientoController::class, 'destroy'])->name('seguimiento.destroy');
@@ -83,6 +84,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/workflow/asignar-responsable/{cuenta}', [WorkflowController::class, 'assignResponsible'])->name('workflow.asignar-responsable');
     Route::get('/workflow/historial/{cuenta}', [WorkflowController::class, 'getHistorial'])->name('workflow.historial');
     Route::get('/workflow/usuarios-responsables', [WorkflowController::class, 'getUsuariosResponsables'])->name('workflow.usuarios-responsables');
+    Route::get('/workflow/cuentas/{cuenta}/supervisor-default', [WorkflowController::class, 'getSupervisorPorDefectoDeCuenta'])->name('workflow.cuentas.supervisor-default');
     Route::post('/workflow/sync-timer', [WorkflowController::class, 'syncTimer'])->name('workflow.sync-timer');
     Route::post('/workflow/iniciar-siguiente-cuenta/{cuenta}', [WorkflowController::class, 'iniciarSiguienteCuenta'])->name('workflow.iniciar-siguiente-cuenta');
     Route::post('/workflow/exportar', [WorkflowController::class, 'exportExcel'])->name('workflow.exportar');

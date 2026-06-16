@@ -296,18 +296,30 @@ class AnaliticaController extends Controller
             return ['labels' => [], 'series' => []];
         }
 
+        $desde = $request->filled('fecha_desde') ? \Carbon\Carbon::parse($request->fecha_desde)->startOfDay() : now()->subDays(30)->startOfDay();
+        $hasta = $request->filled('fecha_hasta') ? \Carbon\Carbon::parse($request->fecha_hasta)->endOfDay() : now()->endOfDay();
+        $diasDiff = $desde->diffInDays($hasta);
+
         $hwQuery = DB::table('historial_workflow as hw')
             ->join('estados_workflow as ew', 'hw.estado_destino_id', '=', 'ew.id')
             ->whereIn('hw.cuenta_cobro_id', $cuentaIds)
             ->where('ew.afecta_indicadores', true)
-            ->where('hw.fecha_transicion', '>=', now()->subDays(30)->startOfDay());
+            ->whereBetween('hw.fecha_transicion', [$desde, $hasta]);
 
-        if ($request->filled('f_usuario')) {
+        if ($request->filled('f_act_responsable')) {
+            $hwQuery->where('hw.usuario_accion_id', $request->f_act_responsable);
+        } elseif ($request->filled('f_usuario')) {
             $hwQuery->where('hw.usuario_accion_id', $request->f_usuario);
         }
 
         if ($request->filled('f_etapa')) {
             $hwQuery->where('ew.nombre', $request->f_etapa);
+        }
+
+        if ($request->filled('f_act_estado')) {
+            $hwQuery->where('ew.nombre', $request->f_act_estado);
+        } elseif ($request->filled('estado')) {
+            $hwQuery->where('ew.nombre', $request->estado);
         }
 
         $data = $hwQuery
@@ -318,8 +330,8 @@ class AnaliticaController extends Controller
 
         // Rellenar días vacíos con 0 para una línea continua
         $result = [];
-        for ($i = 29; $i >= 0; $i--) {
-            $dia = now()->subDays($i)->format('Y-m-d');
+        for ($i = $diasDiff; $i >= 0; $i--) {
+            $dia = $hasta->copy()->subDays($i)->format('Y-m-d');
             $result[$dia] = $data->get($dia, 0);
         }
 
@@ -336,7 +348,8 @@ class AnaliticaController extends Controller
     {
         $mapBloques = BloqueWorkflow::orderBy('orden')->pluck('nombre', 'id')->toArray();
         $estadosConfig = EstadoWorkflow::all()->keyBy('id');
-        
+        $granularidad = $request->input('granularidad_tramo', 'semana');
+        $estadoEtapa = $request->input('f_estado_etapa');
         // 2. Obtener todos los logs de tiempo cerrados
         $logsQuery = \App\Models\TaskTimeLog::where('duracion_segundos', '>', 0);
 
@@ -344,6 +357,12 @@ class AnaliticaController extends Controller
         $logsQuery->whereHas('cuentaCobro', function($q) use ($request, $desde, $hasta) {
             $this->applyGeneralFilters($q, $request, $desde, $hasta, true);
         });
+
+        if ($estadoEtapa) {
+            $logsQuery->whereHas('estado', function ($q) use ($estadoEtapa) {
+                $q->where('nombre', $estadoEtapa);
+            });
+        }
 
         if ($request->filled('f_usuario')) {
             $logsQuery->where('usuario_id', $request->f_usuario);
@@ -365,7 +384,8 @@ class AnaliticaController extends Controller
                 'bloque' => $mapBloques[$bloqueId],
                 'bloque_id' => $bloqueId,
                 'estado' => $config->nombre,
-                'minutos' => round($log->duracion_segundos / 60, 2)
+                'minutos' => round($log->duracion_segundos / 60, 2),
+                'fecha_evento' => $log->start_time,
             ]);
         }
 
@@ -381,6 +401,12 @@ class AnaliticaController extends Controller
 
         $abiertos = $abiertosQuery->with(['responsableActual', 'estadoActual'])->get();
         $businessTime = app(\App\Services\BusinessTimeService::class);
+
+        if ($estadoEtapa) {
+            $abiertos = $abiertos->filter(function ($cuenta) use ($estadoEtapa) {
+                return (string) ($cuenta->estadoActual?->nombre ?? '') === (string) $estadoEtapa;
+            });
+        }
 
         foreach ($abiertos as $cuenta) {
             $config = $cuenta->estadoActual;
@@ -398,7 +424,8 @@ class AnaliticaController extends Controller
                 'bloque' => $mapBloques[$bloqueId],
                 'bloque_id' => $bloqueId,
                 'estado' => $config->nombre,
-                'minutos' => round($volatil / 60, 2)
+                'minutos' => round($volatil / 60, 2),
+                'fecha_evento' => $cuenta->fecha_ultimo_cambio_estado,
             ]);
         }
 
@@ -407,7 +434,7 @@ class AnaliticaController extends Controller
         }
 
         // 4. Agrupación Final por Bloque y sus Estados
-        $tiempoEquipo = $consolidado->groupBy('bloque')->map(function ($group, $bloqueNombre) {
+        $tiempoEquipo = $consolidado->groupBy('bloque')->map(function ($group, $bloqueNombre) use ($granularidad) {
             $estadosDetalle = $group->groupBy('estado')->map(function ($subgroup, $estadoNombre) {
                 return [
                     'nombre' => $estadoNombre,
@@ -417,12 +444,23 @@ class AnaliticaController extends Controller
             })->values()->sortByDesc('minutos')->values();
 
             $totalMinutos = $group->sum('minutos');
+            $tramos = $group->groupBy(function ($item) use ($granularidad) {
+                return $this->getTramoLabel($item['fecha_evento'] ?? null, $granularidad);
+            })->map(function ($subgroup, $etiqueta) use ($granularidad) {
+                return [
+                    'etiqueta' => $etiqueta,
+                    'inicio' => $subgroup->first()['fecha_evento'] ?? null,
+                    'minutos' => (float) $subgroup->sum('minutos'),
+                    'label' => $this->formatMinutos($subgroup->sum('minutos')),
+                ];
+            })->values()->sortBy('inicio')->values();
 
             return [
                 'etapa' => $bloqueNombre, // Mantenemos el nombre de campo para compatibilidad
                 'bloque_id' => $group->first()['bloque_id'],
                 'minutos_totales' => (float) $totalMinutos,
-                'estados' => $estadosDetalle
+                'estados' => $estadosDetalle,
+                'tramos' => $tramos,
             ];
         });
 
@@ -455,6 +493,7 @@ class AnaliticaController extends Controller
         return [
             'tiempoEquipo' => $tiempoEquipo,
             'porUsuario' => $porUsuario->values(),
+            'granularidad_tramo' => $granularidad,
             'bottleneck' => $etapaLenta ? [
                 'etapa' => $etapaLenta['etapa'],
                 'minutos' => $etapaLenta['minutos_totales'],
@@ -466,6 +505,21 @@ class AnaliticaController extends Controller
                 'rapida' => $etapaRapida ? $etapaRapida['etapa'] . ' (' . $this->formatMinutos($etapaRapida['minutos_totales']) . ')' : 'N/A',
             ]
         ];
+    }
+
+    private function getTramoLabel($fecha, string $granularidad): string
+    {
+        if (! $fecha) {
+            return 'Sin fecha';
+        }
+
+        $dt = Carbon::parse($fecha);
+
+        return match ($granularidad) {
+            'fecha' => $dt->format('d/m/Y'),
+            'mes' => $dt->translatedFormat('M Y'),
+            default => 'Sem ' . $dt->isoWeek() . ' (' . $dt->copy()->startOfWeek()->format('d/m') . ' - ' . $dt->copy()->endOfWeek()->format('d/m') . ')',
+        };
     }
 
     public function formatMinutos($totalMinutos)

@@ -7,6 +7,7 @@ use App\Traits\HasBusinessDays;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
 
 class CuentaCobro extends Model
 {
@@ -50,6 +51,7 @@ class CuentaCobro extends Model
         // --- TIMETRACKING v2: Contadores duales separados ---
         'fecha_ultimo_cambio_estado',    // VOLÁTIL: se resetea en cada cambio de estado
         'tiempo_total_proceso_segundos', // PERSISTENTE: nunca se resetea
+        'pausa_gestion_supervisor_desde',
     ];
 
     /**
@@ -71,6 +73,7 @@ class CuentaCobro extends Model
         // v2
         'fecha_ultimo_cambio_estado' => 'datetime',
         'tiempo_total_proceso_segundos' => 'integer',
+        'pausa_gestion_supervisor_desde' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -208,6 +211,11 @@ class CuentaCobro extends Model
                         'nombre' => trim(($hist->usuarioAccion?->primer_nombre ?? '') . ' ' . ($hist->usuarioAccion?->primer_apellido ?? '')) ?: 'Sistema',
                     ],
                     'comentarios' => $hist->comentarios,
+                    'metadata' => $hist->metadata ?? [],
+                    'es_devolucion' => (bool) data_get($hist->metadata, 'es_devolucion', false),
+                    'es_devolucion_supervisor' => (bool) data_get($hist->metadata, 'es_devolucion_supervisor', false),
+                    'responsable_destino_nombre' => data_get($hist->metadata, 'responsable_destino_nombre'),
+                    'supervisor_destino_nombre' => data_get($hist->metadata, 'supervisor_destino_nombre'),
                     'accion' => $hist->accion,
                     'fecha_fin' => null,
                     'tiempo_segundos' => $segundos,
@@ -406,7 +414,9 @@ class CuentaCobro extends Model
             return '0s';
         }
 
-        return $businessTime->formatCalendarInterval($totalSegundos);
+        // El total debe expresarse en tiempo hábil configurable, no en días calendario.
+        // Así se alinea con la jornada definida en HORARIO_LABORAL_INICIO / FIN.
+        return $businessTime->formatInterval($totalSegundos);
     }
 
     /**
@@ -421,6 +431,10 @@ class CuentaCobro extends Model
      */
     public function getTiempoEnEstadoActualAttribute(): string
     {
+        if ($this->estaPausadaPorSupervisorReturn()) {
+            return '0s';
+        }
+
         if (! $this->estadoActual?->contabiliza_tiempo) {
             return '0s';
         }
@@ -447,6 +461,10 @@ class CuentaCobro extends Model
      */
     public function getSegundosEnEstadoActualAttribute(): int
     {
+        if ($this->estaPausadaPorSupervisorReturn()) {
+            return 0;
+        }
+
         if (! $this->estadoActual?->contabiliza_tiempo) {
             return 0;
         }
@@ -473,6 +491,10 @@ class CuentaCobro extends Model
      */
     public function getEstaReposadoAttribute(): bool
     {
+        if ($this->estaPausadaPorSupervisorReturn()) {
+            return false;
+        }
+
         if (!$this->fecha_ultimo_cambio_estado || !$this->estadoActual || ! $this->estadoActual->contabiliza_tiempo)
             return false;
 
@@ -515,5 +537,19 @@ class CuentaCobro extends Model
         $segundos = $this->getElapsedSeconds();
         $businessTime = app(\App\Services\BusinessTimeService::class);
         return $businessTime->formatInterval($segundos);
+    }
+
+    public function estaPausadaPorSupervisorReturn(): bool
+    {
+        if (! $this->soportaPausaGestionSupervisor()) {
+            return false;
+        }
+
+        return ! is_null($this->pausa_gestion_supervisor_desde);
+    }
+
+    public function soportaPausaGestionSupervisor(): bool
+    {
+        return Schema::hasColumn($this->table, 'pausa_gestion_supervisor_desde');
     }
 }

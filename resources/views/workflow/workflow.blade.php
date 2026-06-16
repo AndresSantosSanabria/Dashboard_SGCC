@@ -146,6 +146,7 @@
         <script>
             window.WORK_START_TIME = "{{ \Carbon\Carbon::parse(\App\Models\Configuracion::getValor('HORARIO_LABORAL_INICIO', '06:00'))->format('H:i') }}";
             window.WORK_END_TIME = "{{ \Carbon\Carbon::parse(\App\Models\Configuracion::getValor('HORARIO_LABORAL_FIN', '18:00'))->format('H:i') }}";
+            window.WORKFLOW_SUPERVISOR_PAUSE_SUPPORTED = {{ $soportaPausaGestionSupervisor ? 'true' : 'false' }};
         </script>
         @vite(['resources/views/workflow/workflow.js'])
         <script>

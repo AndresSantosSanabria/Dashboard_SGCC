@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * SERVICIO DE TRACKING DE TIEMPOS - CONTADORES DUALES
@@ -119,6 +120,11 @@ class TimeTrackingService
         // Refrescar para asegurar que tenemos el estado real de la DB
         $cuenta->refresh();
 
+        if ($cuenta->estaPausadaPorSupervisorReturn()) {
+            Log::debug("[TimeTracking] Estado pausado por devolución a supervisor. CuentaId={$cuenta->id}, EstadoId={$cuenta->estado_actual_id}");
+            return;
+        }
+
         $estadoActual = $cuenta->estadoActual ?? \App\Models\EstadoWorkflow::find($cuenta->estado_actual_id);
 
         // Regla de negocio: estados como "Sin trámite" no arrancan el conteo.
@@ -208,6 +214,79 @@ class TimeTrackingService
 
         Log::info("[TimeTracking] Pausa horario. CuentaId={$cuentaFresh->id}, " .
             "Seg={$segundosDia}, Cierre={$tipoCierre}");
+    }
+
+    /**
+     * PAUSA POR DEVOLUCIÓN A SUPERVISOR:
+     * congela el contador del estado actual y deja la cuenta lista para reanudarse
+     * cuando salga de la excepción.
+     */
+    public function pauseBySupervisorReturn(CuentaCobro $cuenta): void
+    {
+        $cuentaFresh = CuentaCobro::find($cuenta->id);
+        if (! $cuentaFresh) {
+            return;
+        }
+
+        if (! $cuentaFresh->soportaPausaGestionSupervisor()) {
+            return;
+        }
+
+        if (! $cuentaFresh->fecha_ultimo_cambio_estado) {
+            DB::table('cuentas_cobro')
+                ->where('id', $cuentaFresh->id)
+                ->update([
+                    'pausa_gestion_supervisor_desde' => now(),
+                ]);
+            return;
+        }
+
+        $segundosDia = $this->businessTime->getWorkingSecondsBetween(
+            Carbon::parse($cuentaFresh->fecha_ultimo_cambio_estado),
+            now()
+        );
+
+        $logAbierto = TaskTimeLog::where('cuenta_cobro_id', $cuentaFresh->id)
+            ->whereNull('end_time')
+            ->orderByDesc('start_time')
+            ->first();
+
+        if ($logAbierto) {
+            $logAbierto->update([
+                'end_time'          => now(),
+                'duracion_segundos' => $segundosDia,
+                'tipo_cierre'       => 'PAUSA_SUPERVISOR',
+            ]);
+        }
+
+        DB::table('cuentas_cobro')
+            ->where('id', $cuentaFresh->id)
+            ->update(array_merge([
+                'tiempo_total_proceso_segundos' => DB::raw(
+                    "COALESCE(tiempo_total_proceso_segundos, 0) + {$segundosDia}"
+                ),
+                'fecha_ultimo_cambio_estado' => null,
+            ], Schema::hasColumn('cuentas_cobro', 'pausa_gestion_supervisor_desde')
+                ? ['pausa_gestion_supervisor_desde' => now()]
+                : []));
+
+        Log::info("[TimeTracking] Pausa supervisor. CuentaId={$cuentaFresh->id}, Seg={$segundosDia}");
+    }
+
+    /**
+     * REANUDACIÓN DESPUÉS DE DEVOLUCIÓN A SUPERVISOR.
+     */
+    public function resumeAfterSupervisorReturn(CuentaCobro $cuenta): void
+    {
+        if (! $cuenta->soportaPausaGestionSupervisor()) {
+            return;
+        }
+
+        DB::table('cuentas_cobro')
+            ->where('id', $cuenta->id)
+            ->update([
+                'pausa_gestion_supervisor_desde' => null,
+            ]);
     }
 
     /**

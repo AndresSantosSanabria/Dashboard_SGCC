@@ -24,6 +24,9 @@
                 <button class="btn btn-sm btn-light border shadow-sm rounded-3 p-1" onclick='openEditModal({!! json_encode($c) !!})' title="Gestionar Ficha">
                     <i class="bi bi-pencil-square text-primary"></i>
                 </button>
+                <button class="btn btn-sm btn-light border shadow-sm rounded-3 p-1" onclick="addSeguimientoPeriod({{ $c->id }}, '{{ $c->numero_contrato }}')" title="Agregar período">
+                    <i class="bi bi-plus-circle text-success"></i>
+                </button>
                 <button class="btn btn-sm btn-light border shadow-sm rounded-3 p-1" onclick="deleteContrato({{ $c->id }}, '{{ $c->numero_contrato }}')" title="Eliminar definitivamente">
                     <i class="bi bi-trash-fill text-danger"></i>
                 </button>
@@ -208,8 +211,11 @@
         {{-- Ejecución Mensual --}}
         @for ($i = 1; $i <= 12; $i++)
             @foreach (["cta{$i}_rep_status", "cta{$i}_secop_status", "cta{$i}_sia_status"] as $field)
-                @php $b = $badgeMap[$c->$field] ?? $badgeMap['']; @endphp
-                <td class="text-center" style="{{ $i == 12 && $field == 'cta12_sia_status' ? 'border-right: 2px solid #E2E8F0' : '' }}">
+                @php
+                    $b = $badgeMap[$c->$field] ?? $badgeMap[''];
+                    $esUltimaCeldaMensual = $i === 12 && $field === ('cta12_sia_status');
+                @endphp
+                <td class="text-center" style="{{ $esUltimaCeldaMensual ? 'border-right: 2px solid #E2E8F0' : '' }}">
                     <div class="dropdown">
                         <div class="badge-pill-saas {{ $b['class'] }} w-100 justify-content-center" data-bs-toggle="dropdown"
                              data-original-val="{{ $c->$field ?: '' }}" data-contrato="{{ $c->numero_contrato }}" data-field="{{ $field }}">
@@ -221,6 +227,13 @@
                             @endforeach
                         </ul>
                     </div>
+                    @if($esUltimaCeldaMensual && !empty($c->meses_extra))
+                        <button type="button"
+                                class="btn btn-link btn-sm p-0 mt-1 extra-small fw-bold text-primary"
+                                onclick='openSeguimientoMesesExtra(@json($c->meses_extra), "{{ $c->numero_contrato }}", {{ $c->id }})'>
+                            +{{ $c->meses_extra_count }} extra
+                        </button>
+                    @endif
                 </td>
             @endforeach
         @endfor

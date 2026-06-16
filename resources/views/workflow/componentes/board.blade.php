@@ -97,6 +97,7 @@
                                         // 2. Usa el helper ANTI-BUG que filtra automáticamente por sesión actual
                                         // Esto previene la herencia de tiempos cuando la cuenta regresa a un estado
                                         $elapsedSeconds = \App\Models\TaskTimeLog::getElapsedTimeForCurrentState($cuenta);
+                                        $timerPausado = $cuenta->estaPausadaPorSupervisorReturn();
                                     @endphp
                                     <div class="account-card" 
                                         style="border-left-color: {{ $cuenta->estadoActual?->color_hex ?? '#6366f1' }};"
@@ -131,10 +132,12 @@
                                                     }
                                                 @endphp
                                                 <div class="d-flex flex-column align-items-end">
-                                                    <span class="timer-badge {{ $timerAlertClass }}" data-elapsed="{{ $elapsedSeconds }}" 
+                                                    <span class="timer-badge {{ $timerPausado ? 'bg-secondary text-white border-secondary shadow-sm' : $timerAlertClass }}"
+                                                          data-elapsed="{{ $elapsedSeconds }}"
+                                                          data-paused="{{ $timerPausado ? '1' : '0' }}" 
                                                           style="{{ $timerAlertClass ? 'padding: 3px 8px; border-radius: 6px; font-weight: 700;' : '' }}">
-                                                        <i class="bi {{ $timerAlertClass ? 'bi-exclamation-octagon-fill' : 'bi-clock-history' }}"></i>
-                                                        <span class="elapsed-time">{{ $businessTime->formatCalendarInterval($elapsedSeconds) }}</span>
+                                                        <i class="bi {{ $timerPausado ? 'bi-pause-circle-fill' : ($timerAlertClass ? 'bi-exclamation-octagon-fill' : 'bi-clock-history') }}"></i>
+                                                        <span class="elapsed-time">{{ $timerPausado ? 'Pausado' : $businessTime->formatCalendarInterval($elapsedSeconds) }}</span>
                                                     </span>
                                                     <div class="extra-small text-muted mt-1" style="font-size: 0.6rem; opacity: 0.8;">
                                                         Total: {{ $cuenta->tiempo_total_ejecucion }}

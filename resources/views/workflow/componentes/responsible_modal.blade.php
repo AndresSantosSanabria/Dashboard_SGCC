@@ -21,6 +21,26 @@
                     </select>
                 </div>
 
+                <div class="mb-3 d-none" id="devolucionSupervisorContainer">
+                    <div class="form-check form-switch p-0">
+                        <input class="form-check-input ms-0 me-2" type="checkbox" role="switch" id="checkDevolucionSupervisor">
+                        <label class="form-check-label fw-bold text-danger" for="checkDevolucionSupervisor">
+                            ¿Es devolución a supervisor?
+                        </label>
+                    </div>
+                    <div class="small text-muted mt-2" id="devolucionSupervisorHelp">
+                        Solo aplica cuando la transición actual es una devolución y el destino es el Bloque 1.
+                        Al activarlo, el sistema intentará precargar el supervisor del contrato.
+                    </div>
+                </div>
+
+                <div class="mb-3 d-none" id="devolucionSupervisorNotice">
+                    <div class="alert alert-warning py-2 mb-0 small">
+                        <i class="bi bi-info-circle me-1"></i>
+                        <span id="devolucionSupervisorNoticeText">Se precargará el supervisor asociado al contrato.</span>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label for="selectResponsable" class="form-label fw-bold">Responsable:</label>
                     <select id="selectResponsable" class="form-select form-select-lg" style="border-radius: 8px;">
@@ -35,6 +55,7 @@
                 <input type="hidden" id="cuentaIdResponsable" value="">
                 <input type="hidden" id="estadoDestinoIdResponsable" value="">
                 <input type="hidden" id="isDevolucionResponsable" value="0">
+                <input type="hidden" id="isDevolucionSupervisor" value="0">
                 <input type="hidden" id="estadoCodigoResponsable" value="">
             </div>
             <div class="modal-footer">
@@ -139,4 +160,3 @@
         </div>
     </div>
 </div>
-

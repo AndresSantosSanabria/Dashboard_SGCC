@@ -29,31 +29,26 @@ body {
 
 /* ── LAYOUT ── */
 .dashboard-container {
-    padding: 1.5rem 2rem; /* Reduced padding */
+    padding: 0;
     max-width: 100%;
-    overflow: visible !important; /* Crucial for sticky children */
+    height: calc(100vh - 2rem); /* Accommodates main padding */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .sticky-header-wrapper {
-    position: sticky;
-    top: 0;
-    z-index: 1050; /* Above table headers and other elements */
+    flex-shrink: 0;
     background: var(--bg-app);
-    padding-top: 1rem;
-    margin-top: -1.5rem;
-    padding-bottom: 1rem;
-    margin-bottom: 1rem;
+    padding: 0 0 1rem;
+    margin-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
-    transition: all 0.3s;
-    max-width: 100%; /* Prevents horizontal overflow */
 }
 
 /* Adjust top for mobile top bar if needed */
 @media (max-width: 991px) {
-    .sticky-header-wrapper {
-        top: 59px; /* Height of mobile-top-bar */
-        padding-top: 0.5rem;
-        margin-top: 0;
+    .dashboard-container {
+        height: calc(100vh - 59px - 2rem); /* Account for mobile top bar */
     }
 }
 
@@ -185,13 +180,21 @@ body {
     background: white;
     border-radius: var(--radius-lg);
     border: 1px solid var(--border);
-    overflow: hidden;
     box-shadow: var(--shadow-premium);
+    position: relative;
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
 }
 
 .table-scroll-container {
     overflow-x: auto;
+    overflow-y: auto;
     scrollbar-width: thin;
+    flex-grow: 1;
+    min-height: 0;
+    position: relative;
 }
 
 .saas-table {
@@ -210,10 +213,17 @@ body {
     text-transform: uppercase;
     border: 1px solid var(--border);
     vertical-align: middle;
+    position: sticky;
+    top: 0;
+    z-index: 50;
 }
 
 .saas-table thead tr:first-child th {
     background: #F1F5F9;
+}
+
+.saas-table thead tr:nth-child(2) th {
+    top: 44px;
 }
 
 .saas-table tbody td {
@@ -243,9 +253,17 @@ body {
 }
 
 .saas-table thead th.stk-saas {
-    z-index: 20;
+    z-index: 60;
     background: #F8FAFC !important;
     box-shadow: inset -1px -1px 0 var(--border);
+}
+
+.saas-table thead tr:first-child th.stk-saas {
+    z-index: 70;
+}
+
+.saas-table thead tr:nth-child(2) th.stk-saas {
+    z-index: 65;
 }
 
 .stk-gest { left: 0; --stk-w: 60px; }
@@ -329,6 +347,11 @@ body {
 .btn-saas-secondary:hover {
     background: #F8FAFC;
     border-color: #CBD5E1;
+}
+
+.seguimiento-custom-input:focus {
+    box-shadow: 0 0 0 4px var(--accent-soft);
+    border-color: var(--accent);
 }
 
 /* Batch Save Banner */

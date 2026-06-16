@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿@extends('layouts.app')
+@extends('layouts.app')
 
 @section('title', 'Dashboard Ejecutivo SECOP — SGCC')
 
@@ -17,6 +17,8 @@
         .btn-premium-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4); }
         .btn-premium-secondary { background: #F1F5F9; color: var(--text-main); border: none; }
         .stk-saas { position: sticky; background: white !important; z-index: 5; }
+        .saas-table thead th { top: 0; }
+        .saas-table thead tr:nth-child(2) th { top: 44px; }
         .table-card-saas { position: relative; }
     </style>
 @endpush
@@ -380,6 +382,32 @@
         <div class="d-flex gap-3">
             <button class="btn btn-outline-light border-0 btn-sm px-3" onclick="discardChanges()">Descartar</button>
             <button class="btn btn-primary btn-sm px-4 rounded-pill fw-bold" onclick="confirmBatchSave()">Guardar Todo</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE MESES ADICIONALES -->
+    <div class="modal fade premium-modal" id="modalMesesExtra" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content overflow-hidden">
+                <div class="modal-header bg-primary">
+                    <h6 class="modal-title fw-bold" id="mesesExtraTitle">Meses adicionales</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body bg-white p-4">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead class="bg-light sticky-top">
+                                <tr>
+                                    <th>Mes</th>
+                                    <th>Fuente</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mesesExtraBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -845,6 +873,39 @@
             }
         }
 
+        async function addSeguimientoPeriod(contratoId, numeroContrato) {
+            const result = await Swal.fire({
+                title: '¿Agregar período?',
+                text: `Se creará el siguiente período mensual para el contrato ${numeroContrato}.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#16A34A',
+                cancelButtonColor: '#64748B',
+                confirmButtonText: 'Sí, agregar',
+                cancelButtonText: 'Cancelar'
+            });
+
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            try {
+                const response = await window.apiFetch(`{{ route('seguimiento.agregar-periodo', ['contrato' => ':id']) }}`.replace(':id', contratoId), {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    window.showSnackbar(data.message || 'Período agregado correctamente', 'success');
+                    window.location.reload();
+                } else {
+                    window.showSnackbar(data.message || 'No se pudo agregar el período', 'error');
+                }
+            } catch (error) {
+                window.showSnackbar('Error de conexión al agregar el período', 'error');
+            }
+        }
+
         function openLinkModal(id, currentLink) {
             document.getElementById('linkContratoId').value = id;
             document.getElementById('linkInput').value = currentLink || '';
@@ -888,6 +949,69 @@
                 spinner.classList.add('d-none');
                 btnText.innerText = 'Guardar Link';
             }
+        }
+
+        function openSeguimientoMesesExtra(mesesExtra, numeroContrato, contratoId) {
+            const body = document.getElementById('mesesExtraBody');
+            const title = document.getElementById('mesesExtraTitle');
+
+            if (!body || !title) return;
+
+            title.textContent = `Meses adicionales del contrato ${numeroContrato}`;
+            const badgeMap = {
+                'OK': { class: 'badge-ok', icon: 'bi-check-circle-fill' },
+                'PENDIENTE': { class: 'badge-pend', icon: 'bi-hourglass-split' },
+                'RECHAZADO': { class: 'badge-crit', icon: 'bi-x-circle-fill' },
+                'CRÍTICO': { class: 'badge-crit', icon: 'bi-exclamation-triangle-fill' },
+                'N/A': { class: 'badge-na', icon: 'bi-dash-circle' },
+                '': { class: 'badge-vacio', icon: 'bi-circle' }
+            };
+            const currentQueue = typeof changesQueue !== 'undefined' ? changesQueue : {};
+            const getEffectiveValue = (field, fallback) => {
+                const queued = currentQueue[`${contratoId}-${field}`];
+                return queued ? queued.newValue : fallback;
+            };
+
+            const renderDropdown = (field, value) => {
+                const currentVal = value ?? '';
+                const active = badgeMap[currentVal] || badgeMap[''];
+                const iconHtml = active.icon ? `<i class="bi ${active.icon}"></i> ` : '';
+                return `
+                    <div class="dropdown">
+                        <div class="badge-pill-saas ${active.class} w-100 justify-content-center"
+                             data-bs-toggle="dropdown"
+                             data-original-val="${currentVal}"
+                             data-contrato="${contratoId}"
+                             data-field="${field}">
+                            ${iconHtml}${currentVal || 'VACÍO'}
+                        </div>
+                        <ul class="dropdown-menu shadow-premium border-0 animate-fadeIn">
+                            <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, ${contratoId}, '${field}', 'OK', this)"><i class="bi bi-check-circle-fill text-success me-2"></i> OK</a></li>
+                            <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, ${contratoId}, '${field}', 'PENDIENTE', this)"><i class="bi bi-hourglass-split text-warning me-2"></i> PENDIENTE</a></li>
+                            <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, ${contratoId}, '${field}', 'RECHAZADO', this)"><i class="bi bi-x-circle-fill text-danger me-2"></i> RECHAZADO</a></li>
+                            <li><a class="dropdown-item py-2" href="#" onclick="updateBadgeStatus(event, ${contratoId}, '${field}', 'N/A', this)"><i class="bi bi-dash-circle text-muted me-2"></i> N/A</a></li>
+                            <li><a class="dropdown-item py-2 text-danger" href="#" onclick="updateBadgeStatus(event, ${contratoId}, '${field}', '', this)"><i class="bi bi-eraser me-2"></i> Vaciar</a></li>
+                        </ul>
+                    </div>
+                `;
+            };
+
+            const rows = Array.isArray(mesesExtra) ? mesesExtra : [];
+            body.innerHTML = rows.length
+                ? rows.map(mes => (mes.items || []).map(item => {
+                    const field = `cta${mes.mes}_${String(item.fuente || '').toLowerCase()}_status`;
+                    const effectiveValue = getEffectiveValue(field, item.estado);
+                    return `
+                        <tr>
+                            <td class="fw-bold">${mes.mes}</td>
+                            <td>${item.fuente || '-'}</td>
+                            <td>${renderDropdown(field, effectiveValue)}</td>
+                        </tr>
+                    `;
+                }).join('')).join('')
+                : '<tr><td colspan="3" class="text-center text-muted py-4">No hay meses adicionales para mostrar.</td></tr>';
+
+            new bootstrap.Modal(document.getElementById('modalMesesExtra')).show();
         }
 
         async function deleteContrato(id, numero) {

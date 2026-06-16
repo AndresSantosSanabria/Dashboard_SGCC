@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * SERVICIO DE ESTANCAMIENTO - LÓGICA DE REPOSO POR ESTADO
@@ -72,6 +73,7 @@ class StagnationService
 
         // Destinatarios base
         $baseUserIds = $this->getBaseUserIds();
+        $soportaPausaSupervisor = Schema::hasColumn('cuentas_cobro', 'pausa_gestion_supervisor_desde');
 
         $ahora       = Carbon::now();
         $alertasBatch = [];
@@ -115,7 +117,7 @@ class StagnationService
             ->chunk(200, function ($cuentas) use (
                 &$alertasBatch, &$count,
                 $limitGlobalMins, $warningGlobalMins,
-                $configs, $baseUserIds, $ahora
+                $configs, $baseUserIds, $ahora, $soportaPausaSupervisor
             ) {
                 foreach ($cuentas as $cuenta) {
 
@@ -125,6 +127,7 @@ class StagnationService
                     // No contaminado por tiempos de estados anteriores.
                     // ──────────────────────────────────────────────────────
                     if (! $cuenta->fecha_ultimo_cambio_estado) continue;
+                    if ($soportaPausaSupervisor && ! empty($cuenta->pausa_gestion_supervisor_desde)) continue;
 
                     $segundosEnEstado = $this->businessTime->getWorkingSecondsBetween(
                         Carbon::parse($cuenta->fecha_ultimo_cambio_estado),
@@ -240,6 +243,10 @@ class StagnationService
             ->first();
 
         if (! $cuenta || ! $cuenta->contabiliza_tiempo) {
+            return false;
+        }
+
+        if (Schema::hasColumn('cuentas_cobro', 'pausa_gestion_supervisor_desde') && ! empty($cuenta->pausa_gestion_supervisor_desde)) {
             return false;
         }
 

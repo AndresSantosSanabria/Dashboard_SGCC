@@ -39,7 +39,17 @@ class SeguimientoController extends Controller
     private function getFilteredContratos(Request $request)
     {
         // 1. CARGA BASE CON RELACIONES
-        $query = Contrato::with(['contratista', 'supervisor', 'modalidad', 'planta', 'concepto', 'cuentaActual', 'ultimaCuentaFinalizada']);
+        $query = Contrato::with([
+            'contratista',
+            'supervisor',
+            'modalidad',
+            'planta',
+            'concepto',
+            'cuentaActual',
+            'ultimaCuentaFinalizada',
+            'seguimientoMensual',
+            'seguimientoRequisitos',
+        ]);
 
         // Filtros de búsqueda: Optimizamos usando subconsultas para contratistas
         if ($request->filled('numero_contrato')) {
@@ -111,6 +121,13 @@ class SeguimientoController extends Controller
         return $query;
     }
 
+    private function getMaxMesSeguimiento($contratosQuery): int
+    {
+        $maxMes = SeguimientoMensual::max('mes');
+
+        return max(12, (int) ($maxMes ?? 12));
+    }
+
     /**
      * Muestra el dashboard de seguimiento.
      */
@@ -127,9 +144,10 @@ class SeguimientoController extends Controller
         Contrato::logManualAudit(null, 'READ', 'El usuario cargó la vista de seguimiento/dashboard', 'contratos');
 
         $contratosQuery = $this->getFilteredContratos($request);
+        $maxMesSeguimiento = $this->getMaxMesSeguimiento($contratosQuery);
 
         // Calculamos el universo de cumplimiento sobre la query filtrada (subquery atomizada para Postgres)
-        $totalEvaluatedFields = 54; // 12 meses * 3 fuentes + 18 reqs (3 base + 9 checklist + 6 cierre)
+        $totalEvaluatedFields = ($maxMesSeguimiento * 3) + 18; // Meses dinámicos * 3 fuentes + 18 reqs
         
         $statsSub = (clone $contratosQuery);
         // Estadísticas Dinámicas: Calculadas sobre el set filtrado completo
@@ -175,7 +193,10 @@ class SeguimientoController extends Controller
 
         if ($request->ajax()) {
             return response()->json([
-                'table' => view('seguimiento.partials.table', ['contratos' => $paginated])->render(),
+                'table' => view('seguimiento.partials.table', [
+                    'contratos' => $paginated,
+                    'maxMesSeguimiento' => $maxMesSeguimiento,
+                ])->render(),
                 'pagination' => (string) $paginated->appends($request->query())->links('pagination::bootstrap-5'),
                 'stats' => $stats,
             ]);
@@ -188,7 +209,8 @@ class SeguimientoController extends Controller
             'contratistas' => $contratistas,
             'stats' => $stats,
             'todosLosEstados' => $todosLosEstados,
-            'bloques' => $bloques
+            'bloques' => $bloques,
+            'maxMesSeguimiento' => $maxMesSeguimiento,
         ]);
     }
 
@@ -204,14 +226,19 @@ class SeguimientoController extends Controller
 
             // Usando cursor() resolvemos el problema de la sobrecarga de memoria
             // y permitimos que la DB nos entregue los registros 1 a 1 de forma óptima
-            $contratos = $this->getFilteredContratos($request)->cursor();
-            
+            $contratosQuery = $this->getFilteredContratos($request);
+            $maxMesSeguimiento = $this->getMaxMesSeguimiento($contratosQuery);
+            $contratos = $contratosQuery->cursor();
+
             $tempFile = tempnam(sys_get_temp_dir(), 'export_') . '.xlsx';
             $writer = SimpleExcelWriter::create($tempFile);
 
             foreach ($contratos as $c) {
                 // Generar los agregados temporales por fila
                 $this->hydrateContratoData($c);
+                if (! $c->relationLoaded('seguimientoCamposValores')) {
+                    $c->load('seguimientoCamposValores.campo');
+                }
                 
                 $row = [
                     'PROCESO' => $c->numero_proceso,
@@ -246,7 +273,7 @@ class SeguimientoController extends Controller
                     $row[$label] = $c->$f ?: 'VACÍO';
                 }
 
-                for ($i = 1; $i <= 12; $i++) {
+                for ($i = 1; $i <= $maxMesSeguimiento; $i++) {
                     $row["REP $i"] = $c->{"cta{$i}_rep_status"} ?: '-';
                     $row["SEC $i"] = $c->{"cta{$i}_secop_status"} ?: '-';
                     $row["SIA $i"] = $c->{"cta{$i}_sia_status"} ?: '-';
@@ -306,13 +333,14 @@ class SeguimientoController extends Controller
                     ['estado' => $status]
                 );
             }
-            // CASO B: Atributos Maestros del Contrato
+            // CASO B: Campos adicionales dinámicos del Seguimiento SECOP
+            // CASO C: Atributos Maestros del Contrato
             elseif (in_array($field, ['secop_estado_contrato', 'aprobado_y_pagado', 'modificaciones_y_cierre', 'link_secop', 'tipo_contratista'])) {
                 $contrato = Contrato::findOrFail($validated['id']);
                 $contrato->$field = $status;
                 $contrato->save();
             }
-            // CASO C: Requisitos de Checklist (Normalizados)
+            // CASO D: Requisitos de Checklist (Normalizados)
             else {
                 // Forzamos una búsqueda explícita para evitar problemas de binding en PostgreSQL
                 $requisito = SeguimientoRequisito::where('contrato_id', $validated['id'])
@@ -370,13 +398,14 @@ class SeguimientoController extends Controller
                         ['estado' => $status]
                     );
                 }
-                // CASO B: Atributos Maestros
+                // CASO B: Campos adicionales dinámicos
+                // CASO C: Atributos Maestros
                 elseif (in_array($field, ['secop_estado_contrato', 'aprobado_y_pagado', 'modificaciones_y_cierre', 'link_secop', 'tipo_contratista'])) {
                     $contrato = Contrato::findOrFail($id);
                     $contrato->$field = $status;
                     $contrato->save();
                 }
-                // CASO C: Requisitos
+                // CASO D: Requisitos
                 else {
                     $requisito = SeguimientoRequisito::where('contrato_id', $id)
                         ->where('nombre', (string)$field)
@@ -408,6 +437,58 @@ class SeguimientoController extends Controller
     }
 
 
+
+    /**
+     * Agrega el siguiente período mensual para un contrato.
+     */
+    public function agregarPeriodo(int $contratoId)
+    {
+        try {
+            /** @var Usuario $user */
+            $user = Auth::user();
+            if (! $user || ! $user->puedeEditarSeguimiento()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No autorizado para agregar períodos.',
+                ], 403);
+            }
+
+            $contrato = Contrato::findOrFail($contratoId);
+
+            DB::transaction(function () use ($contrato) {
+                $maxMes = (int) SeguimientoMensual::where('contrato_id', $contrato->id)->max('mes');
+                $nextMes = $maxMes > 0 ? $maxMes + 1 : 1;
+                $anio = (int) (SeguimientoMensual::where('contrato_id', $contrato->id)->max('anio') ?: now()->year);
+
+                foreach (['REP', 'SECOP', 'SIA'] as $fuente) {
+                    SeguimientoMensual::updateOrCreate(
+                        [
+                            'contrato_id' => $contrato->id,
+                            'mes' => $nextMes,
+                            'anio' => $anio,
+                            'fuente' => $fuente,
+                        ],
+                        [
+                            'estado' => null,
+                        ]
+                    );
+                }
+            });
+
+            Contrato::logManualAudit(null, 'UPDATE', "Se agregó el período mensual siguiente al contrato #{$contrato->numero_contrato}", 'contratos');
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Período agregado correctamente.',
+            ]);
+        } catch (\Exception $e) {
+            Contrato::logException($e, 'contratos', ['operacion' => 'agregarPeriodo', 'contrato_id' => $contratoId]);
+            return response()->json([
+                'success' => false,
+                'message' => 'No se pudo agregar el período: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
 
     /**
      * Registra un nuevo contrato.
@@ -546,7 +627,26 @@ class SeguimientoController extends Controller
      */
     private function hydrateContratoData(object $c)
     {
-        $totalEvaluatedFields = 54;
+        $maxMesSeguimiento = max(12, (int) ($c->seguimientoMensual->max('mes') ?? 12));
+        $totalEvaluatedFields = ($maxMesSeguimiento * 3) + 18;
+
+        $mesesExtra = $c->seguimientoMensual
+            ->filter(fn ($sm) => (int) $sm->mes > 12)
+            ->groupBy('mes')
+            ->map(function ($grupo, $mes) {
+                return [
+                    'mes' => (int) $mes,
+                    'items' => $grupo->map(function ($sm) {
+                        return [
+                            'fuente' => strtoupper((string) $sm->fuente),
+                            'estado' => $sm->estado ?: 'VACÍO',
+                        ];
+                    })->values()->all(),
+                ];
+            })
+            ->sortBy('mes')
+            ->values()
+            ->all();
 
         foreach ($c->seguimientoMensual as $sm) {
             $attr = "cta{$sm->mes}_" . strtolower($sm->fuente) . '_status';
@@ -566,7 +666,55 @@ class SeguimientoController extends Controller
         else $c->global_status = 'VACÍO';
 
         $c->perc_cumplimiento = min(100, $totalEvaluatedFields > 0 ? (($ok + $na) / $totalEvaluatedFields) * 100 : 0);
+        $c->meses_extra = $mesesExtra;
+        $c->meses_extra_count = count($mesesExtra);
 
 
+    }
+
+    private function getCamposPersonalizados()
+    {
+        return SeguimientoCampo::where('es_activo', true)
+            ->orderBy('orden')
+            ->orderBy('id')
+            ->get();
+    }
+
+    private function upsertSeguimientoCampoValor(int $campoId, int $contratoId, ?string $valor): void
+    {
+        $campo = SeguimientoCampo::find($campoId);
+
+        if (! $campo) {
+            throw new \RuntimeException("El campo dinámico #{$campoId} no existe.");
+        }
+
+        $valor = is_null($valor) ? null : trim((string) $valor);
+
+        $data = [
+            'valor_texto' => null,
+            'valor_decimal' => null,
+            'valor_fecha' => null,
+            'valor_json' => null,
+        ];
+
+        if ($valor !== null && $valor !== '') {
+            if ($campo->tipo === 'number') {
+                $data['valor_decimal'] = is_numeric($valor) ? $valor : null;
+            } elseif ($campo->tipo === 'date') {
+                $data['valor_fecha'] = $valor;
+            } elseif ($campo->tipo === 'textarea') {
+                $data['valor_texto'] = $valor;
+            } else {
+                $data['valor_texto'] = $valor;
+            }
+        }
+
+        SeguimientoCampoValor::updateOrCreate(
+            [
+                'seguimiento_campo_id' => $campoId,
+                'contrato_id' => $contratoId,
+            ],
+            $data
+        );
     }
 }

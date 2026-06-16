@@ -8,6 +8,149 @@
 // 1. MOTOR DE TIEMPO REAL (Card Aging)
 // Actualiza los badges de tiempo cada segundo para mostrar cuánto lleva 
 // estancada una cuenta en su estado actual.
+window.workflowResponsibleModalState = {
+    cuentaId: null,
+    estadoDestinoId: null,
+    bloqueDestinoId: null,
+    bloqueDestinoCodigo: null,
+    esDevolucion: false,
+    esDevolucionSupervisor: false,
+    supervisorContrato: null,
+    supervisorUsuario: null,
+    comentario: '',
+    loadingSupervisor: false,
+    error: null,
+};
+
+function setWorkflowResponsibleModalState(partial) {
+    window.workflowResponsibleModalState = {
+        ...window.workflowResponsibleModalState,
+        ...partial,
+    };
+    return window.workflowResponsibleModalState;
+}
+
+function getSelectedBloqueDestinoOption() {
+    const selectBloque = document.getElementById('selectBloqueDestino');
+    if (!selectBloque || selectBloque.selectedIndex < 0) return null;
+
+    const option = selectBloque.options[selectBloque.selectedIndex];
+    if (!option || !option.value) return null;
+
+    return {
+        id: option.value,
+        codigo: option.dataset.codigo || '',
+        nombre: option.textContent || '',
+    };
+}
+
+function toggleDevolucionSupervisorUI(isVisible) {
+    const container = document.getElementById('devolucionSupervisorContainer');
+    const notice = document.getElementById('devolucionSupervisorNotice');
+    const noticeText = document.getElementById('devolucionSupervisorNoticeText');
+    const checkbox = document.getElementById('checkDevolucionSupervisor');
+    const supportFlag = window.WORKFLOW_SUPERVISOR_PAUSE_SUPPORTED !== false;
+
+    if (container) {
+        container.classList.toggle('d-none', !isVisible);
+    }
+
+    if (!isVisible && checkbox) {
+        checkbox.checked = false;
+    }
+
+    if (!isVisible && notice) {
+        notice.classList.add('d-none');
+    }
+
+    if (checkbox) {
+        checkbox.disabled = isVisible && !supportFlag;
+    }
+
+    if (isVisible && !supportFlag && noticeText) {
+        noticeText.textContent = 'La devolución a supervisor está disponible, pero la pausa del timer aún no está activa en la base de datos. Se guardará la devolución sin congelar el conteo.';
+        if (notice) {
+            notice.classList.remove('d-none');
+            notice.classList.remove('alert-info');
+            notice.classList.add('alert-warning');
+        }
+    }
+}
+
+function updateDevolucionSupervisorNotice(message, isWarning = false) {
+    const notice = document.getElementById('devolucionSupervisorNotice');
+    const noticeText = document.getElementById('devolucionSupervisorNoticeText');
+
+    if (noticeText) {
+        noticeText.textContent = message;
+    }
+
+    if (notice) {
+        notice.classList.remove('d-none');
+        notice.classList.remove('alert-warning', 'alert-info');
+        notice.classList.add(isWarning ? 'alert-warning' : 'alert-info');
+    }
+}
+
+function ensureOptionInResponsablesSelect(select, user) {
+    if (!select || !user || !user.id) return;
+
+    const exists = Array.from(select.options).some(opt => String(opt.value) === String(user.id));
+    if (exists) return;
+
+    const opt = document.createElement('option');
+    opt.value = user.id;
+    opt.textContent = `${user.nombre} (Supervisor del contrato)`;
+    opt.dataset.source = 'supervisor_default';
+    select.insertBefore(opt, select.options[1] || null);
+}
+
+async function cargarSupervisorPorDefecto(cuentaId) {
+    setWorkflowResponsibleModalState({ loadingSupervisor: true, error: null });
+
+    try {
+        const response = await window.apiFetch(`/workflow/cuentas/${cuentaId}/supervisor-default`);
+        const data = await response.json();
+
+        if (!data.success) {
+            setWorkflowResponsibleModalState({
+                loadingSupervisor: false,
+                supervisorContrato: null,
+                supervisorUsuario: null,
+                error: data.message || 'No se pudo cargar el supervisor por defecto.',
+            });
+            updateDevolucionSupervisorNotice('No se encontró un supervisor asociado al contrato; puede elegir manualmente.', true);
+            return null;
+        }
+
+        setWorkflowResponsibleModalState({
+            loadingSupervisor: false,
+            supervisorContrato: data.supervisor,
+            supervisorUsuario: data.supervisor_usuario,
+            error: null,
+        });
+
+        if (data.supervisor_usuario) {
+            updateDevolucionSupervisorNotice(`Supervisor precargado: ${data.supervisor_usuario.nombre}`, false);
+        } else if (data.supervisor) {
+            updateDevolucionSupervisorNotice(`Supervisor del contrato: ${data.supervisor.nombre_completo}.`, true);
+        } else {
+            updateDevolucionSupervisorNotice('No se encontró supervisor asociado al contrato; podrá continuar manualmente.', true);
+        }
+
+        return data;
+    } catch (error) {
+        setWorkflowResponsibleModalState({
+            loadingSupervisor: false,
+            supervisorContrato: null,
+            supervisorUsuario: null,
+            error: 'Error al consultar el supervisor por defecto.',
+        });
+        updateDevolucionSupervisorNotice('Error al consultar el supervisor por defecto. Puede continuar con la asignación manual.', true);
+        return null;
+    }
+}
+
 function updateTimers() {
     const now = new Date();
     const isWeekend = now.getDay() === 0 || now.getDay() === 6;
@@ -48,13 +191,14 @@ function updateTimers() {
 
     document.querySelectorAll('.timer-badge[data-elapsed]').forEach(badge => {
         let elapsed = parseInt(badge.getAttribute('data-elapsed'), 10) || 0;
+        const isPaused = badge.getAttribute('data-paused') === '1';
         
         // Simpre incrementamos si estamos en horas laborales
-        if (isWorkingTime) {
+        if (isWorkingTime && !isPaused) {
             elapsed++;
             badge.setAttribute('data-elapsed', elapsed);
         }
-        
+
         // Formateo robusto para asegurar que cambie visualmente cada segundo
         const d = Math.floor(elapsed / secondsInDay);
         const rem = elapsed % secondsInDay;
@@ -69,7 +213,9 @@ function updateTimers() {
         if (s > 0 || parts.length === 0) parts.push(`${s}s`);
         
         const textContainer = badge.querySelector('.elapsed-time');
-        if (textContainer) textContainer.textContent = parts.join(' ');
+        if (textContainer) {
+            textContainer.textContent = isPaused ? 'Pausado' : parts.join(' ');
+        }
     });
 }
 setInterval(updateTimers, 1000);
@@ -234,6 +380,21 @@ function abrirModalResponsable(data, cuentaId) {
     document.getElementById('cuentaIdResponsable').value = data.cuenta_id;
     document.getElementById('estadoDestinoIdResponsable').value = data.estado_destino_id;
     document.getElementById('isDevolucionResponsable').value = data.es_devolucion ? '1' : '0';
+    document.getElementById('isDevolucionSupervisor').value = '0';
+
+    setWorkflowResponsibleModalState({
+        cuentaId: data.cuenta_id,
+        estadoDestinoId: data.estado_destino_id,
+        bloqueDestinoId: data.target_bloque_id || null,
+        bloqueDestinoCodigo: data.target_bloque_codigo || null,
+        esDevolucion: !!data.es_devolucion,
+        esDevolucionSupervisor: false,
+        supervisorContrato: null,
+        supervisorUsuario: null,
+        comentario: '',
+        loadingSupervisor: false,
+        error: null,
+    });
 
     // Personalizar etiquetas según si es devolución o avance
     const labelComentario = document.getElementById('labelComentario');
@@ -249,8 +410,8 @@ function abrirModalResponsable(data, cuentaId) {
         inputComentario.value = ''; // Limpiar previo
     }
 
-    // Poblar el selector de bloques
     const selectBloque = document.getElementById('selectBloqueDestino');
+    // Poblar el selector de bloques
     if (selectBloque) {
         selectBloque.innerHTML = '';
         if (data.bloques_disponibles) {
@@ -267,7 +428,57 @@ function abrirModalResponsable(data, cuentaId) {
         // Evento para recargar responsables al cambiar bloque
         selectBloque.onchange = function () {
             const selectedOpt = selectBloque.options[selectBloque.selectedIndex];
-            cargarResponsablesPorBloque(selectedOpt.dataset.codigo);
+            const selectedBloqueCodigo = selectedOpt?.dataset?.codigo || '';
+            setWorkflowResponsibleModalState({
+                bloqueDestinoId: selectedOpt?.value || null,
+                bloqueDestinoCodigo: selectedBloqueCodigo || null,
+                esDevolucion: !!window.workflowResponsibleModalState.esDevolucion,
+                esDevolucionSupervisor: false,
+                supervisorContrato: null,
+                supervisorUsuario: null,
+            });
+
+            const mostrarSupervisor = window.workflowResponsibleModalState.esDevolucion && selectedBloqueCodigo === 'REV1';
+            toggleDevolucionSupervisorUI(mostrarSupervisor);
+            document.getElementById('isDevolucionSupervisor').value = '0';
+
+            if (selectedBloqueCodigo) {
+                cargarResponsablesPorBloque(selectedBloqueCodigo);
+            }
+        };
+    }
+
+    toggleDevolucionSupervisorUI(!!data.es_devolucion && data.target_bloque_codigo === 'REV1');
+
+    const checkboxSupervisor = document.getElementById('checkDevolucionSupervisor');
+    if (checkboxSupervisor) {
+        checkboxSupervisor.checked = false;
+        checkboxSupervisor.onchange = async function () {
+            const bloqueSeleccionado = getSelectedBloqueDestinoOption();
+            const esBloqueUno = bloqueSeleccionado?.codigo === 'REV1';
+            const esFlujoDevolucion = !!window.workflowResponsibleModalState.esDevolucion;
+
+            if (!esBloqueUno || !esFlujoDevolucion) {
+                checkboxSupervisor.checked = false;
+                document.getElementById('isDevolucionSupervisor').value = '0';
+                setWorkflowResponsibleModalState({ esDevolucionSupervisor: false });
+                toggleDevolucionSupervisorUI(false);
+                return;
+            }
+
+            setWorkflowResponsibleModalState({ esDevolucionSupervisor: checkboxSupervisor.checked });
+            document.getElementById('isDevolucionSupervisor').value = checkboxSupervisor.checked ? '1' : '0';
+
+            if (checkboxSupervisor.checked) {
+                const supervisorData = await cargarSupervisorPorDefecto(data.cuenta_id);
+                const bloqueActual = getSelectedBloqueDestinoOption();
+                if (bloqueActual?.codigo) {
+                    cargarResponsablesPorBloque(bloqueActual.codigo, supervisorData?.supervisor_usuario || null);
+                }
+            } else {
+                const notice = document.getElementById('devolucionSupervisorNotice');
+                if (notice) notice.classList.add('d-none');
+            }
         };
     }
 
@@ -290,7 +501,7 @@ function abrirModalResponsable(data, cuentaId) {
     }
 }
 
-function cargarResponsablesPorBloque(bloqueCodigo) {
+function cargarResponsablesPorBloque(bloqueCodigo, supervisorDefault = null) {
     const select = document.getElementById('selectResponsable');
     select.innerHTML = '<option value="">-- Cargando responsables --</option>';
     select.disabled = true;
@@ -307,6 +518,11 @@ function cargarResponsablesPorBloque(bloqueCodigo) {
                     opt.textContent = u.nombre;
                     select.appendChild(opt);
                 });
+
+                if (supervisorDefault && supervisorDefault.id) {
+                    ensureOptionInResponsablesSelect(select, supervisorDefault);
+                    select.value = supervisorDefault.id;
+                }
             } else {
                 window.showSnackbar('No se pudieron cargar responsables para este bloque', 'error');
             }
@@ -339,6 +555,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const bloqueId = document.getElementById('selectBloqueDestino').value;
             const comentario = document.getElementById('comentarioResponsable').value;
             const esDevolucion = document.getElementById('isDevolucionResponsable').value === '1';
+            const esDevolucionSupervisor = document.getElementById('isDevolucionSupervisor').value === '1';
 
             if (!bloqueId) {
                 window.showSnackbar('❌ Debe seleccionar un bloque de destino', 'error');
@@ -361,7 +578,8 @@ document.addEventListener('DOMContentLoaded', function () {
                     estado_destino_id: estadoDestinoId,
                     bloque_id: bloqueId,
                     responsable_id: responsableId,
-                    comentario: comentario
+                    comentario: comentario,
+                    es_devolucion_supervisor: esDevolucionSupervisor,
                 })
             })
                 .then(response => response.json())
@@ -496,4 +714,3 @@ document.addEventListener('DOMContentLoaded', function () {
     // 3. Inicialización de tabs
     if (typeof window.restoreSelectedBlock === 'function') window.restoreSelectedBlock();
 });
-

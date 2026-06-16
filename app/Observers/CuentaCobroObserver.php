@@ -57,7 +57,8 @@ class CuentaCobroObserver
             $this->timeService->onStateOpened($cuenta);
 
             // Despacha el Job de monitoreo de estancamiento para el NUEVO estado.
-            if ($cuenta->wasChanged('estado_actual_id') || $cuenta->wasChanged('bloque_actual_id')) {
+            if (($cuenta->wasChanged('estado_actual_id') || $cuenta->wasChanged('bloque_actual_id'))
+                && ! $cuenta->estaPausadaPorSupervisorReturn()) {
                 $this->dispatchStagnationCheck($cuenta);
             }
         }
