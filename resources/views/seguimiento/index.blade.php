@@ -36,9 +36,9 @@
                 </div>
                 <div class="d-flex gap-3">
                     <button class="btn-saas-secondary" onclick="exportToExcel()">
-                        <i class="bi bi-file-earmark-excel-fill text-success me-2"></i> Reporte Excel
+                        <i class="bi bi-file-earmark-excel-fill text-success me-2"></i> Plantilla Excel
                     </button>
-                    <button class="btn-saas-primary" onclick="window.location.reload()">
+                    <button class="btn-saas-primary" onclick="refreshSeguimiento()">
                         <i class="bi bi-arrow-clockwise"></i> Sincronizar
                     </button>
                 </div>
@@ -756,6 +756,40 @@
             } catch (e) { console.error(e); }
         }
 
+        async function refreshSeguimiento() {
+            await applyAdvancedFilters();
+        }
+
+        async function focusSeguimientoPeriodo(contratoId, mes, mesesExtra = null, numeroContrato = '') {
+            const container = document.querySelector('.table-scroll-container');
+            const row = document.querySelector(`.contract-row[data-id="${contratoId}"]`);
+
+            if (!row) {
+                return;
+            }
+
+            if (mes > 12) {
+                const extra = Array.isArray(mesesExtra) ? mesesExtra : [];
+                openSeguimientoMesesExtra(extra, numeroContrato || row.querySelector('.stk-num')?.textContent?.trim() || '', contratoId);
+                return;
+            }
+
+            const target = row.querySelector(`[data-field="cta${mes}_rep_status"]`)
+                || row.querySelector(`[data-field="cta${mes}_secop_status"]`)
+                || row.querySelector(`[data-field="cta${mes}_sia_status"]`);
+
+            if (target) {
+                target.classList.add('field-just-created');
+                target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+                setTimeout(() => {
+                    target.classList.remove('field-just-created');
+                }, 2500);
+            } else if (container) {
+                container.scrollLeft = 0;
+            }
+        }
+
 
 
         function openEditModal(c) {
@@ -897,7 +931,8 @@
 
                 if (response.ok && data.success) {
                     window.showSnackbar(data.message || 'Período agregado correctamente', 'success');
-                    window.location.reload();
+                    await refreshSeguimiento();
+                    await focusSeguimientoPeriodo(contratoId, Number(data.next_mes || 0), data.meses_extra || [], data.numero_contrato || numeroContrato);
                 } else {
                     window.showSnackbar(data.message || 'No se pudo agregar el período', 'error');
                 }

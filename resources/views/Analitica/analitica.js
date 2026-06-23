@@ -6,8 +6,6 @@
  * recrean dinámicamente según la respuesta del servidor (AJAX).
  */
 document.addEventListener('DOMContentLoaded', function () {
-    window.currentDelayView = 'general';
-    
     function formatMinutosLabel(val, full = false) {
         const h = Math.floor(val / 60);
         const m = Math.round(val % 60);
@@ -19,6 +17,56 @@ document.addEventListener('DOMContentLoaded', function () {
     const slider      = document.getElementById('rangeSlider');
     const filterForm  = document.getElementById('filterForm');
     const captureArea = document.getElementById('captureArea');
+    const filterEtapaEl = document.getElementById('filterEtapa');
+    const delayLabelEl = document.getElementById('delayDrilldownLabel');
+    const delayBadgeEl = document.getElementById('delayDrilldownBadge');
+    const delayBackBtn = document.getElementById('btnToggleView');
+    let refreshTimer = null;
+    let activeRequest = null;
+
+    const dashboardState = {
+        selectedBlock: '',
+        selectedBlockData: null,
+        delayMode: 'blocks'
+    };
+
+    function setDelayState(mode, blockData = null) {
+        dashboardState.delayMode = mode;
+        dashboardState.selectedBlock = blockData?.etapa || '';
+        dashboardState.selectedBlockData = blockData;
+        window.currentDelayView = mode;
+
+        if (delayLabelEl) {
+            if (mode === 'states' && blockData) {
+                delayLabelEl.textContent = `Detalle del bloque: ${blockData.etapa}`;
+            } else {
+                delayLabelEl.textContent = 'Vista general por bloques';
+            }
+        }
+
+        if (delayBadgeEl) {
+            if (mode === 'states' && blockData) {
+                delayBadgeEl.textContent = 'Drill-down activo';
+                delayBadgeEl.classList.remove('d-none');
+            } else {
+                delayBadgeEl.classList.add('d-none');
+                delayBadgeEl.textContent = '';
+            }
+        }
+
+        if (delayBackBtn) {
+            delayBackBtn.classList.toggle('d-none', mode !== 'states');
+        }
+    }
+
+    function getSelectedEtapa() {
+        return filterEtapaEl ? (filterEtapaEl.value || '') : '';
+    }
+
+    function scheduleRefresh(delay = 120) {
+        clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(() => refreshDashboard(), delay);
+    }
 
     // PALETA DE COLORES INSTITUCIONAL
     const P = {
@@ -47,6 +95,45 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const baseFont  = { fontFamily: 'Inter, sans-serif' };
     const noToolbar = { show: false };
+
+    function resolveDelayHierarchy(delayData) {
+        const blocks = Array.isArray(delayData?.bloques) && delayData.bloques.length
+            ? delayData.bloques
+            : (Array.isArray(delayData?.tiempoEquipo) ? delayData.tiempoEquipo : []);
+
+        const selectedBlockName = getSelectedEtapa();
+        const selectedBlock = selectedBlockName
+            ? blocks.find(block => String(block.etapa) === String(selectedBlockName))
+            : null;
+
+        if (selectedBlock) {
+            return {
+                mode: 'states',
+                blocks,
+                selectedBlock,
+                categories: (selectedBlock.estados || []).map(item => item.nombre),
+                series: [{
+                    name: `Estados de ${selectedBlock.etapa}`,
+                    data: (selectedBlock.estados || []).map(item => item.minutos)
+                }]
+            };
+        }
+
+        return {
+            mode: 'blocks',
+            blocks,
+            selectedBlock: null,
+            categories: blocks.map(block => block.etapa),
+            series: [{
+                name: 'Tiempo total por bloque',
+                data: blocks.map(block => block.minutos_totales)
+            }]
+        };
+    }
+
+    function updateDelayDrilldownUI(mode, selectedBlock = null) {
+        setDelayState(mode, selectedBlock);
+    }
 
     // ==============================
     // CHARTS
@@ -122,122 +209,124 @@ document.addEventListener('DOMContentLoaded', function () {
                     `).join('');
                 }
             }
-            // 1.5 DELAY – Demora por Usuario y Etapa (NUEVA LÓGICA)
-        const delayData = data.demora_usuario_etapa;
-        if (delayData && (delayData.tiempoEquipo.length > 0 || delayData.porUsuario.length > 0)) {
-            const isGrouped = window.currentDelayView === 'grouped';
-            let series = [];
-            let categories = [];
+            // 1.5 DELAY – Jerarquía Bloque -> Estados
+            const delayData = data.demora_usuario_etapa;
+            const delayHierarchy = resolveDelayHierarchy(delayData);
+            const hasDelayData = delayHierarchy.blocks.length > 0;
 
-            if (!isGrouped) {
-                // Vista General
-                series = [{
-                    name: 'Tiempo Total Equipo',
-                    data: delayData.tiempoEquipo.map(d => d.minutos_totales)
-                }];
-                categories = delayData.tiempoEquipo.map(d => d.etapa);
-            } else {
-                // Vista por Usuario
-                const allEtapas = [...new Set(delayData.tiempoEquipo.map(d => d.etapa))];
-                categories = allEtapas;
-                series = delayData.porUsuario.map(u => {
-                    return {
-                        name: u.usuario,
-                        data: allEtapas.map(etapa => {
-                            const found = u.datos.find(d => d.etapa === etapa);
-                            return found ? found.minutos : 0;
-                        })
-                    };
+            if (hasDelayData) {
+                updateDelayDrilldownUI(delayHierarchy.mode, delayHierarchy.selectedBlock);
+
+                if (charts.delay) charts.delay.destroy();
+                charts.delay = new ApexCharts(document.querySelector('#delayChart'), {
+                    series: delayHierarchy.series,
+                    chart: {
+                        type: 'bar',
+                        height: isMobile ? 300 : 380,
+                        toolbar: noToolbar,
+                        ...baseFont,
+                        animations: { enabled: true, easing: 'easeinout', speed: 800 },
+                        theme: { mode: chartTheme },
+                        events: {
+                            dataPointSelection: function (_event, _chartContext, config) {
+                                if (delayHierarchy.mode !== 'blocks') return;
+                                const selected = delayHierarchy.blocks[config.dataPointIndex];
+                                if (!selected) return;
+
+                                if (filterEtapaEl) {
+                                    filterEtapaEl.value = selected.etapa;
+                                }
+
+                                updateDelayDrilldownUI('states', selected);
+                                scheduleRefresh();
+                            }
+                        }
+                    },
+                    plotOptions: {
+                        bar: {
+                            horizontal: true,
+                            borderRadius: 6,
+                            barHeight: delayHierarchy.mode === 'states' ? '70%' : '55%',
+                            distributed: delayHierarchy.mode === 'blocks',
+                            dataLabels: { position: 'top' }
+                        }
+                    },
+                    colors: [P.accent, P.teal, P.indigo, P.amber, P.orange, P.red, P.green],
+                    xaxis: {
+                        categories: delayHierarchy.categories,
+                        labels: {
+                            style: { fontSize: '11px', colors: labelColor, fontWeight: 500 },
+                            formatter: val => formatMinutosLabel(val)
+                        },
+                        axisBorder: { show: false },
+                        axisTicks: { show: false }
+                    },
+                    yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: labelColor } } },
+                    tooltip: {
+                        theme: 'dark',
+                        shared: false,
+                        intersect: true,
+                        custom: function({ seriesIndex, dataPointIndex }) {
+                            const minutes = delayHierarchy.series[seriesIndex]?.data?.[dataPointIndex] ?? 0;
+                            if (delayHierarchy.mode === 'states' && delayHierarchy.selectedBlock) {
+                                const state = delayHierarchy.selectedBlock.estados?.[dataPointIndex];
+                                const title = state ? `${delayHierarchy.selectedBlock.etapa} > ${state.nombre}` : delayHierarchy.selectedBlock.etapa;
+                                return `<div class="apexcharts-tooltip-title" style="padding:8px 10px;font-weight:700">${title}</div><div class="apexcharts-tooltip-series-group" style="padding:0 10px 8px"><span class="apexcharts-tooltip-text">${formatMinutosLabel(minutes, true)}</span></div>`;
+                            }
+
+                            const block = delayHierarchy.blocks[dataPointIndex];
+                            const title = block ? block.etapa : 'Bloque';
+                            return `<div class="apexcharts-tooltip-title" style="padding:8px 10px;font-weight:700">${title}</div><div class="apexcharts-tooltip-series-group" style="padding:0 10px 8px"><span class="apexcharts-tooltip-text">${formatMinutosLabel(minutes, true)}</span></div>`;
+                        },
+                        y: {
+                            formatter: val => formatMinutosLabel(val, true)
+                        }
+                    },
+                    dataLabels: {
+                        enabled: true,
+                        formatter: function(val) {
+                            return formatMinutosLabel(val);
+                        },
+                        style: { fontSize: '10px', fontWeight: 700, colors: [titleColor] },
+                        offsetX: 45
+                    },
+                    grid: { borderColor: gridColor, strokeDashArray: 4 },
+                    legend: { show: false }
                 });
-            }
+                charts.delay.render();
+                
+                if (delayData.kpis) {
+                    document.getElementById('kpi-general').textContent = delayData.kpis.general;
+                    document.getElementById('kpi-lenta').textContent = delayData.kpis.lenta;
+                    document.getElementById('kpi-rapida').textContent = delayData.kpis.rapida;
 
-            if (charts.delay) charts.delay.destroy();
-            charts.delay = new ApexCharts(document.querySelector('#delayChart'), {
-                series: series,
-                chart: { 
-                    type: 'bar', 
-                    height: isMobile ? 300 : 380, 
-                    toolbar: noToolbar, 
-                    ...baseFont, 
-                    animations: { enabled: true, easing: 'easeinout', speed: 800 },
-                    theme: { mode: chartTheme }
-                },
-                plotOptions: { 
-                    bar: { 
-                        horizontal: true, 
-                        borderRadius: 6, 
-                        barHeight: isGrouped ? '80%' : '55%',
-                        distributed: !isGrouped, // Colores por etapa si es vista general
-                        dataLabels: { 
-                            position: 'top',
-                        } 
-                    } 
-                },
-                colors: [P.accent, P.teal, P.indigo, P.amber, P.orange, P.red, P.green],
-                xaxis: {
-                    categories: categories,
-                    labels: { 
-                        style: { fontSize: '11px', colors: labelColor, fontWeight: 500 },
-                        formatter: val => formatMinutosLabel(val)
-                    },
-                    axisBorder: { show: false },
-                    axisTicks: { show: false }
-                },
-                yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: labelColor } } },
-                tooltip: {
-                    theme: 'dark',
-                    shared: false,
-                    intersect: true,
-                    y: {
-                        formatter: val => formatMinutosLabel(val, true)
-                    }
-                },
-                dataLabels: {
-                    enabled: true,
-                    formatter: function(val, opt) {
-                        return formatMinutosLabel(val);
-                    },
-                    style: { fontSize: '10px', fontWeight: 700, colors: [titleColor] },
-                    offsetX: 45, // Ajuste para que no se corte al final de la barra
-                },
-                grid: { borderColor: gridColor, strokeDashArray: 4 },
-                legend: { show: isGrouped, position: 'top', horizontalAlign: 'left', fontSize: '12px' }
-            });
-            charts.delay.render();
-            
-            // Actualizar KPIs de la tarjeta
-            if (delayData.kpis) {
-                document.getElementById('kpi-general').textContent = delayData.kpis.general;
-                document.getElementById('kpi-lenta').textContent = delayData.kpis.lenta;
-                document.getElementById('kpi-rapida').textContent = delayData.kpis.rapida;
+                    if (isMobile) {
+                        const mKpiTotal = document.getElementById('m-kpi-total');
+                        const mKpiLenta = document.getElementById('m-kpi-lenta');
+                        const mKpiLentaSub = document.getElementById('m-kpi-lenta-sub');
+                        const mKpiRapida = document.getElementById('m-kpi-rapida');
+                        const mKpiRapidaSub = document.getElementById('m-kpi-rapida-sub');
 
-                // Update Mobile KPIs
-                if (isMobile) {
-                    const mKpiTotal = document.getElementById('m-kpi-total');
-                    const mKpiLenta = document.getElementById('m-kpi-lenta');
-                    const mKpiLentaSub = document.getElementById('m-kpi-lenta-sub');
-                    const mKpiRapida = document.getElementById('m-kpi-rapida');
-                    const mKpiRapidaSub = document.getElementById('m-kpi-rapida-sub');
+                        if (mKpiTotal) mKpiTotal.textContent = delayData.kpis.general;
+                        
+                        if (mKpiLenta) {
+                            const lentaParts = delayData.kpis.lenta.split(' En ');
+                            mKpiLenta.textContent = lentaParts[0];
+                            if (mKpiLentaSub && lentaParts[1]) mKpiLentaSub.textContent = 'En ' + lentaParts[1];
+                        }
 
-                    if (mKpiTotal) mKpiTotal.textContent = delayData.kpis.general;
-                    
-                    if (mKpiLenta) {
-                        const lentaParts = delayData.kpis.lenta.split(' En ');
-                        mKpiLenta.textContent = lentaParts[0];
-                        if (mKpiLentaSub && lentaParts[1]) mKpiLentaSub.textContent = 'En ' + lentaParts[1];
-                    }
-
-                    if (mKpiRapida) {
-                        const rapidaParts = delayData.kpis.rapida.split(' ');
-                        mKpiRapida.textContent = rapidaParts[0];
-                        if (mKpiRapidaSub && rapidaParts[1]) mKpiRapidaSub.textContent = rapidaParts.slice(1).join(' ');
+                        if (mKpiRapida) {
+                            const rapidaParts = delayData.kpis.rapida.split(' ');
+                            mKpiRapida.textContent = rapidaParts[0];
+                            if (mKpiRapidaSub && rapidaParts[1]) mKpiRapidaSub.textContent = rapidaParts.slice(1).join(' ');
+                        }
                     }
                 }
+            } else {
+                updateDelayDrilldownUI('blocks', null);
+                const el = document.querySelector('#delayChart');
+                if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-clock"></i>Sin datos de demora configurados</div>';
             }
-        } else {
-            const el = document.querySelector('#delayChart');
-            if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-clock"></i>Sin datos de demora configurados</div>';
-        }
         }
 
         // 2. PIPELINE – Carga por Etapa
@@ -431,20 +520,25 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function refreshDashboard() {
+        if (activeRequest) {
+            activeRequest.abort();
+        }
+        activeRequest = new AbortController();
+
         const formData = new FormData(filterForm);
         const params   = new URLSearchParams(formData);
 
         const filterEtapa = document.getElementById('filterEtapa');
         const filterUsuario = document.getElementById('filterUsuario');
+        const filterResponsableEtapa = document.getElementById('filterResponsableEtapa');
         const filterEstadoEtapa = document.getElementById('filterEstadoEtapa');
-        const filterTramoGranularidad = document.getElementById('filterTramoGranularidad');
         const filterActividadResponsable = document.getElementById('filterActividadResponsable');
         const filterActividadEstado = document.getElementById('filterActividadEstado');
         
         if (filterEtapa && filterEtapa.value) params.append('f_etapa', filterEtapa.value);
         if (filterUsuario && filterUsuario.value) params.append('f_usuario', filterUsuario.value);
+        if (filterResponsableEtapa && filterResponsableEtapa.value) params.append('f_responsable_etapa', filterResponsableEtapa.value);
         if (filterEstadoEtapa && filterEstadoEtapa.value) params.append('f_estado_etapa', filterEstadoEtapa.value);
-        if (filterTramoGranularidad && filterTramoGranularidad.value) params.append('granularidad_tramo', filterTramoGranularidad.value);
         if (filterActividadResponsable && filterActividadResponsable.value) params.append('f_act_responsable', filterActividadResponsable.value);
         if (filterActividadEstado && filterActividadEstado.value) params.append('f_act_estado', filterActividadEstado.value);
 
@@ -452,7 +546,9 @@ document.addEventListener('DOMContentLoaded', function () {
         setGlobalLoading(true);
 
         try {
-            const response = await window.apiFetch(filterForm.action + '?' + params.toString());
+            const response = await window.apiFetch(filterForm.action + '?' + params.toString(), {
+                signal: activeRequest.signal
+            });
             if (!response.ok) throw new Error('Error en la respuesta del servidor');
             
             const data = await response.json();
@@ -494,9 +590,13 @@ document.addEventListener('DOMContentLoaded', function () {
             window.history.pushState({ path: newUrl }, '', newUrl);
 
         } catch (error) {
+            if (error && error.name === 'AbortError') {
+                return;
+            }
             console.error('Dashboard Update Error:', error);
             window.showSnackbar('No se pudieron sincronizar los datos. Reintente.', 'error');
         } finally {
+            activeRequest = null;
             // Finalizar carga con un pequeño delay para suavizar la transición
             setTimeout(() => setGlobalLoading(false), 300);
         }
@@ -506,6 +606,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // INITIALIZATION
     // ==============================
     if (captureArea) captureArea.classList.remove('loading');
+    setDelayState(getSelectedEtapa() ? 'states' : 'blocks', null);
     initCharts(chartData);
     initDataTable();
 
@@ -531,7 +632,6 @@ document.addEventListener('DOMContentLoaded', function () {
     // ==============================
     // EVENT LISTENERS
     // ==============================
-    const filterEtapaEl = document.getElementById('filterEtapa');
     const filterEstadoEtapaEl = document.getElementById('filterEstadoEtapa');
 
     if (filterEtapaEl && filterEstadoEtapaEl) {
@@ -560,9 +660,9 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    ['filterEtapa', 'filterEstadoEtapa', 'filterTramoGranularidad', 'filterActividadResponsable', 'filterActividadEstado'].forEach(id => {
+    ['filterEtapa', 'filterEstadoEtapa', 'filterResponsableEtapa', 'filterActividadResponsable', 'filterActividadEstado'].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.addEventListener('change', () => refreshDashboard());
+        if (el) el.addEventListener('change', () => scheduleRefresh());
     });
 
     const globalQuickTimeFilter = document.getElementById('globalQuickTimeFilter');
@@ -606,17 +706,17 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (fp) fp.clear();
             }
 
-            refreshDashboard();
+            scheduleRefresh();
         });
     }
     document.getElementById('filterForm').addEventListener('submit', function (e) {
         e.preventDefault();
-        refreshDashboard();
+        scheduleRefresh();
     });
 
     // Auto-refresh on select change
     document.querySelectorAll('#filterForm select').forEach(sel => {
-        sel.addEventListener('change', () => refreshDashboard());
+        sel.addEventListener('change', () => scheduleRefresh());
     });
 
     $('#btnReset').on('click', function () {
@@ -648,11 +748,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (slider && slider.noUiSlider) slider.noUiSlider.set([0, 100]);
 
-        refreshDashboard();
+        scheduleRefresh();
     });
 
     $('#filterForm select').on('change', function () {
-        refreshDashboard();
+        scheduleRefresh();
     });
 
     // Range Slider
@@ -670,7 +770,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 format: { to: val => Math.round(val), from: val => val }
             });
 
-            slider.noUiSlider.on('change', function () { refreshDashboard(); });
+            slider.noUiSlider.on('change', function () { scheduleRefresh(); });
             slider.noUiSlider.on('update', function (values) {
                 minValInput.value = values[0];
                 maxValInput.value = values[1];
@@ -704,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     const qf = document.getElementById('globalQuickTimeFilter');
                     if (qf) qf.value = "";
 
-                    refreshDashboard();
+                    scheduleRefresh();
                 }
             }
         });
@@ -714,16 +814,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // EVENT LISTENERS PARA MÉTRICAS
     // ==============================
     const btnToggleView = document.getElementById('btnToggleView');
-
-    function refreshDelayChart() {
-        refreshDashboard();
-    }
-
     if (btnToggleView) {
         btnToggleView.addEventListener('click', function() {
-            window.currentDelayView = window.currentDelayView === 'general' ? 'grouped' : 'general';
-            this.innerHTML = window.currentDelayView === 'general' ? '<i class="bi bi-person-lines-fill"></i>' : '<i class="bi bi-people-fill"></i>';
-            refreshDelayChart();
+            if (filterEtapaEl) {
+                filterEtapaEl.value = '';
+            }
+            setDelayState('blocks', null);
+            scheduleRefresh();
         });
     }
 
@@ -1212,7 +1309,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     item.classList.add('is-active');
                     picker.classList.remove('is-open');
 
-                    refreshDashboard();
+                    scheduleRefresh();
                 }
             });
         }

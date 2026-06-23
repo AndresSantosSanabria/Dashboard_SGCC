@@ -193,6 +193,12 @@
                             <div class="card-header bg-transparent border-0 d-flex justify-content-between flex-wrap gap-2">
                                 <h6>Tiempo Real por Etapa</h6>
                                 <div class="d-flex flex-wrap gap-2">
+                                    <select id="filterResponsableEtapa" class="form-select form-select-sm" style="width: 150px;">
+                                        <option value="">Todos los usuarios</option>
+                                        @foreach ($responsables as $resp)
+                                            <option value="{{ $resp->id }}">{{ $resp->primer_nombre }} {{ $resp->primer_apellido }}</option>
+                                        @endforeach
+                                    </select>
                                     <select id="filterEtapa" class="form-select form-select-sm" style="width: 150px;">
                                         <option value="">Todas las etapas</option>
                                         @foreach($etapasDisponibles as $etapa) <option value="{{ $etapa }}">{{ $etapa }}</option> @endforeach
@@ -205,10 +211,16 @@
                                             @endforeach
                                         @endforeach
                                     </select>
-                                    <button type="button" id="btnToggleView" class="btn btn-sm btn-outline-primary"><i class="bi bi-people"></i></button>
+                                    <button type="button" id="btnToggleView" class="btn btn-sm btn-outline-primary d-none" title="Volver al resumen de bloques">
+                                        <i class="bi bi-arrow-left-circle"></i>
+                                    </button>
                                 </div>
                             </div>
                             <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                    <div class="small text-muted" id="delayDrilldownLabel">Vista general por bloques</div>
+                                    <span class="badge bg-light text-primary border d-none" id="delayDrilldownBadge"></span>
+                                </div>
                                 <div class="row g-2 mb-3">
                                     <div class="col-4 text-center border-end"><div class="small text-muted">Total</div><div id="kpi-general" class="fw-bold">--</div></div>
                                     <div class="col-4 text-center border-end"><div class="small text-danger">Crítica</div><div id="kpi-lenta" class="fw-bold small">--</div></div>
@@ -247,11 +259,6 @@
                 {{-- ═══ ANALISIS DETALLADO (PREMIUM INTEGRATION) ═══ --}}
                 <div class="d-flex justify-content-between align-items-center mt-5 mb-3 animate-in">
                     <div class="section-title mb-0 mt-0">ANÁLISIS DE TIEMPOS POR ETAPA (NUEVO)</div>
-                    <select id="filterTramoGranularidad" class="form-select form-select-sm" style="width: 140px;">
-                        <option value="semana">Semanas</option>
-                        <option value="fecha">Fechas</option>
-                        <option value="mes">Meses</option>
-                    </select>
                 </div>
                 
                 <div class="row mb-4 animate-in">

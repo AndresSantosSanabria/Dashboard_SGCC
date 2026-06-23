@@ -368,6 +368,10 @@ class AnaliticaController extends Controller
             $logsQuery->where('usuario_id', $request->f_usuario);
         }
 
+        if ($request->filled('f_responsable_etapa')) {
+            $logsQuery->where('usuario_id', $request->f_responsable_etapa);
+        }
+
         $logs = $logsQuery->with(['usuario'])->get();
         $consolidado = collect();
 
@@ -383,6 +387,8 @@ class AnaliticaController extends Controller
                 'usuario_nombre' => $log->usuario->nombre_completo ?? 'Desconocido',
                 'bloque' => $mapBloques[$bloqueId],
                 'bloque_id' => $bloqueId,
+                'estado_id' => $config->id,
+                'estado_codigo' => $config->codigo,
                 'estado' => $config->nombre,
                 'minutos' => round($log->duracion_segundos / 60, 2),
                 'fecha_evento' => $log->start_time,
@@ -397,6 +403,10 @@ class AnaliticaController extends Controller
 
         if ($request->filled('f_usuario')) {
             $abiertosQuery->where('responsable_actual_id', $request->f_usuario);
+        }
+
+        if ($request->filled('f_responsable_etapa')) {
+            $abiertosQuery->where('responsable_actual_id', $request->f_responsable_etapa);
         }
 
         $abiertos = $abiertosQuery->with(['responsableActual', 'estadoActual'])->get();
@@ -423,6 +433,8 @@ class AnaliticaController extends Controller
                 'usuario_nombre' => $cuenta->responsableActual->nombre_completo ?? 'Desconocido',
                 'bloque' => $mapBloques[$bloqueId],
                 'bloque_id' => $bloqueId,
+                'estado_id' => $config->id,
+                'estado_codigo' => $config->codigo,
                 'estado' => $config->nombre,
                 'minutos' => round($volatil / 60, 2),
                 'fecha_evento' => $cuenta->fecha_ultimo_cambio_estado,
@@ -434,12 +446,22 @@ class AnaliticaController extends Controller
         }
 
         // 4. Agrupación Final por Bloque y sus Estados
-        $tiempoEquipo = $consolidado->groupBy('bloque')->map(function ($group, $bloqueNombre) use ($granularidad) {
-            $estadosDetalle = $group->groupBy('estado')->map(function ($subgroup, $estadoNombre) {
+        $tiempoEquipo = $consolidado->groupBy('bloque_id')->map(function ($group, $bloqueId) use ($granularidad, $mapBloques, $estadosConfig) {
+            $bloqueNombre = $mapBloques[$bloqueId] ?? 'Sin bloque';
+
+            $estadosDetalle = $group->groupBy('estado_id')->map(function ($subgroup, $estadoId) {
+                $first = $subgroup->first();
+                $totalEstado = $subgroup->sum('minutos');
+
                 return [
-                    'nombre' => $estadoNombre,
-                    'minutos' => (float) $subgroup->sum('minutos'),
-                    'label' => $this->formatMinutos($subgroup->sum('minutos'))
+                    'id' => $estadoId,
+                    'codigo' => $first['estado_codigo'] ?? null,
+                    'nombre' => $first['estado'] ?? 'Sin estado',
+                    'bloque_id' => $first['bloque_id'] ?? null,
+                    'bloque' => $first['bloque'] ?? null,
+                    'minutos' => (float) $totalEstado,
+                    'label' => $this->formatMinutos($totalEstado),
+                    'path' => trim(($first['bloque'] ?? 'Sin bloque') . ' > ' . ($first['estado'] ?? 'Sin estado'))
                 ];
             })->values()->sortByDesc('minutos')->values();
 
@@ -456,9 +478,12 @@ class AnaliticaController extends Controller
             })->values()->sortBy('inicio')->values();
 
             return [
+                'id' => (int) $bloqueId,
                 'etapa' => $bloqueNombre, // Mantenemos el nombre de campo para compatibilidad
-                'bloque_id' => $group->first()['bloque_id'],
+                'bloque_id' => (int) $bloqueId,
                 'minutos_totales' => (float) $totalMinutos,
+                'label' => $this->formatMinutos($totalMinutos),
+                'path' => $bloqueNombre,
                 'estados' => $estadosDetalle,
                 'tramos' => $tramos,
             ];
@@ -491,6 +516,7 @@ class AnaliticaController extends Controller
         $etapaRapida = $tiempoEquipo->sortBy('minutos_totales')->first();
 
         return [
+            'bloques' => $tiempoEquipo,
             'tiempoEquipo' => $tiempoEquipo,
             'porUsuario' => $porUsuario->values(),
             'granularidad_tramo' => $granularidad,
@@ -549,6 +575,10 @@ class AnaliticaController extends Controller
             $query->whereHas('contrato', function ($q) use ($request) {
                 $q->where('supervisor_id', $request->supervisor);
             });
+        }
+
+        if ($request->filled('f_bloque')) {
+            $query->where('cuentas_cobro.bloque_actual_id', $request->f_bloque);
         }
 
         // Responsable (Sincronizado entre filtro top y filtro específico de módulo)

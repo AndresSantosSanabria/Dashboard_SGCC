@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Contratista;
 use App\Models\Contrato;
+use App\Models\SeguimientoCampo;
 use App\Models\Modalidad;
 use App\Models\SeguimientoMensual;
 use App\Models\SeguimientoRequisito;
@@ -24,7 +25,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
-use Spatie\SimpleExcel\SimpleExcelWriter;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 class SeguimientoController extends Controller
 {
@@ -224,75 +226,40 @@ class SeguimientoController extends Controller
                 ob_end_clean();
             }
 
-            // Usando cursor() resolvemos el problema de la sobrecarga de memoria
-            // y permitimos que la DB nos entregue los registros 1 a 1 de forma óptima
             $contratosQuery = $this->getFilteredContratos($request);
             $maxMesSeguimiento = $this->getMaxMesSeguimiento($contratosQuery);
-            $contratos = $contratosQuery->cursor();
+            $camposPersonalizados = $this->getCamposPersonalizados();
+            $headers = $this->buildSeguimientoExportHeaders($maxMesSeguimiento, $camposPersonalizados);
 
-            $tempFile = tempnam(sys_get_temp_dir(), 'export_') . '.xlsx';
-            $writer = SimpleExcelWriter::create($tempFile);
+            $spreadsheet = new Spreadsheet();
+            $sheet = $spreadsheet->getActiveSheet();
+            $sheet->setTitle('SEGUIMIENTO SECOP');
+            $sheet->fromArray([$headers], null, 'A1');
+            $sheet->freezePane('A2');
+            $sheet->setAutoFilter($sheet->calculateWorksheetDimension());
 
-            foreach ($contratos as $c) {
-                // Generar los agregados temporales por fila
+            $rowNumber = 2;
+            foreach ($contratosQuery->cursor() as $c) {
                 $this->hydrateContratoData($c);
                 if (! $c->relationLoaded('seguimientoCamposValores')) {
                     $c->load('seguimientoCamposValores.campo');
                 }
-                
-                $row = [
-                    'PROCESO' => $c->numero_proceso,
-                    'Nº CONTRATO' => $c->numero_contrato,
-                    'CONTRATISTA' => $c->contratista->nombre_completo ?? 'N/A',
-                    'TIPO CONTRATISTA' => $c->tipo_contratista,
-                    'SUPERVISOR' => $c->supervisor->nombre_completo ?? 'N/A',
-                    'OBJETO' => $c->objeto,
-                    'VALOR CONTRATO' => (float) ($c->monto_total ?? 0),
-                    'PLANTA' => $c->no_planta,
-                    'CONCEPTO' => $c->concepto_precontractual,
-                    'CDP' => $c->cdp_codigo,
-                    'ESTADO GLOBAL' => $c->global_status,
-                    'PROGRESO (%)' => (float) round($c->perc_cumplimiento ?? 0, 2),
-                    'ESTADO SECOP' => $c->secop_estado_contrato,
-                    'APROBADO Y PAGADO' => $c->aprobado_y_pagado,
-                    'MODIFICACIONES Y CIERRE' => $c->modificaciones_y_cierre,
-                ];
 
-                $reqs = [
-                    'estudios_previos_status' => 'ESTUDIOS PREVIOS',
-                    'soportes_status' => 'SOPORTES',
-                    'idoneidad_status' => 'IDONEIDAD',
-                    'acuerdo_confidencialidad_status' => 'CONFIDENCIALIDAD',
-                    'clausulado_status' => 'CLAUSULADO',
-                    'acta_inicio_status' => 'ACTA INICIO',
-                    'delegacion_status' => 'DELEGACIÓN',
-                    'arl_status' => 'ARL',
-                    'rpc_status' => 'RP',
-                ];
-                foreach ($reqs as $f => $label) {
-                    $row[$label] = $c->$f ?: 'VACÍO';
-                }
-
-                for ($i = 1; $i <= $maxMesSeguimiento; $i++) {
-                    $row["REP $i"] = $c->{"cta{$i}_rep_status"} ?: '-';
-                    $row["SEC $i"] = $c->{"cta{$i}_secop_status"} ?: '-';
-                    $row["SIA $i"] = $c->{"cta{$i}_sia_status"} ?: '-';
-                }
-
-                $writer->addRow($row);
+                $sheet->fromArray([$this->buildSeguimientoExportRow($c, $maxMesSeguimiento, $camposPersonalizados)], null, 'A' . $rowNumber);
+                $rowNumber++;
             }
 
-            $writer->close();
-
             $filename = 'reporte_' . date('Ymd_His') . '.xlsx';
-            
+            $tempFile = tempnam(sys_get_temp_dir(), 'export_') . '.xlsx';
+            (new Xlsx($spreadsheet))->save($tempFile);
+
             return response()->download($tempFile, $filename, [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Content-Disposition' => 'attachment; filename="' . $filename . '"',
                 'Access-Control-Expose-Headers' => 'Content-Disposition'
             ])->deleteFileAfterSend(true);
-            
-        } catch (\Exception $e) {
+
+        } catch (\Throwable $e) {
             Contrato::logException($e, 'contratos', $request->all());
 
             return response()->json([
@@ -302,13 +269,6 @@ class SeguimientoController extends Controller
         }
     }
 
-    /**
-     * MOTOR DE PERSISTENCIA (Intelligent Router)
-     * 
-     * Este método detecta qué tipo de campo se está actualizando (Mensual, 
-     * Requisito o Maestro) y lo enruta a la tabla correcta. 
-     * Es el corazón de la reactividad del Spreadsheet de seguimiento.
-     */
     public function updateStatus(Request $request)
     {
         try {
@@ -454,8 +414,9 @@ class SeguimientoController extends Controller
             }
 
             $contrato = Contrato::findOrFail($contratoId);
+            $nextMes = null;
 
-            DB::transaction(function () use ($contrato) {
+            DB::transaction(function () use ($contrato, &$nextMes) {
                 $maxMes = (int) SeguimientoMensual::where('contrato_id', $contrato->id)->max('mes');
                 $nextMes = $maxMes > 0 ? $maxMes + 1 : 1;
                 $anio = (int) (SeguimientoMensual::where('contrato_id', $contrato->id)->max('anio') ?: now()->year);
@@ -475,13 +436,22 @@ class SeguimientoController extends Controller
                 }
             });
 
-            Contrato::logManualAudit(null, 'UPDATE', "Se agregó el período mensual siguiente al contrato #{$contrato->numero_contrato}", 'contratos');
+            $contrato->load(['seguimientoMensual', 'seguimientoRequisitos', 'seguimientoCamposValores.campo', 'contratista', 'supervisor']);
+            $this->hydrateContratoData($contrato);
+
+            Contrato::logManualAudit(null, 'UPDATE', "Se agregó el período mensual siguiente al contrato #{$contrato->numero_contrato}", 'contratos', [
+                'next_mes' => $nextMes,
+            ]);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Período agregado correctamente.',
+                'message' => "Período {$nextMes} agregado correctamente.",
+                'next_mes' => $nextMes,
+                'numero_contrato' => $contrato->numero_contrato,
+                'meses_extra_count' => $contrato->meses_extra_count ?? 0,
+                'meses_extra' => $contrato->meses_extra ?? [],
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Contrato::logException($e, 'contratos', ['operacion' => 'agregarPeriodo', 'contrato_id' => $contratoId]);
             return response()->json([
                 'success' => false,
@@ -678,6 +648,157 @@ class SeguimientoController extends Controller
             ->orderBy('orden')
             ->orderBy('id')
             ->get();
+    }
+
+    private function buildSeguimientoExportHeaders(int $maxMesSeguimiento, $camposPersonalizados = []): array
+    {
+        $headers = [
+            'GESTION',
+            'SCORE',
+            'TIPO',
+            'IDENTIFICADOR',
+            'NOMBRE COMPLETO',
+            'TIPO ENTIDAD',
+            'SUPERVISOR',
+            'OBJETO CONTRACTUAL',
+            'VALOR TOTAL',
+            'SECOP',
+            'PLANTA',
+            'CONCEPTO',
+            'F. CDP',
+            'E. PREVIOS',
+            'SOPORTES',
+            'IDONEIDAD',
+            'CONFID.',
+            'CLAUS.',
+            'ACTA I.',
+            'DELEG.',
+            'ARL',
+            'RP',
+            'STATUS S.',
+            'PAGADO',
+            'CIERRE',
+        ];
+
+        for ($i = 1; $i <= $maxMesSeguimiento; $i++) {
+            $headers[] = "R{$i}";
+            $headers[] = "S{$i}";
+            $headers[] = "I{$i}";
+        }
+
+        $headers = array_merge($headers, [
+            'EVAL.',
+            'ACTA C.',
+            'REQ. LIQ.',
+            'REPOS.',
+            'LIQ. S.',
+            'LIQ. I.',
+            'SALDO RT.',
+            'OBS. RAZON',
+            'OBS. ACCION',
+            'NO LIQ.',
+            'ABOGADO',
+            'CONTADOR',
+        ]);
+
+        foreach ($camposPersonalizados as $campo) {
+            $headers[] = $campo->etiqueta ?: $campo->clave;
+        }
+
+        return $headers;
+    }
+
+    private function buildSeguimientoExportRow(object $c, int $maxMesSeguimiento, $camposPersonalizados = []): array
+    {
+        $values = [];
+        $campoValores = $c->relationLoaded('seguimientoCamposValores')
+            ? $c->seguimientoCamposValores->keyBy('seguimiento_campo_id')
+            : collect();
+
+        $values[] = '';
+        $values[] = $this->excelValue($c->perc_cumplimiento);
+        $values[] = $this->excelValue($c->numero_proceso);
+        $values[] = $this->excelValue($c->numero_contrato);
+        $values[] = $this->excelValue(optional($c->contratista)->nombre_completo);
+        $values[] = $this->excelValue($c->tipo_contratista);
+        $values[] = $this->excelValue(optional($c->supervisor)->nombre_completo);
+        $values[] = $this->excelValue($c->objeto);
+        $values[] = $this->excelValue($c->monto_total);
+        $values[] = $this->excelValue($c->link_secop);
+        $values[] = $this->excelValue($c->planta_status);
+        $values[] = $this->excelValue($c->concepto_status);
+        $values[] = $this->excelValue($c->cdp_status);
+
+        foreach ([
+            'estudios_previos_status',
+            'soportes_status',
+            'idoneidad_status',
+            'acuerdo_confidencialidad_status',
+            'clausulado_status',
+            'acta_inicio_status',
+            'delegacion_status',
+            'arl_status',
+            'rpc_status',
+        ] as $field) {
+            $values[] = $this->excelValue($c->$field);
+        }
+
+        $values[] = $this->excelValue($c->secop_estado_contrato);
+        $values[] = $this->excelValue($c->aprobado_y_pagado);
+        $values[] = $this->excelValue($c->modificaciones_y_cierre);
+
+        for ($i = 1; $i <= $maxMesSeguimiento; $i++) {
+            $values[] = $this->excelValue($c->{"cta{$i}_rep_status"} ?? '');
+            $values[] = $this->excelValue($c->{"cta{$i}_secop_status"} ?? '');
+            $values[] = $this->excelValue($c->{"cta{$i}_sia_status"} ?? '');
+        }
+
+        $values[] = $this->excelValue($c->evaluacion_proveedor_status);
+        $values[] = $this->excelValue($c->acta_cierre_expediente_status);
+        $values[] = $this->excelValue($c->requiere_acta_liq_status);
+        $values[] = $this->excelValue($c->acta_liq_repositorio_status);
+        $values[] = $this->excelValue($c->acta_liq_secop_status);
+        $values[] = $this->excelValue($c->acta_liq_sia_status);
+
+        $values[] = $this->excelValue($c->saldo);
+        $values[] = $this->excelValue($c->observacion_1_razon ?? '');
+        $values[] = $this->excelValue($c->observacion_2_accion ?? '');
+        $values[] = $this->excelValue($c->razon_no_liquidacion ?? '');
+        $values[] = $this->excelValue($c->abogado_responsable ?? '');
+        $values[] = $this->excelValue($c->contador_responsable ?? '');
+
+        foreach ($camposPersonalizados as $campo) {
+            $valor = $campoValores->get($campo->id);
+            $values[] = $this->excelValue($valor?->valor_mostrado ?? '');
+        }
+
+        return $values;
+    }
+
+    private function excelValue($value): string|float|int
+    {
+        if (is_null($value)) {
+            return '';
+        }
+
+        if (is_string($value)) {
+            $clean = trim($value);
+
+            if ($clean === '') {
+                return '';
+            }
+
+            if (! mb_check_encoding($clean, 'UTF-8')) {
+                $converted = @mb_convert_encoding($clean, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+                if ($converted !== false) {
+                    $clean = $converted;
+                }
+            }
+
+            return $clean;
+        }
+
+        return $value;
     }
 
     private function upsertSeguimientoCampoValor(int $campoId, int $contratoId, ?string $valor): void
