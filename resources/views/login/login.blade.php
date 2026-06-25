@@ -220,6 +220,69 @@
     @include('dashboard.componentes.history_modal')
 
     <script>
+        function renderAccountCard(account, contratoNum) {
+            const statusClass = account.finalizada ? 'bg-success' : 'bg-primary';
+            const progress = Number(account.progreso ?? 0);
+            const progressText = Number.isFinite(progress) ? `${Math.round(progress)}%` : '0%';
+
+            return `
+                <button type="button"
+                    class="text-start w-100 border-0 p-0 bg-transparent"
+                    onclick="showHistory(${account.id}, '${(contratoNum || '').replace(/'/g, "\\'")}', '${(account.id_tramite ?? account.numero_cuenta ?? account.id).toString().replace(/'/g, "\\'")}')">
+                    <div class="result-item" style="background:#fff;border-radius:14px;padding:14px 16px;border:1px solid rgba(15,23,42,.08);box-shadow:0 8px 18px rgba(15,23,42,.06);">
+                        <div class="d-flex justify-content-between align-items-start gap-3">
+                            <div>
+                                <div class="fw-bold text-dark">Cuenta ${account.numero_cuenta ?? account.id}</div>
+                                <div class="text-muted small">ID trámite: ${account.id_tramite ?? account.id}</div>
+                            </div>
+                            <span class="badge ${statusClass}" style="border-radius:999px;">${account.estado_actual ?? 'En trámite'}</span>
+                        </div>
+                        <div class="mt-2 small text-muted">Inicio: ${account.fecha_inicio ?? 'N/A'}</div>
+                        <div class="mt-1 small text-muted">Actualización: ${account.ultima_actualizacion ?? 'N/A'}</div>
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between small mb-1">
+                                <span>Avance</span>
+                                <span class="fw-bold">${progressText}</span>
+                            </div>
+                            <div class="progress" style="height:8px;border-radius:999px;">
+                                <div class="progress-bar" role="progressbar" style="width:${Math.max(0, Math.min(progress, 100))}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </button>
+            `;
+        }
+
+        function renderConsultationResults(data, resultsArea) {
+            if (!data.cuentas || data.cuentas.length === 0) {
+                resultsArea.innerHTML = `<div class="text-warning small">No se encontraron cuentas asociadas.</div>`;
+                return;
+            }
+
+            const selectorTitle = data.requires_selection
+                ? 'Selecciona una cuenta para ver su historial'
+                : 'Cuenta encontrada';
+
+            const cards = data.cuentas.map(account => renderAccountCard(account, data.numero_contrato)).join('');
+
+            resultsArea.innerHTML = `
+                <div class="mb-3">
+                    <div class="result-item">
+                        <span class="result-label">Contratista</span>
+                        <span class="result-value">${data.contratista}</span>
+                    </div>
+                    <div class="result-item">
+                        <span class="result-label">Contrato</span>
+                        <span class="result-value">${data.numero_contrato}</span>
+                    </div>
+                </div>
+                <div class="mb-2 fw-bold text-dark">${selectorTitle}</div>
+                <div class="d-grid gap-3">
+                    ${cards}
+                </div>
+            `;
+        }
+
         function performConsultation(nitId, textId, spinnerId, resultsId) {
             const nit = document.getElementById(nitId).value;
             const btnText = document.getElementById(textId);
@@ -252,38 +315,7 @@
                         resultsArea.innerHTML =
                             `<div class="text-warning small">${data.error || 'No se encontró la información'}</div>`;
                     } else {
-                        resultsArea.innerHTML = `
-                        <div class="result-item">
-                            <span class="result-label">Contratista</span>
-                            <span class="result-value">${data.contratista}</span>
-                        </div>
-                        <div class="result-item" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; margin-top: 10px;">
-                            <span class="result-label" style="color: #fbfbfbff; opacity: 1;">Estado Actual</span>
-                            <span class="status-badge" style="background: #2563eb; color:white; padding:2px 8px; border-radius:4px;">${data.estado}</span>
-                        </div>
-                        <div class="result-item">
-                            <span class="result-label">Bloque Actual</span>
-                            <span class="result-value">${data.bloque}</span>
-                        </div>
-                        ${data.responsable ? `
-                        <div class="result-item" style="border-top: 1px solid #e2e8f0; padding-top: 10px; margin-top: 6px; background: #eff6ff; border-radius: 8px; padding: 10px 14px;">
-                            <span class="result-label" style="color:#3b82f6; font-size:0.72rem; letter-spacing:0.08em; font-weight: 800;">FUE ASIGNADO A</span>
-                            <span class="result-value" style="display:flex;align-items:center;gap:8px;font-size:1rem;font-weight:800;color:#1e293b;">
-                                <i class="bi bi-person-check-fill" style="color:#3b82f6; font-size:1.1rem;"></i>
-                                ${data.responsable}
-                            </span>
-                        </div>
-                        ` : ''}
-                        <div class="result-item">
-                            <span class="result-label">Última Actualización</span>
-                            <span class="result-value" style="font-size: 0.8rem; opacity: 0.7;">${data.ultima_actualizacion}</span>
-                        </div>
-                        <div class="result-item mt-3 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
-                            <button type="button" class="btn btn-primary w-100" onclick="showHistory(${data.id}, 'Tramite Actual')" style="font-size: 0.9rem;">
-                                <i class="fas fa-history me-2"></i> Ver Historial Detallado
-                            </button>
-                        </div>
-                    `;
+                        renderConsultationResults(data, resultsArea);
                     }
                     resultsArea.classList.remove('d-none');
                 })
@@ -329,7 +361,7 @@
             }
         });
 
-        window.showHistory = function(cuentaId, contratoNum) {
+        window.showHistory = function(cuentaId, contratoNum, cuentaNum = '') {
             if (!historyModalInstance) {
                 const modalElement = document.getElementById("historyModal");
                 if (modalElement) {
@@ -341,6 +373,8 @@
             }
 
             document.getElementById("historyContratoNum").textContent = contratoNum;
+            const cuentaLabel = document.getElementById("historyCuentaNum");
+            if (cuentaLabel) cuentaLabel.textContent = cuentaNum || `#${cuentaId}`;
             const spinner = document.getElementById("historySpinner");
             const content = document.getElementById("timelineContent");
             const empty = document.getElementById("historyEmpty");

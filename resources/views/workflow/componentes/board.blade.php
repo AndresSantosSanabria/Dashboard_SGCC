@@ -59,7 +59,24 @@
                 </div>
                 <div class="kanban-board">
                     @foreach ($block['columnas'] as $estadoId => $columna)
-                        <div class="kanban-column">
+                        @php
+                            $tipoCol = strtoupper($columna['tipo'] ?? '');
+                            $codigoCol = strtoupper($columna['codigo'] ?? '');
+                            $nombreColLower = trim(mb_strtolower($columna['nombre'] ?? ''));
+                            
+                            $esTransicionalCol = (
+                                $key != 6 && (
+                                    $tipoCol === 'APROBADO' ||
+                                    in_array($codigoCol, ['REV1_PASA', 'SAP_OK', 'FAC_OK', 'FIR_OK', 'HAC_OK'], true) ||
+                                    $nombreColLower === 'pasa' ||
+                                    $nombreColLower === 'con ingreso mercancia' ||
+                                    $nombreColLower === 'facturada' ||
+                                    $nombreColLower === 'firmada' ||
+                                    $nombreColLower === 'radicada'
+                                )
+                            );
+                        @endphp
+                        <div class="kanban-column" {!! $esTransicionalCol ? 'style="display: none !important;"' : '' !!}>
                             <div class="column-title d-flex align-items-center">
                                 <div class="me-2" style="width: 8px; height: 8px; border-radius: 50%; background-color: {{ $columna['color_hex'] ?? '#adb5bd' }}; shadow: 0 0 5px {{ $columna['color_hex'] }}44;"></div>
                                 <span class="text-capitalize flex-grow-1">{{ $columna['nombre'] }}</span>

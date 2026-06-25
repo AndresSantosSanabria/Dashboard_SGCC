@@ -150,7 +150,7 @@ function debounce(func, wait) {
     };
 }
 
-const fetchFilteredData = () => {
+const fetchFilteredData = (forcedBlockId = null) => {
     // Cancelar petición previa si existe
     if (abortController) {
         abortController.abort();
@@ -185,6 +185,9 @@ const fetchFilteredData = () => {
             bindPagination();
             // Re-aplicar estado de columnas
             applyMinimizedColumns();
+            if (forcedBlockId && typeof window.selectWorkflowBlock === 'function') {
+                window.selectWorkflowBlock(forcedBlockId);
+            }
         })
         .catch((error) => {
             if (error.name === "AbortError") return;
@@ -628,15 +631,15 @@ window.editAccount = function (id) {
     );
 };
 
-window.startNextAccount = function (id, contrato, siguienteCuenta) {
+window.startParallelAccount = function (id, contrato, siguienteCuenta) {
     Swal.fire({
-        title: '¿Iniciar siguiente cuenta?',
-        text: `¿Desea iniciar formalmente el trámite para la cuenta #${siguienteCuenta} del contrato ${contrato}?`,
+        title: '¿Iniciar cuenta paralela?',
+        text: `¿Desea iniciar un nuevo trámite paralelo para la cuenta #${siguienteCuenta} del contrato ${contrato}?`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#004884',
         cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, iniciar',
+        confirmButtonText: 'Sí, iniciar paralela',
         cancelButtonText: 'Cancelar',
         reverseButtons: true,
         customClass: {
@@ -650,16 +653,27 @@ window.startNextAccount = function (id, contrato, siguienteCuenta) {
         })
             .then(res => res.json())
             .then(data => {
-                if (data.success) {
-                    showSnackbar("✅ " + data.message, "success");
+                if (!data.success) {
+                    showSnackbar("⚠️ " + (data.message || "No se pudo crear la cuenta paralela"), "error");
+                    return;
+                }
+                showSnackbar(`✅ Cuenta paralela #${data.numero_cuenta} creada correctamente`, "success");
+                window.pendingOpenCuentaId = data.id;
+                window.pendingOpenCuentaBanner = '⚠️ Esta es una cuenta paralela recién creada';
+                if (typeof window.recargarKanban === 'function') {
+                    window.recargarKanban(data.bloque_inicial_id || null, {
+                        openCuentaId: data.id,
+                        resetFilters: true,
+                    });
+                } else if (typeof fetchFilteredData === 'function') {
                     fetchFilteredData();
                 } else {
-                    showSnackbar("⚠️ " + data.message, "error");
+                    window.location.reload();
                 }
             })
             .catch(err => {
                 console.error(err);
-                showSnackbar("❌ Error al iniciar el siguiente ciclo", "error");
+                showSnackbar("❌ Error al iniciar la cuenta paralela", "error");
             });
     });
 };
@@ -786,4 +800,3 @@ window.toggleDashboardSort = function (column) {
         fetchFilteredData();
     }
 };
-

@@ -29,6 +29,9 @@ class AnaliticaExport
             ->whereIn('usuario_id', $usuariosIds)
             // Filtro de fechas aplicado a cuando se registró el tiempo
             ->whereBetween('updated_at', [$fechaInicioParsed, $fechaFinParsed])
+            ->whereHas('estado', function ($query) {
+                $query->where('codigo', '!=', 'REV1_SIN');
+            })
             ->with(['cuentaCobro.contrato.contratista']);
 
         // Para evitar problemas de memoria, usamos chunk
@@ -57,7 +60,10 @@ class AnaliticaExport
         $abiertosQuery = CuentaCobro::with(['contrato.contratista'])
             ->where('finalizada', false)
             ->whereNotNull('fecha_ultimo_cambio_estado')
-            ->whereIn('responsable_actual_id', $usuariosIds);
+            ->whereIn('responsable_actual_id', $usuariosIds)
+            ->whereHas('estadoActual', function ($query) {
+                $query->where('codigo', '!=', 'REV1_SIN');
+            });
             
         $abiertos = $abiertosQuery->get();
 

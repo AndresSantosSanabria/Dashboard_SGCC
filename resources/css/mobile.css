@@ -1833,3 +1833,126 @@
         padding: 0.85rem 1rem !important;
     }
 }
+
+/* ══════════════════════════════════════════════════════════
+    REDESIGN 2026 — Nuevos componentes del Tablero Analítico
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 991.98px) {
+    .kpi-sapphire .kpi-value { color: var(--mobile-sapphire, #60a5fa) !important; }
+    .kpi-amber .kpi-value { color: var(--mobile-amber, #fbbf24) !important; }
+    .kpi-emerald .kpi-value { color: var(--mobile-emerald, #34d399) !important; }
+    .kpi-ruby .kpi-value { color: var(--mobile-ruby, #fb7185) !important; }
+    .kpi-indigo .kpi-value { color: var(--mobile-indigo, #818cf8) !important; }
+    .kpi-teal .kpi-value { color: var(--mobile-teal, #2dd4bf) !important; }
+
+    .kpi-card .kpi-header {
+        width: 100%;
+    }
+
+    .bottleneck-card {
+        margin: 0 0.5rem 0.75rem !important;
+        padding: 12px 14px !important;
+    }
+
+    .bottleneck-card .bottleneck-text {
+        font-size: 0.78rem !important;
+    }
+
+    .timeline-vertical {
+        max-height: 300px !important;
+    }
+
+    .timeline-vertical .tl-event {
+        font-size: 0.78rem !important;
+    }
+
+    .timeline-vertical .tl-meta {
+        font-size: 0.72rem !important;
+    }
+
+    .analytic-item .block-header {
+        padding: 12px 14px !important;
+        flex-wrap: wrap !important;
+        gap: 10px !important;
+    }
+
+    .analytic-item .block-progress {
+        flex: 1 1 100% !important;
+        order: 10 !important;
+    }
+
+    .analytic-item .block-time {
+        min-width: auto !important;
+    }
+
+    .analytic-item .block-status-badge {
+        font-size: 0.65rem !important;
+    }
+
+    .analytic-item .states-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .analytic-item .tramos-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    .filter-bar .form-select-sm,
+    .filter-bar .smart-dropdown-trigger,
+    .filter-bar .header-date-selector,
+    .btn-filter,
+    .export-dropdown .dropdown-toggle {
+        height: 36px !important;
+        font-size: 0.78rem !important;
+    }
+
+    #filterForm {
+        gap: 0.4rem !important;
+    }
+
+    .filter-bar .smart-dropdown-menu {
+        position: fixed !important;
+        top: auto !important;
+        left: 5% !important;
+        right: 5% !important;
+        width: 90% !important;
+        max-width: 90% !important;
+        max-height: 50vh !important;
+        z-index: 1060 !important;
+    }
+
+    #donutLegend {
+        display: flex !important;
+        justify-content: center !important;
+        gap: 1.5rem !important;
+    }
+
+    #donutLegend > div {
+        flex: 0 0 auto !important;
+    }
+
+    .section-title {
+        font-size: 0.68rem !important;
+        padding: 0 0.5rem !important;
+    }
+}
+
+/* Extra small: 480px */
+@media (max-width: 480px) {
+    .kpi-row {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.5rem !important;
+    }
+
+    .analytic-item .states-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .analytic-item .tramos-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    #filterForm .btn-filter span {
+        display: none !important;
+    }
+}

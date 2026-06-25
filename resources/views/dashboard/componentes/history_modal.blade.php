@@ -11,7 +11,11 @@
                         <h5 class="modal-title fw-bold mb-0" id="historyModalLabel" style="font-size: 1.1rem; letter-spacing: 0.5px;">
                             Historial de Movimientos
                         </h5>
-                        <p class="mb-0 small opacity-75">Contrato: <span id="historyContratoNum" class="fw-bold"></span></p>
+                        <p class="mb-0 small opacity-75">
+                            Contrato: <span id="historyContratoNum" class="fw-bold"></span>
+                            <span class="mx-2">|</span>
+                            Cuenta: <span id="historyCuentaNum" class="fw-bold"></span>
+                        </p>
                     </div>
                     <div class="ms-auto me-4">
                         <span id="historyTotalTimeBadge" class="badge bg-white text-primary px-2 px-md-3 py-1 py-md-2 shadow-sm" style="font-size: 0.75rem; border-radius: 20px; display: none;">

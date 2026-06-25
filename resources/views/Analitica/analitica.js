@@ -1,10 +1,7 @@
-/**
- * MOTOR DE VISUALIZACIÓN BI (ApexCharts)
- *
- * Este script gestiona la interactividad del tablero analítico.
- * Sigue un patrón de "Data-Driven UI", donde los gráficos se destruyen y
- * recrean dinámicamente según la respuesta del servidor (AJAX).
- */
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
+window.jspdf = { jsPDF };
 document.addEventListener('DOMContentLoaded', function () {
     function formatMinutosLabel(val, full = false) {
         const h = Math.floor(val / 60);
@@ -14,8 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     let chartData = window.chartData || {};
     let charts = {};
-    const slider      = document.getElementById('rangeSlider');
-    const filterForm  = document.getElementById('filterForm');
+    const filterForm = document.getElementById('filterForm');
     const captureArea = document.getElementById('captureArea');
     const filterEtapaEl = document.getElementById('filterEtapa');
     const delayLabelEl = document.getElementById('delayDrilldownLabel');
@@ -35,15 +31,11 @@ document.addEventListener('DOMContentLoaded', function () {
         dashboardState.selectedBlock = blockData?.etapa || '';
         dashboardState.selectedBlockData = blockData;
         window.currentDelayView = mode;
-
         if (delayLabelEl) {
-            if (mode === 'states' && blockData) {
-                delayLabelEl.textContent = `Detalle del bloque: ${blockData.etapa}`;
-            } else {
-                delayLabelEl.textContent = 'Vista general por bloques';
-            }
+            delayLabelEl.textContent = mode === 'states' && blockData
+                ? `Detalle del bloque: ${blockData.etapa}`
+                : 'Vista general por bloques';
         }
-
         if (delayBadgeEl) {
             if (mode === 'states' && blockData) {
                 delayBadgeEl.textContent = 'Drill-down activo';
@@ -53,10 +45,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 delayBadgeEl.textContent = '';
             }
         }
-
-        if (delayBackBtn) {
-            delayBackBtn.classList.toggle('d-none', mode !== 'states');
-        }
+        if (delayBackBtn) delayBackBtn.classList.toggle('d-none', mode !== 'states');
     }
 
     function getSelectedEtapa() {
@@ -68,66 +57,39 @@ document.addEventListener('DOMContentLoaded', function () {
         refreshTimer = setTimeout(() => refreshDashboard(), delay);
     }
 
-    // PALETA DE COLORES INSTITUCIONAL
     const P = {
-        primary:  '#0f172a',
-        accent:   '#6366f1',
-        success:  '#10b981',
-        warning:  '#f59e0b',
-        danger:   '#ef4444',
-        info:     '#3b82f6',
-        slate:    '#475569',
-        slateLt:  '#94a3b8',
-        muted:    '#f1f5f9',
-        blue:     '#0f172a',
-        blueLt:   '#3b82f6',
-        indigo:   '#6366f1',
-        teal:     '#14b8a6',
-        green:    '#10b981',
-        greenLt:  '#34d399',
-        amber:    '#f59e0b',
-        orange:   '#f97316',
-        red:      '#ef4444',
-        redLt:    '#f87171',
-        gray:     '#475569',
-        grayLt:   '#94a3b8'
+        primary: '#0F172A', accent: '#6366f1', success: '#10b981',
+        warning: '#f59e0b', danger: '#ef4444', info: '#3b82f6',
+        slate: '#475569', slateLt: '#94A3B8', muted: '#f1f5f9',
+        blue: '#0F172A', blueLt: '#3b82f6', indigo: '#6366f1',
+        teal: '#14b8a6', green: '#10b981', greenLt: '#34d399',
+        amber: '#f59e0b', orange: '#f97316', red: '#ef4444',
+        ruby: '#BE123C', emerald: '#047857', sapphire: '#1D4ED8',
+        gray: '#475569', grayLt: '#94A3B8'
     };
 
-    const baseFont  = { fontFamily: 'Inter, sans-serif' };
+    const baseFont = { fontFamily: 'Inter, sans-serif' };
     const noToolbar = { show: false };
 
     function resolveDelayHierarchy(delayData) {
         const blocks = Array.isArray(delayData?.bloques) && delayData.bloques.length
             ? delayData.bloques
             : (Array.isArray(delayData?.tiempoEquipo) ? delayData.tiempoEquipo : []);
-
         const selectedBlockName = getSelectedEtapa();
         const selectedBlock = selectedBlockName
             ? blocks.find(block => String(block.etapa) === String(selectedBlockName))
             : null;
-
         if (selectedBlock) {
             return {
-                mode: 'states',
-                blocks,
-                selectedBlock,
+                mode: 'states', blocks, selectedBlock,
                 categories: (selectedBlock.estados || []).map(item => item.nombre),
-                series: [{
-                    name: `Estados de ${selectedBlock.etapa}`,
-                    data: (selectedBlock.estados || []).map(item => item.minutos)
-                }]
+                series: [{ name: `Estados de ${selectedBlock.etapa}`, data: (selectedBlock.estados || []).map(item => item.minutos) }]
             };
         }
-
         return {
-            mode: 'blocks',
-            blocks,
-            selectedBlock: null,
+            mode: 'blocks', blocks, selectedBlock: null,
             categories: blocks.map(block => block.etapa),
-            series: [{
-                name: 'Tiempo total por bloque',
-                data: blocks.map(block => block.minutos_totales)
-            }]
+            series: [{ name: 'Tiempo total por bloque', data: blocks.map(block => block.minutos_totales) }]
         };
     }
 
@@ -135,234 +97,240 @@ document.addEventListener('DOMContentLoaded', function () {
         setDelayState(mode, selectedBlock);
     }
 
-    // ==============================
-    // CHARTS
-    // ==============================
+    function renderTimelineHtml(events) {
+        const container = document.getElementById('timelineHtml');
+        if (!container) return;
+        if (!events || events.length === 0) {
+            container.innerHTML = '<div class="tl-empty"><i class="bi bi-activity"></i>Sin actividad reciente</div>';
+            return;
+        }
+        container.innerHTML = events.map(e => {
+            let tlClass = 'tl-progress';
+            if (e.type === 'approved' || e.type === 'finalized') tlClass = 'tl-approved';
+            else if (e.type === 'returned' || e.type === 'rejected') tlClass = 'tl-returned';
+            else if (e.type === 'critical') tlClass = 'tl-critical';
+            return `<div class="tl-item ${tlClass}">
+                <div class="tl-content">
+                    <div class="tl-main">
+                        <div class="tl-event">${e.evento}</div>
+                        <div class="tl-meta">${e.usuario} &middot; ${e.cuenta} ${e.monto ? '&middot; $' + e.monto : ''}</div>
+                    </div>
+                    <span class="tl-time">${e.tiempo}</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function formatTimeAgo(dateStr) {
+        if (!dateStr) return '';
+        const now = new Date();
+        const d = new Date(dateStr);
+        const diffMs = now - d;
+        const diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 1) return 'Ahora';
+        if (diffMin < 60) return `Hace ${diffMin} min`;
+        const diffH = Math.floor(diffMin / 60);
+        if (diffH < 24) return `Hace ${diffH}h ${diffMin % 60}m`;
+        const diffD = Math.floor(diffH / 24);
+        return `Hace ${diffD}d`;
+    }
+
+    function buildTimelineFromData(data) {
+        if (!data || !data.length) return [];
+        return data.slice(0, 15).map(item => ({
+            evento: item.evento || item.estado || 'Transición',
+            usuario: item.usuario || item.usuario_nombre || 'Sistema',
+            cuenta: item.cuenta || item.numero_cuenta || '',
+            monto: item.monto ? new Intl.NumberFormat('es-CO').format(item.monto) : null,
+            tiempo: formatTimeAgo(item.fecha || item.fecha_evento || item.created_at),
+            type: item.type || item.tipo || 'progress'
+        }));
+    }
+
     function initCharts(data) {
         const isMobile = window.innerWidth <= 991;
         const chartTheme = isMobile ? 'dark' : 'light';
         const labelColor = isMobile ? '#94a3b8' : P.slateLt;
         const titleColor = isMobile ? '#f1f5f9' : P.primary;
-        const gridColor  = isMobile ? 'rgba(255,255,255,0.05)' : '#f8fafc';
+        const gridColor = isMobile ? 'rgba(255,255,255,0.05)' : '#f8fafc';
 
-        // 1. DISTRIBUCIÓN POR ESTADO (Donut)
+        // 1. SEMI-DONUT
         if (data.estado_anillos) {
             if (charts.donut) charts.donut.destroy();
+            const total = data.estado_anillos.series.reduce((a, b) => a + b, 0);
             charts.donut = new ApexCharts(document.querySelector('#donutChart'), {
                 series: data.estado_anillos.series,
-                chart: { 
-                    type: 'donut', 
-                    height: isMobile ? 260 : 320, 
-                    ...baseFont,
-                    theme: { mode: chartTheme }
-                },
+                chart: { type: 'donut', height: 260, ...baseFont, theme: { mode: chartTheme } },
                 labels: data.estado_anillos.labels,
-                colors: [P.accent, '#ef4444'], // Blue for Process, Red for Return/Gap
-                legend: {
-                    show: !isMobile,
-                    position: 'bottom',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    fontFamily: 'Inter, sans-serif',
-                    markers: { radius: 12 },
-                    itemMargin: { horizontal: 15, vertical: 8 }
-                },
+                colors: [P.sapphire, P.ruby],
+                legend: { show: false },
                 plotOptions: {
                     pie: {
+                        startAngle: -90,
+                        endAngle: 90,
+                        offsetY: 0,
                         donut: {
-                            size: '75%',
+                            size: '78%',
                             labels: {
                                 show: true,
-                                total: {
-                                    show: true,
-                                    label: 'total',
-                                    fontSize: '14px',
-                                    fontWeight: 600,
-                                    color: labelColor,
-                                    formatter: w => w.globals.seriesTotals.reduce((a, b) => a + b, 0)
-                                },
-                                value: {
-                                    fontSize: isMobile ? '1.6rem' : '2.2rem',
-                                    fontWeight: 800,
-                                    color: titleColor,
-                                    offsetY: 5
-                                }
+                                total: { show: true, label: 'Total', fontSize: '11px', fontWeight: 500, color: labelColor, formatter: () => total },
+                                value: { fontSize: isMobile ? '1.4rem' : '1.8rem', fontWeight: 700, color: titleColor, offsetY: 0 }
                             }
                         }
                     }
                 },
                 dataLabels: { enabled: false },
-                stroke: { width: isMobile ? 2 : 5, colors: [isMobile ? 'transparent' : '#fff'] }
+                stroke: { width: 0 }
             });
             charts.donut.render();
 
-            // Populate Mobile Legend
-            if (isMobile) {
-                const legendEl = document.getElementById('mobileDonutLegend');
-                if (legendEl) {
-                    legendEl.innerHTML = data.estado_anillos.labels.map((label, i) => `
-                        <div class="m-legend-item">
-                            <span class="m-legend-dot" style="background: ${[P.accent, P.danger][i]}"></span>
-                            <span class="m-legend-label">${label}</span>
-                            <span class="m-legend-value">${data.estado_anillos.series[i]}</span>
+            const legendEl = document.getElementById('donutLegend');
+            if (legendEl) {
+                const pcts = data.estado_anillos.series.map(s => total > 0 ? ((s / total) * 100).toFixed(1) : '0');
+                legendEl.innerHTML = data.estado_anillos.labels.map((label, i) => `
+                    <div class="d-flex justify-content-between align-items-center py-1 px-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <span style="width:8px;height:8px;border-radius:50%;background:${[P.sapphire, P.ruby][i]};display:inline-block;"></span>
+                            <span style="font-size:0.8125rem;color:var(--text-secondary)">${label}</span>
                         </div>
-                    `).join('');
-                }
-            }
-            // 1.5 DELAY – Jerarquía Bloque -> Estados
-            const delayData = data.demora_usuario_etapa;
-            const delayHierarchy = resolveDelayHierarchy(delayData);
-            const hasDelayData = delayHierarchy.blocks.length > 0;
-
-            if (hasDelayData) {
-                updateDelayDrilldownUI(delayHierarchy.mode, delayHierarchy.selectedBlock);
-
-                if (charts.delay) charts.delay.destroy();
-                charts.delay = new ApexCharts(document.querySelector('#delayChart'), {
-                    series: delayHierarchy.series,
-                    chart: {
-                        type: 'bar',
-                        height: isMobile ? 300 : 380,
-                        toolbar: noToolbar,
-                        ...baseFont,
-                        animations: { enabled: true, easing: 'easeinout', speed: 800 },
-                        theme: { mode: chartTheme },
-                        events: {
-                            dataPointSelection: function (_event, _chartContext, config) {
-                                if (delayHierarchy.mode !== 'blocks') return;
-                                const selected = delayHierarchy.blocks[config.dataPointIndex];
-                                if (!selected) return;
-
-                                if (filterEtapaEl) {
-                                    filterEtapaEl.value = selected.etapa;
-                                }
-
-                                updateDelayDrilldownUI('states', selected);
-                                scheduleRefresh();
-                            }
-                        }
-                    },
-                    plotOptions: {
-                        bar: {
-                            horizontal: true,
-                            borderRadius: 6,
-                            barHeight: delayHierarchy.mode === 'states' ? '70%' : '55%',
-                            distributed: delayHierarchy.mode === 'blocks',
-                            dataLabels: { position: 'top' }
-                        }
-                    },
-                    colors: [P.accent, P.teal, P.indigo, P.amber, P.orange, P.red, P.green],
-                    xaxis: {
-                        categories: delayHierarchy.categories,
-                        labels: {
-                            style: { fontSize: '11px', colors: labelColor, fontWeight: 500 },
-                            formatter: val => formatMinutosLabel(val)
-                        },
-                        axisBorder: { show: false },
-                        axisTicks: { show: false }
-                    },
-                    yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: labelColor } } },
-                    tooltip: {
-                        theme: 'dark',
-                        shared: false,
-                        intersect: true,
-                        custom: function({ seriesIndex, dataPointIndex }) {
-                            const minutes = delayHierarchy.series[seriesIndex]?.data?.[dataPointIndex] ?? 0;
-                            if (delayHierarchy.mode === 'states' && delayHierarchy.selectedBlock) {
-                                const state = delayHierarchy.selectedBlock.estados?.[dataPointIndex];
-                                const title = state ? `${delayHierarchy.selectedBlock.etapa} > ${state.nombre}` : delayHierarchy.selectedBlock.etapa;
-                                return `<div class="apexcharts-tooltip-title" style="padding:8px 10px;font-weight:700">${title}</div><div class="apexcharts-tooltip-series-group" style="padding:0 10px 8px"><span class="apexcharts-tooltip-text">${formatMinutosLabel(minutes, true)}</span></div>`;
-                            }
-
-                            const block = delayHierarchy.blocks[dataPointIndex];
-                            const title = block ? block.etapa : 'Bloque';
-                            return `<div class="apexcharts-tooltip-title" style="padding:8px 10px;font-weight:700">${title}</div><div class="apexcharts-tooltip-series-group" style="padding:0 10px 8px"><span class="apexcharts-tooltip-text">${formatMinutosLabel(minutes, true)}</span></div>`;
-                        },
-                        y: {
-                            formatter: val => formatMinutosLabel(val, true)
-                        }
-                    },
-                    dataLabels: {
-                        enabled: true,
-                        formatter: function(val) {
-                            return formatMinutosLabel(val);
-                        },
-                        style: { fontSize: '10px', fontWeight: 700, colors: [titleColor] },
-                        offsetX: 45
-                    },
-                    grid: { borderColor: gridColor, strokeDashArray: 4 },
-                    legend: { show: false }
-                });
-                charts.delay.render();
-                
-                if (delayData.kpis) {
-                    document.getElementById('kpi-general').textContent = delayData.kpis.general;
-                    document.getElementById('kpi-lenta').textContent = delayData.kpis.lenta;
-                    document.getElementById('kpi-rapida').textContent = delayData.kpis.rapida;
-
-                    if (isMobile) {
-                        const mKpiTotal = document.getElementById('m-kpi-total');
-                        const mKpiLenta = document.getElementById('m-kpi-lenta');
-                        const mKpiLentaSub = document.getElementById('m-kpi-lenta-sub');
-                        const mKpiRapida = document.getElementById('m-kpi-rapida');
-                        const mKpiRapidaSub = document.getElementById('m-kpi-rapida-sub');
-
-                        if (mKpiTotal) mKpiTotal.textContent = delayData.kpis.general;
-                        
-                        if (mKpiLenta) {
-                            const lentaParts = delayData.kpis.lenta.split(' En ');
-                            mKpiLenta.textContent = lentaParts[0];
-                            if (mKpiLentaSub && lentaParts[1]) mKpiLentaSub.textContent = 'En ' + lentaParts[1];
-                        }
-
-                        if (mKpiRapida) {
-                            const rapidaParts = delayData.kpis.rapida.split(' ');
-                            mKpiRapida.textContent = rapidaParts[0];
-                            if (mKpiRapidaSub && rapidaParts[1]) mKpiRapidaSub.textContent = rapidaParts.slice(1).join(' ');
-                        }
-                    }
-                }
-            } else {
-                updateDelayDrilldownUI('blocks', null);
-                const el = document.querySelector('#delayChart');
-                if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-clock"></i>Sin datos de demora configurados</div>';
+                        <span style="font-size:0.8125rem;font-weight:700;color:var(--text-primary)">${data.estado_anillos.series[i]} (${pcts[i]}%)</span>
+                    </div>
+                `).join('');
             }
         }
 
-        // 2. PIPELINE – Carga por Etapa
+        // 1.5 DELAY CHART
+        const delayData = data.demora_usuario_etapa;
+        const delayHierarchy = resolveDelayHierarchy(delayData);
+        const hasDelayData = delayHierarchy.blocks.length > 0;
+
+        if (hasDelayData) {
+            updateDelayDrilldownUI(delayHierarchy.mode, delayHierarchy.selectedBlock);
+            if (charts.delay) charts.delay.destroy();
+
+            const isDistributed = delayHierarchy.mode === 'blocks';
+            const barColors = isDistributed
+                ? [P.sapphire, P.teal, P.indigo, P.amber, P.orange, P.ruby, P.emerald]
+                : [P.sapphire];
+
+            charts.delay = new ApexCharts(document.querySelector('#delayChart'), {
+                series: delayHierarchy.series,
+                chart: {
+                    type: 'bar', height: isMobile ? 300 : 360, toolbar: noToolbar,
+                    ...baseFont, animations: { enabled: true, easing: 'easeinout', speed: 800 },
+                    theme: { mode: chartTheme },
+                    events: {
+                        dataPointSelection: function (_event, _chartContext, config) {
+                            if (delayHierarchy.mode !== 'blocks') return;
+                            const selected = delayHierarchy.blocks[config.dataPointIndex];
+                            if (!selected) return;
+                            if (filterEtapaEl) filterEtapaEl.value = selected.etapa;
+                            updateDelayDrilldownUI('states', selected);
+                            scheduleRefresh();
+                        }
+                    }
+                },
+                plotOptions: {
+                    bar: {
+                        horizontal: true,
+                        borderRadius: 6,
+                        barHeight: delayHierarchy.mode === 'states' ? '70%' : '55%',
+                        distributed: isDistributed,
+                        dataLabels: { position: 'top' }
+                    }
+                },
+
+                colors: barColors,
+                xaxis: {
+                    categories: delayHierarchy.categories,
+                    labels: {
+                        style: { fontSize: '11px', colors: labelColor, fontWeight: 500 },
+                        formatter: val => formatMinutosLabel(val)
+                    },
+                    axisBorder: { show: false },
+                    axisTicks: { show: false }
+                },
+                yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: labelColor } } },
+                tooltip: {
+                    theme: 'light', style: { fontSize: '12px', fontFamily: 'Inter, sans-serif' },
+                    shared: false, intersect: true,
+                    custom: function ({ seriesIndex, dataPointIndex }) {
+                        const minutes = delayHierarchy.series[seriesIndex]?.data?.[dataPointIndex] ?? 0;
+                        if (delayHierarchy.mode === 'states' && delayHierarchy.selectedBlock) {
+                            const state = delayHierarchy.selectedBlock.estados?.[dataPointIndex];
+                            const title = state ? `${delayHierarchy.selectedBlock.etapa} > ${state.nombre}` : delayHierarchy.selectedBlock.etapa;
+                            return `<div class="apexcharts-tooltip-title" style="padding:8px 10px;font-weight:700">${title}</div><div class="apexcharts-tooltip-series-group" style="padding:0 10px 8px"><span class="apexcharts-tooltip-text">${formatMinutosLabel(minutes, true)}</span></div>`;
+                        }
+                        const block = delayHierarchy.blocks[dataPointIndex];
+                        const title = block ? block.etapa : 'Bloque';
+                        return `<div class="apexcharts-tooltip-title" style="padding:8px 10px;font-weight:700">${title}</div><div class="apexcharts-tooltip-series-group" style="padding:0 10px 8px"><span class="apexcharts-tooltip-text">${formatMinutosLabel(minutes, true)}</span></div>`;
+                    },
+                    y: { formatter: val => formatMinutosLabel(val, true) }
+                },
+                dataLabels: {
+                    enabled: true,
+                    formatter: val => formatMinutosLabel(val),
+                    style: { fontSize: '10px', fontWeight: 700, colors: [titleColor] },
+                    offsetX: 45
+                },
+                grid: { borderColor: gridColor, strokeDashArray: 4 },
+                legend: { show: false }
+            });
+            charts.delay.render();
+
+            if (delayData.kpis) {
+                document.getElementById('kpi-general').textContent = delayData.kpis.general;
+                document.getElementById('kpi-lenta').textContent = delayData.kpis.lenta;
+                document.getElementById('kpi-rapida').textContent = delayData.kpis.rapida;
+                if (isMobile) {
+                    const els = {
+                        total: document.getElementById('m-kpi-total'),
+                        lenta: document.getElementById('m-kpi-lenta'),
+                        lentaSub: document.getElementById('m-kpi-lenta-sub'),
+                        rapida: document.getElementById('m-kpi-rapida'),
+                        rapidaSub: document.getElementById('m-kpi-rapida-sub')
+                    };
+                    if (els.total) els.total.textContent = delayData.kpis.general;
+                    if (els.lenta) {
+                        const parts = delayData.kpis.lenta.split(' En ');
+                        els.lenta.textContent = parts[0];
+                        if (els.lentaSub && parts[1]) els.lentaSub.textContent = 'En ' + parts[1];
+                    }
+                    if (els.rapida) {
+                        const parts = delayData.kpis.rapida.split(' ');
+                        els.rapida.textContent = parts[0];
+                        if (els.rapidaSub && parts[1]) els.rapidaSub.textContent = parts.slice(1).join(' ');
+                    }
+                }
+            }
+        } else {
+            updateDelayDrilldownUI('blocks', null);
+            const el = document.querySelector('#delayChart');
+            if (el) el.innerHTML = '<div class="empty-state"><i class="bi bi-clock"></i>Sin datos de demora configurados</div>';
+        }
+
+        // 2. PIPELINE
         if (data.gap_chart && data.gap_chart.labels.length > 0) {
             if (charts.gap) charts.gap.destroy();
             charts.gap = new ApexCharts(document.querySelector('#gapChart'), {
                 series: [{ name: 'Contratos', data: data.gap_chart.series }],
-                chart: { 
-                    type: 'bar', 
-                    height: isMobile ? 260 : 320, 
-                    toolbar: noToolbar, 
-                    ...baseFont, 
-                    animations: { enabled: true, speed: 800 },
-                    theme: { mode: chartTheme }
-                },
-                plotOptions: { bar: { horizontal: true, borderRadius: 10, barHeight: '55%', distributed: true } },
-                colors: [P.blue, P.indigo, P.teal, P.green, P.amber, P.red],
+                chart: { type: 'bar', height: isMobile ? 260 : 300, toolbar: noToolbar, ...baseFont, animations: { enabled: true, speed: 800 }, theme: { mode: chartTheme } },
+                plotOptions: { bar: { horizontal: true, borderRadius: 8, barHeight: '55%', distributed: true } },
+                colors: [P.sapphire, P.indigo, P.teal, P.emerald, P.amber, P.ruby],
+
                 xaxis: {
                     categories: data.gap_chart.labels,
                     labels: { style: { fontSize: '11px', colors: labelColor } },
                     axisBorder: { show: false }
                 },
-                yaxis: { labels: { style: { fontSize: '11px', fontWeight: 600, colors: labelColor } } },
+                yaxis: { labels: { style: { fontSize: '11px', fontWeight: 500, colors: labelColor } } },
                 legend: { show: false },
-                tooltip: { theme: 'dark', y: { formatter: val => val + ' contratos' } },
-                dataLabels: {
-                    enabled: true,
-                    textAnchor: 'start',
-                    style: { colors: ['#fff'], fontSize: '12px', fontWeight: 700 },
-                    offsetX: 10
-                },
+                tooltip: { theme: 'light', style: { fontSize: '12px' }, y: { formatter: val => val + ' contratos' } },
+                dataLabels: { enabled: true, textAnchor: 'start', style: { colors: ['#fff'], fontSize: '11px', fontWeight: 700 }, offsetX: 8 },
                 grid: { borderColor: gridColor, strokeDashArray: 4 }
             });
             charts.gap.render();
 
-            // Populate Mobile Pipeline Bars
             if (isMobile) {
                 const pipeEl = document.getElementById('mobilePipelineBars');
                 if (pipeEl) {
@@ -370,11 +338,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     pipeEl.innerHTML = data.gap_chart.labels.map((label, i) => `
                         <div class="m-pipeline-item">
                             <div class="m-pipeline-header">
-                                <span>${label}</span>
-                                <span>${data.gap_chart.series[i]}</span>
+                                <span>${label}</span><span>${data.gap_chart.series[i]}</span>
                             </div>
                             <div class="m-pipeline-bar-bg">
-                                <div class="m-pipeline-bar-fill" style="width: ${(data.gap_chart.series[i] / maxVal) * 100}%"></div>
+                                <div class="m-pipeline-bar-fill" style="width:${(data.gap_chart.series[i] / maxVal) * 100}%"></div>
                             </div>
                         </div>
                     `).join('');
@@ -382,53 +349,137 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } else {
             const el = document.querySelector('#gapChart');
-            if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-bar-chart"></i>Sin datos en el pipeline</div>';
+            if (el) el.innerHTML = '<div class="empty-state"><i class="bi bi-bar-chart"></i>Sin datos en el pipeline</div>';
         }
 
-        // 3. TIMELINE – Actividad últimos 30 días
-        if (data.timeline && data.timeline.labels.length > 0) {
+        // 3. TIMELINE (HTML vertical, not ApexCharts area)
+        if (data.timeline_events && data.timeline_events.length > 0) {
+            renderTimelineHtml(buildTimelineFromData(data.timeline_events));
+        } else if (data.timeline_raw && data.timeline_raw.length > 0) {
+            renderTimelineHtml(buildTimelineFromData(data.timeline_raw));
+        } else {
+            const container = document.getElementById('timelineHtml');
+            if (container) container.innerHTML = '<div class="tl-empty"><i class="bi bi-activity"></i>Sin actividad reciente (30 días)</div>';
+        }
+
+        // 4. SPARKLINES — usan la data de timeline para mostrar tendencia real filtrada
+        const renderSparkline = (id, dataPoints, color) => {
+            const el = document.querySelector(`#${id}`);
+            if (!el) return;
+            if (charts[id]) charts[id].destroy();
+            if (!dataPoints || dataPoints.length === 0) {
+                el.innerHTML = '';
+                return;
+            }
+            charts[id] = new ApexCharts(el, {
+                series: [{ data: dataPoints }],
+                chart: { type: 'area', width: '100%', height: 36, sparkline: { enabled: true } },
+                stroke: { curve: 'smooth', width: 1.5 },
+                fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.25, opacityTo: 0, stops: [0, 100] } },
+                colors: [color],
+                tooltip: { enabled: false }
+            });
+            charts[id].render();
+        };
+
+        // Sacamos 6 muestras de la serie real de timeline para los sparklines
+        const tlSeries = data.timeline?.series || [];
+        const sparkSample = tlSeries.length > 6
+            ? tlSeries.filter((_, i) => i % Math.ceil(tlSeries.length / 6) === 0).slice(-6)
+            : tlSeries;
+
+        renderSparkline('sparkline-1', sparkSample, P.sapphire);
+        renderSparkline('sparkline-2', sparkSample, P.amber);
+        renderSparkline('sparkline-3', sparkSample, P.emerald);
+        renderSparkline('sparkline-4', sparkSample, P.ruby);
+        renderSparkline('sparkline-5', sparkSample, P.indigo);
+        renderSparkline('sparkline-6', sparkSample, P.teal);
+
+        // 5. ACTIVITY TIMELINE (Area chart)
+        const tlData = data.timeline;
+        const tlContainer = document.querySelector('#timelineChart');
+        if (tlContainer && tlData && tlData.labels && tlData.labels.length > 0) {
             if (charts.timeline) charts.timeline.destroy();
-            charts.timeline = new ApexCharts(document.querySelector('#timelineChart'), {
-                series: [{ name: 'Transiciones', data: data.timeline.series }],
-                chart: { 
-                    type: 'area', 
-                    height: isMobile ? 220 : 280, 
-                    toolbar: noToolbar, 
+            charts.timeline = new ApexCharts(tlContainer, {
+                series: [{
+                    name: 'Transacciones',
+                    data: tlData.series
+                }],
+                chart: {
+                    type: 'area',
+                    height: isMobile ? 140 : 160,
+                    toolbar: { show: false },
+                    sparkline: { enabled: false },
                     ...baseFont,
-                    theme: { mode: chartTheme }
+                    theme: { mode: chartTheme },
+                    animations: { enabled: true, easing: 'easeinout', speed: 600 }
                 },
-                colors: [P.accent],
+                colors: [P.sapphire],
                 fill: {
                     type: 'gradient',
-                    gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.0, stops: [0, 100] }
+                    gradient: {
+                        shadeIntensity: 1,
+                        opacityFrom: 0.35,
+                        opacityTo: 0.05,
+                        stops: [0, 95, 100]
+                    }
                 },
-                stroke: { curve: 'smooth', width: 3 },
+                stroke: {
+                    curve: 'smooth',
+                    width: 2,
+                    colors: [P.sapphire]
+                },
+                markers: {
+                    size: isMobile ? 2 : 3,
+                    colors: [P.sapphire],
+                    strokeColors: '#fff',
+                    strokeWidth: 2,
+                    hover: { size: 5 }
+                },
                 xaxis: {
-                    categories: data.timeline.labels,
-                    labels: { rotate: -45, style: { fontSize: '10px', colors: labelColor } },
+                    type: 'datetime',
+                    categories: tlData.labels,
+                    labels: {
+                        format: 'dd MMM',
+                        style: { fontSize: '9px', colors: labelColor, fontWeight: 500 },
+                        rotate: 0,
+                        hideOverlappingLabels: true,
+                        trim: true
+                    },
                     axisBorder: { show: false },
-                    axisTicks: { show: false }
+                    axisTicks: { show: false },
+                    tooltip: { enabled: false }
                 },
-                yaxis: { labels: { formatter: val => Math.round(val), style: { colors: labelColor } } },
+                yaxis: {
+                    show: false,
+                    min: 0,
+                    forceNiceScale: true
+                },
+                grid: { show: false },
+                tooltip: {
+                    theme: 'light',
+                    style: { fontSize: '11px', fontFamily: 'Inter, sans-serif' },
+                    x: {
+                        format: 'dd MMM yyyy'
+                    },
+                    y: {
+                        formatter: val => val + ' transacciones'
+                    }
+                },
                 dataLabels: { enabled: false },
-                grid: { borderColor: gridColor, strokeDashArray: 4 },
-                markers: { size: 5, colors: ['#fff'], strokeColors: P.accent, strokeWidth: 3, hover: { size: 7 } },
-                tooltip: { theme: 'dark', y: { formatter: val => val + ' transiciones' } }
+                legend: { show: false }
             });
             charts.timeline.render();
         } else {
-            const el = document.querySelector('#timelineChart');
-            if (el) el.innerHTML = '<div class="empty-chart-state"><i class="bi bi-activity"></i>Sin actividad reciente (30 días)</div>';
+            if (tlContainer) {
+                tlContainer.innerHTML = '<div style="text-align:center;padding:20px 10px;color:var(--text-muted);font-size:0.75rem;"><i class="bi bi-bar-chart-line" style="font-size:1.5rem;opacity:0.3;display:block;margin-bottom:6px;"></i>Sin actividad en el período</div>';
+            }
         }
     }
 
-    // ==============================
-    // UI UPDATES
-    // ==============================
     function updateKPIs(data) {
-        const fmt    = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
+        const fmt = new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 });
         const fmtDec = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-
         const miniValue = document.querySelector('.mini-value');
         if (miniValue) {
             miniValue.style.opacity = '0';
@@ -438,28 +489,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 miniValue.style.opacity = '1';
             }, 300);
         }
-
-        const cards = document.querySelectorAll('.kpi-card');
-        cards.forEach(card => {
+        document.querySelectorAll('.kpi-card').forEach(card => {
             const val = card.querySelector('.kpi-value');
             if (!val) return;
             val.style.opacity = '0';
             setTimeout(() => {
-                if (card.classList.contains('kpi-blue'))   val.textContent = fmt.format(data.contratistasUnicos);
-                else if (card.classList.contains('kpi-amber'))  val.textContent = fmt.format(data.cuentasTramite);
-                else if (card.classList.contains('kpi-green'))  val.textContent = fmt.format(data.cuentasRadicadas);
-                else if (card.classList.contains('kpi-red'))    val.textContent = fmt.format(Math.max(0, data.pagosTotales - data.cuentasRadicadas));
+                if (card.classList.contains('kpi-sapphire')) val.textContent = fmt.format(data.contratistasUnicos);
+                else if (card.classList.contains('kpi-amber')) val.textContent = fmt.format(data.cuentasTramite);
+                else if (card.classList.contains('kpi-emerald')) val.textContent = fmt.format(data.cuentasRadicadas);
+                else if (card.classList.contains('kpi-ruby')) val.textContent = fmt.format(Math.max(0, data.pagosTotales - data.cuentasRadicadas));
                 else if (card.classList.contains('kpi-indigo')) val.textContent = fmt.format(data.pagosTotales);
-                else if (card.classList.contains('kpi-teal'))   val.textContent = fmtDec.format(data.avanceGlobal) + '%';
+                else if (card.classList.contains('kpi-teal')) val.textContent = fmtDec.format(data.avanceGlobal) + '%';
                 val.style.transition = 'opacity 0.5s ease';
                 val.style.opacity = '1';
             }, 300);
         });
-
-        const globalProgress = document.querySelector('.kpi-teal .progress-bar');
-        if (globalProgress) globalProgress.style.width = Math.min(data.avanceGlobal, 100) + '%';
-
-        // Update Mobile Global Progress
         const mGlobalProgressVal = document.getElementById('mobileGlobalProgressVal');
         const mGlobalProgressBar = document.getElementById('mobileGlobalProgressBar');
         if (mGlobalProgressVal) mGlobalProgressVal.textContent = fmtDec.format(data.avanceGlobal) + '%';
@@ -471,250 +515,218 @@ document.addEventListener('DOMContentLoaded', function () {
         table.destroy();
         document.getElementById('tableBody').innerHTML = html;
         initDataTable();
-        applyMinimizedColumns();
-
-        // Update Mobile List if provided
         if (mobileHtml) {
             const mobileList = document.getElementById('mobileContractList');
             if (mobileList) mobileList.innerHTML = mobileHtml;
         }
     }
 
-    // ==============================
-    // REACTIVITY & LOADING ENGINE
-    // ==============================
-    function getChartSkeleton() {
-        return `<div class="skeleton-chart animate-pulse"></div>`;
+    function updateActiveFiltersChips() {
+        const container = document.getElementById('activeFilters');
+        if (!container) return;
+        const chips = [];
+        const fd = document.getElementById('fecha_desde')?.value;
+        const fh = document.getElementById('fecha_hasta')?.value;
+        if (fd && fh) {
+            const d1 = new Date(fd + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+            const d2 = new Date(fh + 'T00:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+            chips.push({ label: `${d1} - ${d2}`, field: 'fecha' });
+        }
+        const sup = document.querySelector('[name="supervisor"] option:checked');
+        if (sup && sup.value) chips.push({ label: 'Sup: ' + sup.textContent.trim().substring(0, 20), field: 'supervisor' });
+        const resp = document.querySelector('[name="responsable"] option:checked');
+        if (resp && resp.value) chips.push({ label: 'Resp: ' + resp.textContent.trim().substring(0, 20), field: 'responsable' });
+        const est = document.querySelector('[name="estado"] option:checked');
+        if (est && est.value) chips.push({ label: 'Estado: ' + est.textContent.trim().substring(0, 20), field: 'estado' });
+        container.innerHTML = chips.map(c => `
+            <span class="active-filter-chip" data-field="${c.field}">
+                ${c.label}
+                <span class="chip-remove" data-field="${c.field}"><i class="bi bi-x"></i></span>
+            </span>
+        `).join('');
+        container.querySelectorAll('.chip-remove').forEach(el => {
+            el.addEventListener('click', function () {
+                const field = this.dataset.field;
+                if (field === 'fecha') {
+                    document.getElementById('fecha_desde').value = '';
+                    document.getElementById('fecha_hasta').value = '';
+                    const fp = document.getElementById('dateRangePicker')?._flatpickr;
+                    if (fp) fp.clear();
+                    const dd = document.getElementById('dateDisplay');
+                    if (dd) dd.textContent = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
+                } else {
+                    const sel = document.querySelector(`[name="${field}"]`);
+                    if (sel) sel.value = '';
+                }
+                scheduleRefresh();
+            });
+        });
     }
 
     function setGlobalLoading(isLoading) {
-        const containers = [
-            '#donutChart', '#gapChart', '#delayChart', '#timelineChart', 
-            '#timeTableContainer', '#tableBody', '#bottleneckContainer'
-        ];
-
         if (isLoading) {
             if (captureArea) captureArea.classList.add('is-updating');
-            
-            // Inyectar skeletons en contenedores críticos para evitar colapso de altura
-            document.querySelectorAll('.card-premium .card-body').forEach(body => {
-                const chart = body.querySelector('[id$="Chart"]');
-                if (chart) {
-                    chart.style.opacity = '0.3';
-                    // No vaciamos para mantener la altura, solo bajamos opacidad
-                }
-            });
-
-            // Skeletons específicos para tablas y listas
-            const tableBody = document.getElementById('tableBody');
-            if (tableBody) tableBody.style.opacity = '0.5';
-            
+            document.querySelectorAll('.card-premium .card-body [id$="Chart"]').forEach(ch => ch.style.opacity = '0.3');
+            const tb = document.getElementById('tableBody');
+            if (tb) tb.style.opacity = '0.5';
         } else {
             if (captureArea) captureArea.classList.remove('is-updating');
-            document.querySelectorAll('.card-premium .card-body [id$="Chart"]').forEach(chart => {
-                chart.style.opacity = '1';
-            });
-            const tableBody = document.getElementById('tableBody');
-            if (tableBody) tableBody.style.opacity = '1';
+            document.querySelectorAll('.card-premium .card-body [id$="Chart"]').forEach(ch => ch.style.opacity = '1');
+            const tb = document.getElementById('tableBody');
+            if (tb) tb.style.opacity = '1';
         }
     }
 
     async function refreshDashboard() {
-        if (activeRequest) {
-            activeRequest.abort();
-        }
+        if (activeRequest) activeRequest.abort();
         activeRequest = new AbortController();
-
         const formData = new FormData(filterForm);
-        const params   = new URLSearchParams(formData);
+        const params = new URLSearchParams(formData);
 
-        const filterEtapa = document.getElementById('filterEtapa');
-        const filterUsuario = document.getElementById('filterUsuario');
-        const filterResponsableEtapa = document.getElementById('filterResponsableEtapa');
-        const filterEstadoEtapa = document.getElementById('filterEstadoEtapa');
-        const filterActividadResponsable = document.getElementById('filterActividadResponsable');
-        const filterActividadEstado = document.getElementById('filterActividadEstado');
-        
-        if (filterEtapa && filterEtapa.value) params.append('f_etapa', filterEtapa.value);
-        if (filterUsuario && filterUsuario.value) params.append('f_usuario', filterUsuario.value);
-        if (filterResponsableEtapa && filterResponsableEtapa.value) params.append('f_responsable_etapa', filterResponsableEtapa.value);
-        if (filterEstadoEtapa && filterEstadoEtapa.value) params.append('f_estado_etapa', filterEstadoEtapa.value);
-        if (filterActividadResponsable && filterActividadResponsable.value) params.append('f_act_responsable', filterActividadResponsable.value);
-        if (filterActividadEstado && filterActividadEstado.value) params.append('f_act_estado', filterActividadEstado.value);
+        const filterParams = {
+            filterEtapa: 'f_etapa',
+            filterUsuario: 'f_usuario',
+            filterResponsableEtapa: 'f_responsable_etapa',
+            filterEstadoEtapa: 'f_estado_etapa',
+            filterActividadResponsable: 'f_act_responsable',
+            filterActividadEstado: 'f_act_estado'
+        };
+        Object.entries(filterParams).forEach(([id, param]) => {
+            const el = document.getElementById(id);
+            if (el && el.value) params.append(param, el.value);
+        });
 
-        // Estado inicial de carga
         setGlobalLoading(true);
-
         try {
-            const response = await window.apiFetch(filterForm.action + '?' + params.toString(), {
-                signal: activeRequest.signal
-            });
+            const response = await window.apiFetch(filterForm.action + '?' + params.toString(), { signal: activeRequest.signal });
             if (!response.ok) throw new Error('Error en la respuesta del servidor');
-            
             const data = await response.json();
-
-            // 1. Actualizar KPIs Numéricos (Global)
             updateKPIs(data);
-
-            // 2. Re-renderizar Gráficos con nuevas transiciones
             initCharts(data.chartData);
-
-            // 3. Actualizar Listados y Tablas
             updateTable(data.tableHtml, data.mobileTableHtml);
-
-            // 4. Actualizar Componentes Premium (Tiempos desglosados)
             const timeTable = document.getElementById('timeTableContainer');
-            if (timeTable && data.timeTableHtml) {
-                timeTable.innerHTML = data.timeTableHtml;
-            }
-
+            if (timeTable && data.timeTableHtml) timeTable.innerHTML = data.timeTableHtml;
             const bottleneck = document.getElementById('bottleneckContainer');
-            if (bottleneck && data.bottleneckHtml) {
-                bottleneck.innerHTML = data.bottleneckHtml;
-            }
-
-            // 5. KPIs de Demora
+            if (bottleneck && data.bottleneckHtml) bottleneck.innerHTML = data.bottleneckHtml;
             if (data.chartData.demora_usuario_etapa) {
                 const du = data.chartData.demora_usuario_etapa;
-                const kpiGen = document.getElementById('kpi-general');
-                const kpiLen = document.getElementById('kpi-lenta');
-                const kpiRap = document.getElementById('kpi-rapida');
-                
-                if (kpiGen) kpiGen.textContent = du.kpis.general;
-                if (kpiLen) kpiLen.textContent = du.kpis.lenta;
-                if (kpiRap) kpiRap.textContent = du.kpis.rapida;
+                ['kpi-general', 'kpi-lenta', 'kpi-rapida'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.textContent = du.kpis[id.replace('kpi-', '')];
+                });
             }
-
-            // Actualizar URL sin recargar para mantener historial
+            updateActiveFiltersChips();
             const newUrl = window.location.pathname + '?' + params.toString();
             window.history.pushState({ path: newUrl }, '', newUrl);
-
         } catch (error) {
-            if (error && error.name === 'AbortError') {
-                return;
-            }
+            if (error?.name === 'AbortError') return;
             console.error('Dashboard Update Error:', error);
             window.showSnackbar('No se pudieron sincronizar los datos. Reintente.', 'error');
         } finally {
             activeRequest = null;
-            // Finalizar carga con un pequeño delay para suavizar la transición
             setTimeout(() => setGlobalLoading(false), 300);
         }
     }
 
-    // ==============================
-    // INITIALIZATION
-    // ==============================
-    if (captureArea) captureArea.classList.remove('loading');
-    setDelayState(getSelectedEtapa() ? 'states' : 'blocks', null);
-    initCharts(chartData);
-    initDataTable();
-
     function initDataTable() {
-        const table = $('#alertTable').DataTable({
+        return $('#alertTable').DataTable({
             pageLength: 10,
             language: { url: '//cdn.datatables.net/plug-ins/1.13.7/i18n/es-ES.json' },
             dom: 'Bfrtip',
-            buttons: [
-                {
-                    extend: 'excelHtml5',
-                    text: 'Excel',
-                    className: 'd-none',
-                    filename: 'BI_Report_SGCC',
-                    exportOptions: { columns: ':visible' }
-                }
-            ],
+            buttons: [{ extend: 'excelHtml5', text: 'Excel', className: 'd-none', filename: 'BI_Report_SGCC', exportOptions: { columns: ':visible' } }],
             order: [[6, 'desc']]
         });
-        return table;
     }
 
-    // ==============================
-    // EVENT LISTENERS
-    // ==============================
-    const filterEstadoEtapaEl = document.getElementById('filterEstadoEtapa');
+    // ===== SMART DROPDOWNS =====
+    document.querySelectorAll('.smart-dropdown').forEach(dd => {
+        const trigger = dd.querySelector('.smart-dropdown-trigger');
+        const menu = dd.querySelector('.smart-dropdown-menu');
+        const search = dd.querySelector('.smart-dropdown-search');
+        const items = dd.querySelectorAll('.smart-dropdown-item');
+        const label = dd.querySelector('.trigger-label');
 
-    if (filterEtapaEl && filterEstadoEtapaEl) {
-        filterEtapaEl.addEventListener('change', function() {
-            const selectedEtapa = this.value;
-            const currentEstado = filterEstadoEtapaEl.value;
-            let foundCurrent = false;
-
-            Array.from(filterEstadoEtapaEl.options).forEach(opt => {
-                if (!opt.value) {
-                    opt.style.display = ''; 
-                    return;
-                }
-                const optBloque = opt.getAttribute('data-bloque');
-                if (!selectedEtapa || optBloque === selectedEtapa) {
-                    opt.style.display = '';
-                    if (opt.value === currentEstado) foundCurrent = true;
-                } else {
-                    opt.style.display = 'none';
-                }
+        if (trigger && menu) {
+            trigger.addEventListener('click', function (e) {
+                e.stopPropagation();
+                document.querySelectorAll('.smart-dropdown.is-open').forEach(d => {
+                    if (d !== dd) d.classList.remove('is-open');
+                });
+                dd.classList.toggle('is-open');
+                if (search) setTimeout(() => search.focus(), 50);
             });
 
-            if (!foundCurrent && currentEstado !== "") {
-                filterEstadoEtapaEl.value = "";
+            items.forEach(item => {
+                item.addEventListener('click', function () {
+                    const val = this.dataset.value;
+                    const text = this.textContent.trim();
+                    items.forEach(i => i.classList.remove('is-active'));
+                    this.classList.add('is-active');
+                    if (label) label.textContent = text || 'Seleccionar...';
+                    dd.classList.remove('is-open');
+
+                    const fieldName = menu.dataset.field;
+                    if (fieldName) {
+                        let hidden = dd.querySelector('input[type="hidden"]');
+                        if (!hidden) {
+                            hidden = document.createElement('input');
+                            hidden.type = 'hidden';
+                            hidden.name = fieldName;
+                            dd.appendChild(hidden);
+                        }
+                        hidden.value = val;
+                    }
+                    scheduleRefresh();
+                });
+            });
+
+            if (search) {
+                search.addEventListener('input', function () {
+                    const q = this.value.toLowerCase().trim();
+                    items.forEach(item => {
+                        if (item.classList.contains('no-results')) return;
+                        const txt = item.textContent.toLowerCase();
+                        item.style.display = txt.includes(q) ? '' : 'none';
+                    });
+                });
+                search.addEventListener('click', function (e) { e.stopPropagation(); });
             }
-        });
+        }
+    });
+
+    document.addEventListener('click', function () {
+        document.querySelectorAll('.smart-dropdown.is-open').forEach(d => d.classList.remove('is-open'));
+    });
+
+    // ===== INIT =====
+    if (captureArea) captureArea.classList.remove('loading');
+    setDelayState(getSelectedEtapa() ? 'states' : 'blocks', null);
+
+    // Build timeline from initial chartData if available
+    if (chartData.timeline_events) {
+        renderTimelineHtml(buildTimelineFromData(chartData.timeline_events));
+    } else if (chartData.timeline_raw) {
+        renderTimelineHtml(buildTimelineFromData(chartData.timeline_raw));
+    } else if (chartData.timeline && chartData.timeline.labels) {
+        const container = document.getElementById('timelineHtml');
+        if (container) container.innerHTML = '<div class="tl-empty"><i class="bi bi-activity"></i>Sin actividad reciente (30 días)</div>';
     }
 
+    initCharts(chartData);
+    initDataTable();
+    updateActiveFiltersChips();
+
+    // ===== EVENT LISTENERS =====
     ['filterEtapa', 'filterEstadoEtapa', 'filterResponsableEtapa', 'filterActividadResponsable', 'filterActividadEstado'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', () => scheduleRefresh());
     });
 
-    const globalQuickTimeFilter = document.getElementById('globalQuickTimeFilter');
-    if (globalQuickTimeFilter) {
-        globalQuickTimeFilter.addEventListener('change', function() {
-            const days = this.value;
-            const fechaDesdeEl = document.getElementById('fecha_desde');
-            const fechaHastaEl = document.getElementById('fecha_hasta');
-            const dateDisplay = document.getElementById('dateDisplay');
-            const fp = document.getElementById('dateRangePicker')?._flatpickr;
-
-            if (days) {
-                const end = new Date();
-                const start = new Date();
-                start.setDate(end.getDate() - parseInt(days));
-
-                const format = (d) => {
-                    const y = d.getFullYear();
-                    const m = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    return `${y}-${m}-${day}`;
-                };
-                
-                fechaDesdeEl.value = format(start);
-                fechaHastaEl.value = format(end);
-
-                if (dateDisplay) {
-                    const options = { day: 'numeric', month: 'long', year: 'numeric' };
-                    dateDisplay.textContent = `${start.toLocaleDateString('es-ES', options)} - ${end.toLocaleDateString('es-ES', options)}`;
-                }
-
-                if (fp) {
-                    fp.setDate([start, end], false);
-                }
-            } else {
-                fechaDesdeEl.value = '';
-                fechaHastaEl.value = '';
-                if (dateDisplay) {
-                    dateDisplay.textContent = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-                }
-                if (fp) fp.clear();
-            }
-
-            scheduleRefresh();
-        });
-    }
     document.getElementById('filterForm').addEventListener('submit', function (e) {
         e.preventDefault();
         scheduleRefresh();
     });
 
-    // Auto-refresh on select change
     document.querySelectorAll('#filterForm select').forEach(sel => {
         sel.addEventListener('change', () => scheduleRefresh());
     });
@@ -722,600 +734,181 @@ document.addEventListener('DOMContentLoaded', function () {
     $('#btnReset').on('click', function () {
         if (filterForm) filterForm.reset();
         if (filterForm) $(filterForm).find('input[type="hidden"]').val('');
-
-        const pickerEl  = document.getElementById('estadoPicker');
-        const labelEl   = document.getElementById('selectedEstadoLabel');
-        const hiddenEl  = document.getElementById('hiddenSearchEstado');
-        if (pickerEl && labelEl && hiddenEl) {
-            hiddenEl.value = '';
-            labelEl.textContent = 'Todos los estados';
-            pickerEl.querySelectorAll('.analitica-picker-item').forEach(el => el.classList.remove('is-active'));
-            const allItem = pickerEl.querySelector('.analitica-picker-item[data-value=""]');
-            if (allItem) allItem.classList.add('is-active');
-            pickerEl.classList.remove('is-open');
-        }
-
         const dateDisplay = document.getElementById('dateDisplay');
-        if (dateDisplay) {
-            dateDisplay.textContent = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
-        }
-
+        if (dateDisplay) dateDisplay.textContent = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' });
         const fp = document.getElementById('dateRangePicker')?._flatpickr;
         if (fp) fp.clear();
-
-        const qf = document.getElementById('globalQuickTimeFilter');
-        if (qf) qf.value = "";
-
-        if (slider && slider.noUiSlider) slider.noUiSlider.set([0, 100]);
-
+        document.querySelectorAll('.smart-dropdown').forEach(dd => {
+            const label = dd.querySelector('.trigger-label');
+            const firstItem = dd.querySelector('.smart-dropdown-item');
+            if (label && firstItem) {
+                dd.querySelectorAll('.smart-dropdown-item').forEach(i => i.classList.remove('is-active'));
+                firstItem.classList.add('is-active');
+                label.textContent = firstItem.textContent.trim();
+            }
+            const hidden = dd.querySelector('input[type="hidden"]');
+            if (hidden) hidden.value = '';
+        });
         scheduleRefresh();
     });
 
-    $('#filterForm select').on('change', function () {
+    document.getElementById('btnToggleView')?.addEventListener('click', function () {
+        if (filterEtapaEl) filterEtapaEl.value = '';
+        setDelayState('blocks', null);
         scheduleRefresh();
     });
-
-    // Range Slider
-    if (slider) {
-        const minValInput = document.getElementById('minVal');
-        const maxValInput = document.getElementById('maxVal');
-
-        if (!slider.noUiSlider) {
-            noUiSlider.create(slider, {
-                start: [parseInt(minValInput.value), parseInt(maxValInput.value)],
-                connect: true,
-                range: { 'min': 0, 'max': 100 },
-                step: 1,
-                tooltips: true,
-                format: { to: val => Math.round(val), from: val => val }
-            });
-
-            slider.noUiSlider.on('change', function () { scheduleRefresh(); });
-            slider.noUiSlider.on('update', function (values) {
-                minValInput.value = values[0];
-                maxValInput.value = values[1];
-            });
-        }
-    }
 
     // Flatpickr
     const dateRangePicker = document.getElementById('dateRangePicker');
     if (dateRangePicker) {
         flatpickr(dateRangePicker, {
-            mode: 'range',
-            dateFormat: 'Y-m-d',
-            locale: 'es',
-            defaultDate: [
-                document.getElementById('fecha_desde').value,
-                document.getElementById('fecha_hasta').value
-            ],
+            mode: 'range', dateFormat: 'Y-m-d', locale: 'es',
+            defaultDate: [document.getElementById('fecha_desde').value, document.getElementById('fecha_hasta').value],
             onChange: function (selectedDates, dateStr, instance) {
                 if (selectedDates.length === 2) {
-                    const start = instance.formatDate(selectedDates[0], 'Y-m-d');
-                    const end   = instance.formatDate(selectedDates[1], 'Y-m-d');
-
-                    document.getElementById('fecha_desde').value = start;
-                    document.getElementById('fecha_hasta').value = end;
-
-                    const displayStart = instance.formatDate(selectedDates[0], 'd F, Y');
-                    const displayEnd   = instance.formatDate(selectedDates[1], 'd F, Y');
-                    document.getElementById('dateDisplay').textContent = `${displayStart} - ${displayEnd}`;
-
-                    const qf = document.getElementById('globalQuickTimeFilter');
-                    if (qf) qf.value = "";
-
+                    document.getElementById('fecha_desde').value = instance.formatDate(selectedDates[0], 'Y-m-d');
+                    document.getElementById('fecha_hasta').value = instance.formatDate(selectedDates[1], 'Y-m-d');
+                    document.getElementById('dateDisplay').textContent =
+                        instance.formatDate(selectedDates[0], 'd M, Y') + ' - ' + instance.formatDate(selectedDates[1], 'd M, Y');
                     scheduleRefresh();
                 }
             }
         });
     }
 
-    // ==============================
-    // EVENT LISTENERS PARA MÉTRICAS
-    // ==============================
-    const btnToggleView = document.getElementById('btnToggleView');
-    if (btnToggleView) {
-        btnToggleView.addEventListener('click', function() {
-            if (filterEtapaEl) {
-                filterEtapaEl.value = '';
-            }
-            setDelayState('blocks', null);
-            scheduleRefresh();
-        });
-    }
+    // ===== EXPORTS =====
+    $(document).on('click', '#dropdownExportar', function () {
+        console.log('===== CLIC EN TOGGLE PRINCIPAL EXPORTAR (#dropdownExportar) =====');
+    });
 
-    // Se eliminó la lógica de administración manual por solicitud del usuario
-
-    // ===================================================================
-    // PDF EXPORT — Generación programática limpia con jsPDF + AutoTable
-    //
-    // Estrategia: construir el PDF directamente con jsPDF en lugar de
-    // capturar el DOM con html2canvas (que no soporta oklch ni temas oscuros).
-    // El resultado es un documento de impresión profesional con fondo blanco.
-    // ===================================================================
-    $('#btnExportPDF').on('click', async function () {
-        const btn             = $(this);
+    $(document).on('click', '#btnExportPDF', async function (e) {
+        console.log('===== CLIC EN BOTÓN PDF (#btnExportPDF) =====');
+        e.preventDefault();
+        const btn = $(this);
         const originalContent = btn.html();
+        let captureAreaRef = null;
 
         try {
-            const jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+            // Verificar que html2canvas existe
+            if (typeof html2canvas === 'undefined') {
+                throw new Error('Librería html2canvas no cargada. Verifica que esté importada en el HTML.');
+            }
+
+            // Obtener constructor de jsPDF de forma más robusta
+            const jsPDFConstructor = window.jsPDF || (window.jspdf && window.jspdf.jsPDF);
             if (!jsPDFConstructor) {
-                Swal.fire('Error', 'Librería jsPDF no cargada. Verifique la conexión a internet.', 'error');
-                return;
+                throw new Error('Librería jsPDF no cargada. Verifica que esté importada en el HTML.');
             }
 
             btn.html('<span class="spinner-border spinner-border-sm me-2"></span>Generando PDF...');
             btn.prop('disabled', true);
 
-            // ── Paleta institucional ──
-            const C = {
-                navy:      [15, 23, 42],
-                blue:      [59, 130, 246],
-                green:     [16, 185, 129],
-                amber:     [245, 158, 11],
-                red:       [239, 68, 68],
-                indigo:    [99, 102, 241],
-                teal:      [20, 184, 166],
-                slate:     [71, 85, 105],
-                slateLt:   [148, 163, 184],
-                border:    [226, 232, 240],
-                bg:        [248, 250, 252],
-                white:     [255, 255, 255],
-            };
+            captureAreaRef = document.getElementById('captureArea');
+            if (!captureAreaRef) throw new Error('No se encontró el área a capturar (captureArea).');
 
-            const pdf = new jsPDFConstructor({ orientation: 'l', unit: 'mm', format: 'a4' });
-            const W   = pdf.internal.pageSize.getWidth();   // 297mm
-            const H   = pdf.internal.pageSize.getHeight();  // 210mm
-            const M   = 14; // margen horizontal
-            let   y   = M;
+            console.log('1. Añadiendo clase is-exporting...');
+            // Agregar clase para estilos de impresión
+            captureAreaRef.classList.add('is-exporting');
 
-            // ── Helpers ──
-            const rgb = (arr) => ({ r: arr[0], g: arr[1], b: arr[2] });
+            console.log('2. Esperando render del DOM...');
+            // Permitir que el DOM se actualice
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            function newPageIfNeeded(neededMm) {
-                if (y + neededMm > H - M) {
-                    pdf.addPage();
-                    drawPageFooter();
-                    y = M;
-                    return true;
-                }
-                return false;
-            }
-
-            function drawPageFooter() {
-                const pageNum = pdf.internal.getCurrentPageInfo().pageNumber;
-                pdf.setDrawColor(...C.border);
-                pdf.setLineWidth(0.2);
-                pdf.line(M, H - 8, W - M, H - 8);
-                pdf.setFontSize(7);
-                pdf.setTextColor(...C.slateLt);
-                pdf.text('© ' + new Date().getFullYear() + ' Gobernación de Cundinamarca — Informe Analítico BI', M, H - 4);
-                pdf.text('Pág. ' + pageNum, W - M, H - 4, { align: 'right' });
-            }
-
-            // ── PÁGINA 1: ENCABEZADO ──────────────────────────────────────
-            // Banda superior institucional
-            pdf.setFillColor(...C.navy);
-            pdf.rect(0, 0, W, 22, 'F');
-
-            // Línea de acento
-            pdf.setFillColor(...C.blue);
-            pdf.rect(0, 22, W, 1.2, 'F');
-
-            // Texto encabezado
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(14);
-            pdf.setTextColor(...C.white);
-            pdf.text('INFORME DE GESTIÓN BI', M, 10);
-
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(7.5);
-            pdf.setTextColor(...C.slateLt);
-            pdf.text('Secretaría de Tecnologías de la Información y las Comunicaciones', M, 16);
-
-            // Metadata derecha
-            const now     = new Date();
-            const dateStr = now.toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
-            const timeStr = now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
-            const userName = document.querySelector('meta[name="user-name"]')?.content
-                          || (document.querySelector('.navbar .dropdown-toggle')?.textContent?.trim() || 'Admin Sistema');
-
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(7);
-            pdf.setTextColor(...C.slateLt);
-            pdf.text('GENERADO POR', W - M, 7, { align: 'right' });
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(8);
-            pdf.setTextColor(...C.white);
-            pdf.text(userName, W - M, 12, { align: 'right' });
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(7);
-            pdf.setTextColor(...C.slateLt);
-            pdf.text('FECHA: ' + dateStr + ' ' + timeStr, W - M, 17, { align: 'right' });
-
-            y = 30;
-
-            // ── Filtros aplicados ──
-            const filters = [];
-            const ff = document.getElementById('filterForm');
-            if (ff) {
-                const c = ff.querySelector('[name="contrato"]')?.value;
-                if (c) filters.push('Contrato: ' + c);
-                const s = ff.querySelector('[name="supervisor"] option:checked')?.text;
-                if (s && s !== 'Todos') filters.push('Supervisor: ' + s);
-                const r = ff.querySelector('[name="responsable"] option:checked')?.text;
-                if (r && r !== 'Todos') filters.push('Responsable: ' + r);
-                const e = document.getElementById('selectedEstadoLabel')?.textContent;
-                if (e && e !== 'Todos los estados') filters.push('Estado: ' + e);
-            }
-            const dateRange = document.getElementById('dateDisplay')?.textContent?.trim() || dateStr;
-            const filterTxt = filters.length > 0 ? filters.join('  |  ') : 'Sin filtros específicos (Global)';
-
-            pdf.setFillColor(...C.bg);
-            pdf.roundedRect(M, y, W - M * 2, 10, 2, 2, 'F');
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(7);
-            pdf.setTextColor(...C.slate);
-            pdf.text('Filtros aplicados:', M + 3, y + 4.5);
-            pdf.setFont('helvetica', 'normal');
-            pdf.setTextColor(...C.slateLt);
-            pdf.text(filterTxt, M + 32, y + 4.5);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setTextColor(...C.slate);
-            pdf.text('Período:  ' + dateRange, W - M - 3, y + 4.5, { align: 'right' });
-            y += 15;
-
-            // ── SECCIÓN: KPIs ─────────────────────────────────────────────
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(8);
-            pdf.setTextColor(...C.slate);
-            pdf.text('INDICADORES CLAVE', M, y);
-            pdf.setDrawColor(...C.blue);
-            pdf.setLineWidth(0.5);
-            pdf.line(M, y + 1, M + 38, y + 1);
-            y += 5;
-
-            // Recolectar valores KPI desde el DOM
-            const kpiCards = document.querySelectorAll('.kpi-card');
-            const kpiData  = [];
-
-            // Valor RP del mini-indicator
-            const rpVal = document.querySelector('.mini-value')?.textContent?.trim() || '$0';
-            kpiData.push({ label: 'Valor Total RP', value: rpVal, color: C.navy });
-
-            kpiCards.forEach(card => {
-                const val   = card.querySelector('.kpi-value')?.textContent?.trim() || '0';
-                const label = card.querySelector('.kpi-label')?.textContent?.trim() || '';
-                let color   = C.blue;
-                if (card.classList.contains('kpi-amber'))  color = C.amber;
-                if (card.classList.contains('kpi-green'))  color = C.green;
-                if (card.classList.contains('kpi-red'))    color = C.red;
-                if (card.classList.contains('kpi-indigo')) color = C.indigo;
-                if (card.classList.contains('kpi-teal'))   color = C.teal;
-                if (label) kpiData.push({ label, value: val, color });
+            console.log('3. Llamando a html2canvas...');
+            // Capturar el canvas con configuración optimizada
+            const canvas = await html2canvas(captureAreaRef, {
+                scale: 1.5, // Resolución moderada para no saturar memoria
+                useCORS: true,
+                logging: true, // HABILITADO LOGGING PARA DEBUG
+                backgroundColor: '#F8FAFC',
+                allowTaint: false, // NO USAR ALLOW TAINT PORQUE BLOQUEA toDataURL
+                scrollY: -window.scrollY,
+                scrollX: -window.scrollX,
+                windowHeight: captureAreaRef.scrollHeight || captureAreaRef.offsetHeight
             });
 
-            // Dibujar tarjetas KPI en una fila
-            const kpiCount = Math.min(kpiData.length, 7);
-            const kpiW     = (W - M * 2 - (kpiCount - 1) * 3) / kpiCount;
-            const kpiH     = 26; // Aumentado de 20 para mejor proporción
+            console.log('4. html2canvas terminó. Extrayendo imagen...');
+            captureAreaRef.classList.remove('is-exporting');
 
-            kpiData.slice(0, kpiCount).forEach((kpi, i) => {
-                const kx = M + i * (kpiW + 3);
-                const ky = y;
+            const imgData = canvas.toDataURL('image/png', 0.95);
+            console.log('5. Imagen extraída. Inicializando jsPDF...');
 
-                // Fondo tarjeta
-                pdf.setFillColor(...C.white);
-                pdf.setDrawColor(...C.border);
-                pdf.setLineWidth(0.15);
-                pdf.roundedRect(kx, ky, kpiW, kpiH, 2, 2, 'FD');
-
-                // Barra de color superior
-                pdf.setFillColor(...kpi.color);
-                pdf.roundedRect(kx, ky, kpiW, 1.8, 1, 1, 'F');
-                pdf.rect(kx, ky + 1, kpiW, 0.8, 'F');
-
-                // Valor
-                pdf.setFont('helvetica', 'bold');
-                const fontSize = kpi.value.length > 12 ? 8 : 11;
-                pdf.setFontSize(fontSize);
-                pdf.setTextColor(...kpi.color);
-                pdf.text(kpi.value, kx + kpiW / 2, ky + 13, { align: 'center' }); // Centrado vertical mejorado
-
-                // Label
-                pdf.setFont('helvetica', 'normal');
-                pdf.setFontSize(6.5);
-                pdf.setTextColor(...C.slateLt);
-                const labelLines = pdf.splitTextToSize(kpi.label, kpiW - 4);
-                pdf.text(labelLines, kx + kpiW / 2, ky + 20, { align: 'center' });
-            });
-            y += kpiH + 10;
-
-            // ── SECCIÓN: Gráficos (exportados como imagen desde ApexCharts) ──
-            newPageIfNeeded(10);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(8);
-            pdf.setTextColor(...C.slate);
-            pdf.text('ANÁLISIS GRÁFICO', M, y);
-            pdf.setDrawColor(...C.indigo);
-            pdf.setLineWidth(0.5);
-            pdf.line(M, y + 1, M + 38, y + 1);
-            y += 6;
-
-            // Exportar gráficos como PNG desde ApexCharts respetando aspect ratio
-            const getImageSize = (src) => new Promise(res => {
-                const img = new Image();
-                img.onload = () => res({ w: img.width, h: img.height });
-                img.src = src;
+            // Crear PDF con tamaño A4
+            const pdf = new jsPDFConstructor({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
             });
 
-            async function addChartToPdf(chartInstance, label, x, cy, w, h) {
-                if (!chartInstance) return;
-                try {
-                    const uri = await chartInstance.dataURI();
-                    const imgSrc = uri.imgURI || uri;
-                    if (imgSrc && imgSrc.startsWith('data:image')) {
-                        // Marco contenedor
-                        pdf.setFillColor(...C.white);
-                        pdf.setDrawColor(...C.border);
-                        pdf.setLineWidth(0.15);
-                        pdf.roundedRect(x, cy, w, h + 8, 2, 2, 'FD');
+            const pdfWidth = pdf.internal.pageSize.getWidth(); // 210 mm
+            const pdfHeight = pdf.internal.pageSize.getHeight(); // 297 mm
+            const margin = 10; // Margen de 10mm
+            const contentWidth = pdfWidth - (margin * 2);
 
-                        // Etiqueta del gráfico
-                        pdf.setFont('helvetica', 'bold');
-                        pdf.setFontSize(7);
-                        pdf.setTextColor(...C.slate);
-                        pdf.text(label, x + 4, cy + 5);
+            // Calcular altura de la imagen basada en el ancho disponible
+            const imgWidth = contentWidth;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-                        // Calcular ajuste proporcional (Aspect Ratio)
-                        const size = await getImageSize(imgSrc);
-                        const ratio = size.w / size.h;
-                        
-                        let targetW = w - 8;
-                        let targetH = targetW / ratio;
+            let currentPosition = margin;
+            let remainingHeight = imgHeight;
 
-                        if (targetH > h) {
-                            targetH = h;
-                            targetW = targetH * ratio;
-                        }
+            console.log('6. Añadiendo imagen a las páginas...');
+            // Agregar imagen a la primera página
+            pdf.addImage(imgData, 'PNG', margin, currentPosition, imgWidth, imgHeight);
+            remainingHeight -= (pdfHeight - margin * 2);
 
-                        // Centrar imagen dentro del marco disponible
-                        const offsetX = (w - targetW) / 2;
-                        const offsetY = (h - targetH) / 2 + 6; // +6 por la etiqueta
-
-                        pdf.addImage(imgSrc, 'PNG', x + offsetX, cy + offsetY, targetW, targetH, undefined, 'FAST');
-                    }
-                } catch (e) {
-                    pdf.setFillColor(...C.bg);
-                    pdf.setDrawColor(...C.border);
-                    pdf.setLineWidth(0.15);
-                    pdf.roundedRect(x, cy, w, h + 8, 2, 2, 'FD');
-                    pdf.setFont('helvetica', 'italic');
-                    pdf.setFontSize(7);
-                    pdf.setTextColor(...C.slateLt);
-                    pdf.text('Gráfico no disponible', x + w / 2, cy + (h + 8) / 2, { align: 'center' });
-                }
+            // Agregar páginas adicionales si es necesario
+            while (remainingHeight > 0) {
+                pdf.addPage();
+                currentPosition = -remainingHeight + margin;
+                pdf.addImage(imgData, 'PNG', margin, currentPosition, imgWidth, imgHeight);
+                remainingHeight -= (pdfHeight - margin * 2);
             }
 
-            const chartRowH = 58;
-            const gutter    = 10; // Aumentado para más aire entre columnas
-            const halfW     = (W - M * 2 - gutter) / 2;
+            // Generar nombre del archivo con timestamp
+            const now = new Date();
+            const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+            const timeStr = now.getHours().toString().padStart(2, '0') +
+                now.getMinutes().toString().padStart(2, '0');
+            const filename = `Tablero_Analitico_${dateStr}_${timeStr}.pdf`;
 
-            // Fila 1: Donut + Pipeline
-            newPageIfNeeded(chartRowH + 15);
-            await addChartToPdf(charts.donut,    'DISTRIBUCIÓN DE ESTADOS',         M,             y, halfW, chartRowH);
-            await addChartToPdf(charts.gap,      'PIPELINE — CARGA POR ETAPA',      M + halfW + gutter, y, halfW, chartRowH);
-            y += chartRowH + 18;
-
-            // Fila 2: Demora + Timeline
-            newPageIfNeeded(chartRowH + 15);
-            await addChartToPdf(charts.delay,    'DEMORA PROMEDIO (HORAS)',         M,             y, halfW, chartRowH);
-            await addChartToPdf(charts.timeline, 'ACTIVIDAD ÚLTIMOS 30 DÍAS',       M + halfW + gutter, y, halfW, chartRowH);
-            y += chartRowH + 18;
-
-            // ── SECCIÓN: Tabla de contratos ────────────────────────────────
-            newPageIfNeeded(20);
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(8);
-            pdf.setTextColor(...C.slate);
-            pdf.text('DETALLE POR CONTRATO', M, y);
-            pdf.setDrawColor(...C.green);
-            pdf.setLineWidth(0.5);
-            pdf.line(M, y + 1, M + 46, y + 1);
-            y += 6;
-
-            // Recolectar datos de la tabla del DOM
-            const dtApi  = $('#alertTable').DataTable();
-            const allRows = dtApi.rows({ search: 'applied' }).data().toArray();
-
-            // Cabeceras visibles (excluir columna de botones toggle)
-            const headers = ['N° Contrato', 'Contratista', 'Etapa Actual', 'Estado', 'Meta', 'Radicadas', 'Pendientes', 'Avance'];
-
-            // Limpiar html de las celdas
-            function cellText(raw) {
-                if (raw === null || raw === undefined) return '';
-                const str = String(raw);
-                const tmp = document.createElement('div');
-                tmp.innerHTML = str;
-                return (tmp.textContent || tmp.innerText || '').trim();
-            }
-
-            const tableRows = allRows.map(row => {
-                return Array.from({ length: 8 }, (_, i) => cellText(row[i]));
-            });
-
-            // Estilos de columna
-            const colStyles = {
-                0: { cellWidth: 28 },
-                1: { cellWidth: 48 },
-                2: { cellWidth: 35 },
-                3: { cellWidth: 35 },
-                4: { cellWidth: 20, halign: 'center' },
-                5: { cellWidth: 22, halign: 'center' },
-                6: { cellWidth: 22, halign: 'center' },
-                7: { cellWidth: 28, halign: 'center' },
-            };
-
-            if (typeof pdf.autoTable === 'function') {
-                pdf.autoTable({
-                    startY:     y,
-                    head:       [headers],
-                    body:       tableRows,
-                    margin:     { left: M, right: M },
-                    styles: {
-                        fontSize:    7,
-                        cellPadding: 2.5,
-                        lineColor:   C.border,
-                        lineWidth:   0.15,
-                        textColor:   C.slate,
-                        font:        'helvetica',
-                        overflow:    'ellipsize',
-                    },
-                    headStyles: {
-                        fillColor:   C.navy,
-                        textColor:   C.white,
-                        fontStyle:   'bold',
-                        halign:      'left',
-                        fontSize:    7,
-                    },
-                    alternateRowStyles: { fillColor: C.bg },
-                    columnStyles: colStyles,
-                    didParseCell: function (data) {
-                        // Colorear columna Pendientes si > 0
-                        if (data.section === 'body' && data.column.index === 6) {
-                            const val = parseInt(data.cell.raw) || 0;
-                            if (val > 0) {
-                                data.cell.styles.textColor = C.red;
-                                data.cell.styles.fontStyle  = 'bold';
-                            } else {
-                                data.cell.styles.textColor = C.green;
-                            }
-                        }
-                    },
-                    didDrawPage: function () {
-                        drawPageFooter();
-                    }
-                });
-            } else {
-                // Fallback simple si autoTable no está disponible
-                pdf.setFontSize(8);
-                pdf.setTextColor(...C.red);
-                pdf.text('Instale jspdf-autotable para ver la tabla de contratos.', M, y + 5);
-                y += 10;
-            }
-
-            // Footer de la última página
-            drawPageFooter();
-
-            pdf.save('Informe_Analitico_' + now.getTime() + '.pdf');
+            // Descargar el PDF
+            pdf.save(filename);
 
             btn.html(originalContent).prop('disabled', false);
-            window.showSnackbar('Reporte PDF generado exitosamente', 'success');
+
+            // Mostrar mensaje de éxito
+            if (typeof window.showSnackbar === 'function') {
+                window.showSnackbar('Reporte PDF generado exitosamente: ' + filename, 'success');
+            } else if (typeof Swal !== 'undefined') {
+                Swal.fire('Éxito', 'Reporte PDF generado exitosamente', 'success');
+            } else {
+                alert('Reporte PDF generado exitosamente');
+            }
 
         } catch (error) {
             console.error('Error exportando PDF:', error);
-            Swal.fire('Error', 'No se pudo generar el PDF: ' + error.message, 'error');
+            if (captureAreaRef) captureAreaRef.classList.remove('is-exporting');
+
             btn.html(originalContent).prop('disabled', false);
-        }
-    });
 
-    // ==============================
-    // EXCEL EXPORT
-    // ==============================
-    $('#btnExportExcel').on('click', function () {
-        const table = $('#alertTable').DataTable();
-        table.button('.buttons-excel').trigger();
-    });
+            const errorMsg = error.message || 'Error desconocido al generar PDF';
 
-    // ==============================
-    // LÓGICA DE OCULTAR COLUMNAS
-    // ==============================
-    let minimizedColumns = new Set();
-
-    window.resetColumns = function () {
-        minimizedColumns.clear();
-        applyMinimizedColumns();
-    };
-
-    function toggleColumn(index) {
-        if (minimizedColumns.has(index)) minimizedColumns.delete(index);
-        else minimizedColumns.add(index);
-        applyMinimizedColumns();
-    }
-
-    function applyMinimizedColumns() {
-        const tableEl  = document.getElementById('alertTable');
-        const resetBtn = document.getElementById('btnResetColumns');
-        if (!tableEl) return;
-
-        tableEl.querySelectorAll('.column-hidden').forEach(el => el.classList.remove('column-hidden'));
-
-        minimizedColumns.forEach(index => {
-            tableEl.querySelectorAll(`tr > *:nth-child(${index + 1})`).forEach(cell => {
-                cell.classList.add('column-hidden');
-            });
-        });
-
-        if (resetBtn) resetBtn.style.display = minimizedColumns.size > 0 ? 'inline-flex' : 'none';
-    }
-
-    document.addEventListener('click', function (e) {
-        const btn = e.target.closest('.toggle-col-btn');
-        if (btn) {
-            const th = btn.closest('th');
-            if (th) {
-                const index = Array.from(th.parentNode.children).indexOf(th);
-                toggleColumn(index);
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Error', 'No se pudo generar el PDF: ' + errorMsg, 'error');
+            } else {
+                alert('No se pudo generar el PDF: ' + errorMsg);
             }
         }
     });
 
-    // ==============================
-    // ANALITICA ESTADO PICKER
-    // ==============================
-    const picker       = document.getElementById('estadoPicker');
-    const pickerBtn    = document.getElementById('estadoPickerBtn');
-    const pickerMenu   = document.getElementById('estadoPickerMenu');
-    const hiddenEstado = document.getElementById('hiddenSearchEstado');
-    const estadoLabel  = document.getElementById('selectedEstadoLabel');
-
-    if (picker && pickerBtn) {
-        pickerBtn.addEventListener('click', function (e) {
-            e.stopPropagation();
-            picker.classList.toggle('is-open');
-        });
-
-        if (pickerMenu) {
-            pickerMenu.addEventListener('click', function (e) {
-                const item        = e.target.closest('.analitica-picker-item');
-                const groupHeader = e.target.closest('.analitica-picker-group-header');
-
-                if (groupHeader) {
-                    e.stopPropagation();
-                    const group = groupHeader.closest('.analitica-picker-group');
-                    if (group) group.classList.toggle('is-expanded');
-                    return;
-                }
-
-                if (item) {
-                    e.stopPropagation();
-                    const value = item.dataset.value;
-                    const label = item.dataset.label || item.textContent.trim();
-
-                    if (hiddenEstado) hiddenEstado.value = value;
-                    if (estadoLabel)  estadoLabel.textContent = label;
-
-                    pickerMenu.querySelectorAll('.analitica-picker-item').forEach(el => el.classList.remove('is-active'));
-                    item.classList.add('is-active');
-                    picker.classList.remove('is-open');
-
-                    scheduleRefresh();
-                }
-            });
+    $('#btnExportExcel').on('click', function (e) {
+        e.preventDefault();
+        try {
+            $('#alertTable').DataTable().button('.buttons-excel').trigger();
+        } catch (error) {
+            console.error('Error exportando Excel:', error);
+            alert('Para exportar a Excel, asegúrate de que la extensión de botones de DataTables esté cargada.');
         }
-
-        document.addEventListener('click', function (e) {
-            if (!picker.contains(e.target)) picker.classList.remove('is-open');
-        });
-    }
+    });
 });

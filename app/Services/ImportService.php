@@ -166,7 +166,21 @@ class ImportService
 
         // 4. Cuenta Cobro logic (Simplified for this example, but should follow existing patterns)
         $numeroCuenta = (string) $this->getCellValue($data, ['NUMERO DE CUENTA', 'N° CUENTA'], '1');
-        
+        $cuentaExistente = CuentaCobro::where('contrato_id', $contrato->id)
+            ->where('numero_cuenta', $numeroCuenta)
+            ->first();
+
+        $totalCount = CuentaCobro::where('contrato_id', $contrato->id)
+            ->when($cuentaExistente?->id, fn($q) => $q->where('id', '!=', $cuentaExistente->id))
+            ->count();
+
+        $limite = (int) CuentaCobro::where('contrato_id', $contrato->id)
+            ->max('numero_pagos_totales');
+
+        if ($totalCount >= $limite) {
+            throw new \RuntimeException("El contrato ya ha alcanzado el límite máximo de {$limite} cuentas de cobro (N° Pagos Totales).");
+        }
+
         $cuenta = CuentaCobro::updateOrCreate(
             ['contrato_id' => $contrato->id, 'numero_cuenta' => $numeroCuenta],
             [

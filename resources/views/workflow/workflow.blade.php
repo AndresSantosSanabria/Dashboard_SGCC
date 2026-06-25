@@ -154,7 +154,29 @@
                 const filterForm = document.querySelector('.filter-bar');
                 let debounceTimer = null;
 
-                window.recargarKanban = function(forcedBlockId = null) {
+                window.recargarKanban = function(forcedBlockId = null, options = {}) {
+                    const limpiarFiltrosBusqueda = () => {
+                        const contratoInput = document.querySelector('input[name="numero_contrato"]');
+                        const cuentaInput = document.querySelector('input[name="numero_cuenta"]');
+                        const contratistaInput = document.querySelector('input[name="contratista"]');
+                        const responsableSelect = document.querySelector('select[name="responsable_id"]');
+                        const supervisorSelect = document.querySelector('select[name="supervisor_id"]');
+                        const estadoInput = document.getElementById('hiddenSearchEstadoWorkflow');
+                        const estadoLabel = document.getElementById('selectedEstadoLabelWorkflow');
+
+                        if (contratoInput) contratoInput.value = '';
+                        if (cuentaInput) cuentaInput.value = '';
+                        if (contratistaInput) contratistaInput.value = '';
+                        if (responsableSelect) responsableSelect.value = '';
+                        if (supervisorSelect) supervisorSelect.value = '';
+                        if (estadoInput) estadoInput.value = '';
+                        if (estadoLabel) estadoLabel.textContent = 'Todos los estados';
+                    };
+
+                    if (options.resetFilters !== false) {
+                        limpiarFiltrosBusqueda();
+                    }
+
                     const formData = new FormData(filterForm);
                     const params = new URLSearchParams(formData).toString();
                     const url = `{{ route('workflow') }}?${params}`;
@@ -168,6 +190,39 @@
                     const scrollY = window.scrollY;
                     const scrollX = window.scrollX;
 
+                    const abrirCuenta = (cuentaId, bannerText) => {
+                        if (!cuentaId) return false;
+                        const target = document.querySelector(`[data-cuenta-id="${cuentaId}"]`);
+                        if (target) {
+                            target.click();
+                            const modal = document.getElementById(`modalCuenta${cuentaId}`);
+                            if (modal) {
+                                const bannerId = `newCuentaBanner${cuentaId}`;
+                                let banner = document.getElementById(bannerId);
+                                if (!banner) {
+                                    banner = document.createElement('div');
+                                    banner.id = bannerId;
+                                    banner.className = 'alert alert-warning fw-semibold mb-3';
+                                    banner.textContent = bannerText;
+                                    modal.querySelector('.modal-body')?.prepend(banner);
+                                } else {
+                                    banner.textContent = bannerText;
+                                    banner.classList.remove('d-none');
+                                }
+                                setTimeout(() => banner?.classList.add('d-none'), 5000);
+                            }
+                            return true;
+                        }
+
+                        const directModal = document.getElementById(`modalCuenta${cuentaId}`);
+                        if (directModal && window.bootstrap) {
+                            bootstrap.Modal.getOrCreateInstance(directModal).show();
+                            return true;
+                        }
+
+                        return false;
+                    };
+
                     window.apiFetch(url)
                         .then(r => r.text())
                         .then(html => {
@@ -178,37 +233,48 @@
 
                             kanbanContainer.innerHTML = html;
                             
-                            // Lógica para auto-seleccionar bloque con resultados si hay filtros activos
-                            const filterContratista = document.querySelector('input[name="contratista"]')?.value.trim();
-                            const filterNumero = document.querySelector('input[name="numero_contrato"]')?.value.trim();
-                            const filterCuenta = document.querySelector('input[name="numero_cuenta"]')?.value.trim();
-                            const filterEstado = document.querySelector('input[name="estado_nombre"]')?.value.trim();
-
                             if (forcedBlockId) {
                                 if (typeof window.selectWorkflowBlock === 'function') {
                                     window.selectWorkflowBlock(forcedBlockId);
-                                }
-                            } else if (filterContratista || filterNumero || filterCuenta || filterEstado) {
-                                // Buscar el primer selector que tenga más de 0 casos
-                                const firstBlockWithResults = Array.from(document.querySelectorAll('.workflow-selector')).find(s => {
-                                    const countText = s.querySelector('.selector-count')?.textContent || '0';
-                                    const count = parseInt(countText);
-                                    return count > 0;
-                                });
-
-                                if (firstBlockWithResults) {
-                                    const blockId = firstBlockWithResults.dataset.blockId;
-                                    window.selectWorkflowBlock(blockId);
-                                } else {
-                                    if (typeof window.restoreSelectedBlock === 'function') window.restoreSelectedBlock();
                                 }
                             } else {
                                 if (typeof window.restoreSelectedBlock === 'function') window.restoreSelectedBlock();
                             }
 
-                            kanbanContainer.style.opacity = '1';
-                            kanbanContainer.style.pointerEvents = 'auto';
-                            window.scrollTo(scrollX, scrollY);
+                            const pendingCuentaId = options.openCuentaId || window.pendingOpenCuentaId;
+                            if (pendingCuentaId) {
+                                const bannerText = window.pendingOpenCuentaBanner || '⚠️ Esta es una cuenta paralela recién creada';
+                                const tryOpen = () => abrirCuenta(pendingCuentaId, bannerText);
+
+                                requestAnimationFrame(() => {
+                                    if (tryOpen()) {
+                                        window.pendingOpenCuentaId = null;
+                                        window.pendingOpenCuentaBanner = null;
+                                        kanbanContainer.style.opacity = '1';
+                                        kanbanContainer.style.pointerEvents = 'auto';
+                                        window.scrollTo(scrollX, scrollY);
+                                        return;
+                                    }
+
+                                    const observer = new MutationObserver(() => {
+                                        if (tryOpen()) {
+                                            observer.disconnect();
+                                            window.pendingOpenCuentaId = null;
+                                            window.pendingOpenCuentaBanner = null;
+                                            kanbanContainer.style.opacity = '1';
+                                            kanbanContainer.style.pointerEvents = 'auto';
+                                            window.scrollTo(scrollX, scrollY);
+                                        }
+                                    });
+
+                                    observer.observe(kanbanContainer, { childList: true, subtree: true });
+                                    setTimeout(() => observer.disconnect(), 3000);
+                                });
+                            } else {
+                                kanbanContainer.style.opacity = '1';
+                                kanbanContainer.style.pointerEvents = 'auto';
+                                window.scrollTo(scrollX, scrollY);
+                            }
                         })
                         .catch(err => {
                             console.error('Error al filtrar:', err);

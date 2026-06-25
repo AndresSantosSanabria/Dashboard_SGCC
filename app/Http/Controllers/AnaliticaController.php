@@ -108,9 +108,10 @@ class AnaliticaController extends Controller
             'gap_chart'      => $this->getGapDataSql(clone $filterQuery),
             'heatmap'        => $this->getHeatmapDataSql(clone $filterQuery),
             'estado_anillos' => $this->getEstadoAnillos(clone $filterQuery),
-            'demora_bloques' => $this->getDemoraPromedioBloques(clone $filterQuery),
+            'demora_bloques' => $this->getDemoraPromedioBloques(clone $filterQuery, $desde, $hasta),
             'timeline'       => $this->getTimelineActivity($request, clone $filterQuery),
             'demora_usuario_etapa' => $this->getDemoraUsuarioEtapaData($request, $desde, $hasta),
+            'timeline_events' => $this->getTimelineEvents($request, clone $filterQuery),
         ];
 
         // 5. RESPUESTA (Dual: Síncrona o AJAX)
@@ -248,7 +249,7 @@ class AnaliticaController extends Controller
      * LEFT JOIN con el historial para que siempre aparezcan todas las etapas,
      * aunque su promedio sea 0 por falta de datos históricos.
      */
-    private function getDemoraPromedioBloques($query)
+    private function getDemoraPromedioBloques($query, $desde = null, $hasta = null)
     {
         $cuentaIds = (clone $query)->pluck('cuentas_cobro.id');
 
@@ -266,10 +267,16 @@ class AnaliticaController extends Controller
 
         // LEFT JOIN: si un bloque no tiene historial, AVG devuelve NULL → lo convertimos a 0
         $promedios = DB::table('bloques_workflow as bw')
-            ->leftJoin('historial_workflow as hw', function ($join) use ($cuentaIds) {
+            ->leftJoin('historial_workflow as hw', function ($join) use ($cuentaIds, $desde, $hasta) {
                 $join->on('bw.id', '=', 'hw.bloque_id')
-                     ->whereIn('hw.cuenta_cobro_id', $cuentaIds)
-                     ->join('estados_workflow as ew', 'hw.estado_origen_id', '=', 'ew.id')
+                     ->whereIn('hw.cuenta_cobro_id', $cuentaIds);
+                if ($desde) {
+                    $join->whereRaw('hw.fecha_transicion::timestamp >= ?', [$desde]);
+                }
+                if ($hasta) {
+                    $join->whereRaw('hw.fecha_transicion::timestamp <= ?', [$hasta]);
+                }
+                $join->join('estados_workflow as ew', 'hw.estado_origen_id', '=', 'ew.id')
                      ->where('ew.afecta_indicadores', true)
                      ->where('ew.contabiliza_tiempo', true)
                      ->where('hw.tiempo_en_estado_anterior_segundos', '>', 0);
@@ -341,6 +348,54 @@ class AnaliticaController extends Controller
         ];
     }
     /**
+     * Timeline de Eventos: Obtiene los últimos eventos de actividad con usuario, estado y cuenta.
+     */
+    private function getTimelineEvents(Request $request, $query)
+    {
+        $cuentaIds = (clone $query)->pluck('cuentas_cobro.id');
+
+        if ($cuentaIds->isEmpty()) {
+            return [];
+        }
+
+        $hwQuery = \App\Models\HistorialWorkflow::whereIn('cuenta_cobro_id', $cuentaIds)
+            ->whereHas('estadoDestino', fn($q) => $q->where('afecta_indicadores', true))
+            ->with(['usuarioAccion', 'cuentaCobro.contrato', 'estadoDestino', 'estadoOrigen']);
+
+        $actResp = $request->filled('f_act_responsable') ? $request->f_act_responsable
+            : ($request->filled('f_usuario') ? $request->f_usuario
+            : ($request->filled('f_responsable_etapa') ? $request->f_responsable_etapa
+            : $request->responsable));
+        if ($actResp) {
+            $hwQuery->where('usuario_accion_id', $actResp);
+        }
+
+        $actEst = $request->filled('f_act_estado') ? $request->f_act_estado
+            : ($request->filled('f_estado_etapa') ? $request->f_estado_etapa
+            : $request->estado);
+        if ($actEst) {
+            $hwQuery->whereHas('estadoDestino', fn($q) => $q->where('nombre', $actEst));
+        }
+
+        $eventos = $hwQuery->orderBy('fecha_transicion', 'desc')->limit(15)->get();
+
+        return $eventos->map(function ($hw) {
+            $esDevolucion = $hw->estadoDestino && $hw->estadoDestino->permite_devolucion;
+            $tipo = $hw->estadoDestino && $hw->estadoDestino->es_final ? 'approved' : ($esDevolucion ? 'returned' : 'progress');
+
+            return [
+                'evento' => $hw->estadoDestino->nombre ?? 'Transición',
+                'usuario' => $hw->usuarioAccion ? trim(($hw->usuarioAccion->primer_nombre ?? '') . ' ' . ($hw->usuarioAccion->primer_apellido ?? '')) : 'Sistema',
+                'cuenta' => $hw->cuentaCobro && $hw->cuentaCobro->contrato ? $hw->cuentaCobro->contrato->numero_contrato : ('#' . $hw->cuenta_cobro_id),
+                'monto' => $hw->cuentaCobro && $hw->cuentaCobro->contrato ? $hw->cuentaCobro->contrato->monto_total : null,
+                'fecha' => $hw->fecha_transicion,
+                'tiempo' => $hw->fecha_transicion ? \Carbon\Carbon::parse($hw->fecha_transicion)->diffForHumans() : null,
+                'type' => $tipo,
+            ];
+        })->toArray();
+    }
+
+    /**
      * Obtiene los datos para la nueva gráfica de Demora por Usuario y Etapa.
      * Basado EXCLUSIVAMENTE en datos REALES del flujo de trabajo, excluyendo administradores.
      */
@@ -352,6 +407,13 @@ class AnaliticaController extends Controller
         $estadoEtapa = $request->input('f_estado_etapa');
         // 2. Obtener todos los logs de tiempo cerrados
         $logsQuery = \App\Models\TaskTimeLog::where('duracion_segundos', '>', 0);
+
+        if ($desde) {
+            $logsQuery->where('updated_at', '>=', $desde);
+        }
+        if ($hasta) {
+            $logsQuery->where('updated_at', '<=', $hasta);
+        }
 
         // Aplicar filtros generales a los logs
         $logsQuery->whereHas('cuentaCobro', function($q) use ($request, $desde, $hasta) {
@@ -581,17 +643,23 @@ class AnaliticaController extends Controller
             $query->where('cuentas_cobro.bloque_actual_id', $request->f_bloque);
         }
 
-        // Responsable (Sincronizado entre filtro top y filtro específico de módulo)
-        $responsableId = $request->filled('f_usuario') ? $request->f_usuario : $request->responsable;
+        // Responsable (Sincronizado: main > delay-card > activity-card > legacy)
+        $responsableId = $request->filled('f_usuario') ? $request->f_usuario
+            : ($request->filled('f_responsable_etapa') ? $request->f_responsable_etapa
+            : ($request->filled('f_act_responsable') ? $request->f_act_responsable
+            : $request->responsable));
         if ($responsableId) {
             $query->where('cuentas_cobro.responsable_actual_id', $responsableId);
         }
 
-        // Estado / Etapa (Sincronizado)
+        // Estado / Etapa (Sincronizado: main filters + chart-specific params)
         // Omitimos este filtro si estamos buscando LOGS históricos, ya que un log de "Revisión"
         // debe aparecer aunque la cuenta ya esté en "Facturación".
         if (!$skipStateFilter) {
-            $estadoNombre = $request->filled('f_etapa') ? $request->f_etapa : $request->estado;
+            $estadoNombre = $request->filled('f_etapa') ? $request->f_etapa
+                : ($request->filled('f_act_estado') ? $request->f_act_estado
+                : ($request->filled('f_estado_etapa') ? $request->f_estado_etapa
+                : $request->estado));
             if ($estadoNombre) {
                 $query->whereHas('estadoActual', function ($q) use ($estadoNombre) {
                     $q->where('nombre', $estadoNombre);

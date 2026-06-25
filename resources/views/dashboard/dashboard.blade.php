@@ -222,7 +222,7 @@
                         role="status">
                     </div>
                     <span class="badge badge-pill shadow-sm" id="resultsCount">
-                        {{ $cuentas->total() }} registros
+                        {{ $contratos->total() }} contratos
                     </span>
                 </div>
             </div>

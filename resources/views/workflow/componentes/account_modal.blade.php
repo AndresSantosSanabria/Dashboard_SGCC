@@ -18,6 +18,10 @@
                 @endif
             </div>
             <div class="modal-body">
+                <div id="newCuentaBanner{{ $cuenta->id }}" class="alert alert-success d-none mb-3" role="alert" style="border-radius: 12px;">
+                    <i class="bi bi-check-circle-fill me-2"></i>
+                    Nueva cuenta creada correctamente para este contrato. Esta es la cuenta recién iniciada.
+                </div>
                 <div class="info-cards-row">
                     <div class="info-card">
                         <div class="info-card-icon"><i class="fas fa-file-contract"></i></div>
@@ -233,6 +237,26 @@
                     style="border-radius:12px;">
                     <i class="bi bi-x-lg me-1"></i> Cerrar
                 </button>
+                @php
+                    $totalCuentasContrato = $cuenta->contrato?->cuentasCobro()
+                        ->whereNull('deleted_at')
+                        ->count() ?? 0;
+                    $limiteCuentas = (int) ($cuenta->contrato?->cuentasCobro()
+                        ->max('numero_pagos_totales') ?? 0) ?: 1;
+                    $puedeCrearParalela = $cuenta->contrato && $totalCuentasContrato < $limiteCuentas;
+                @endphp
+                @if ($puedeCrearParalela)
+                    <button type="button"
+                        class="btn btn-warning px-4"
+                        style="border-radius:12px;"
+                        onclick="startParallelAccount({{ $cuenta->id }}, '{{ $cuenta->contrato?->numero_contrato }}', {{ $totalCuentasContrato + 1 }})">
+                        <i class="bi bi-plus-circle me-1"></i> Iniciar cuenta paralela (#{{ $totalCuentasContrato + 1 }})
+                    </button>
+                @elseif ($cuenta->contrato)
+                    <span class="badge bg-secondary px-3 py-2">
+                        <i class="bi bi-lock me-1"></i> Límite ({{ $limiteCuentas }})
+                    </span>
+                @endif
                 <a href="{{ route('dashboard') }}?searchContrato={{ $cuenta->contrato?->numero_contrato }}"
                     class="btn btn-premium-confirm">
                     <i class="bi bi-speedometer2 me-1"></i> Ver en Dashboard

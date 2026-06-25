@@ -1,4 +1,4 @@
-/**
+﻿/**
  * FRONTEND OPERATIVO - WORKFLOW KANBAN
  * 
  * Gestiona la reactividad del tablero, el cronómetro de las tarjetas 
@@ -714,3 +714,55 @@ document.addEventListener('DOMContentLoaded', function () {
     // 3. Inicialización de tabs
     if (typeof window.restoreSelectedBlock === 'function') window.restoreSelectedBlock();
 });
+
+/**
+ * Crea una cuenta paralela y refresca el tablero Kanban.
+ * Disponible desde el modal de gestión en Workflow y Dashboard.
+ */
+window.startParallelAccount = function (id, contrato, siguienteCuenta) {
+    Swal.fire({
+        title: '¿Iniciar cuenta paralela?',
+        text: `¿Desea iniciar un nuevo trámite paralelo para la cuenta #${siguienteCuenta} del contrato ${contrato}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#004884',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, iniciar paralela',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        customClass: {
+            popup: 'premium-swal-popup',
+            title: 'premium-swal-title'
+        }
+    }).then(result => {
+        if (!result.isConfirmed) return;
+
+        window.apiFetch(`/workflow/iniciar-siguiente-cuenta/${id}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (!data.success) {
+                    window.showSnackbar('⚠️ ' + (data.message || 'No se pudo crear la cuenta paralela'), 'error');
+                    return;
+                }
+
+                window.showSnackbar(`✅ Cuenta paralela #${data.numero_cuenta} creada correctamente`, 'success');
+                window.pendingOpenCuentaId = data.id;
+                window.pendingOpenCuentaBanner = '⚠️ Esta es una cuenta paralela recién creada';
+
+                if (typeof window.recargarKanban === 'function') {
+                    window.recargarKanban(data.bloque_inicial_id || null, {
+                        openCuentaId: data.id,
+                        resetFilters: true,
+                    });
+                } else if (typeof fetchFilteredData === 'function') {
+                    fetchFilteredData();
+                } else {
+                    window.location.reload();
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                window.showSnackbar('❌ Error al iniciar la cuenta paralela', 'error');
+            });
+    });
+};
