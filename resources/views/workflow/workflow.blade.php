@@ -173,7 +173,7 @@
                         if (estadoLabel) estadoLabel.textContent = 'Todos los estados';
                     };
 
-                    if (options.resetFilters !== false) {
+                    if (options.resetFilters === true) {
                         limpiarFiltrosBusqueda();
                     }
 
