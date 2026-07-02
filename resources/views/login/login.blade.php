@@ -15,6 +15,21 @@
         .modal-backdrop {
             z-index: 11999 !important;
         }
+
+        /* Tooltip para notas adicionales en el historial público */
+        .tooltip-notas {
+            max-width: 280px;
+            font-size: 0.78rem;
+            line-height: 1.4;
+            padding: 8px 12px;
+            background: #1e293b;
+            color: #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+        }
+        .tooltip-notas::before {
+            border-top-color: #1e293b;
+        }
     </style>
 @endpush
 
@@ -221,31 +236,49 @@
 
     <script>
         function renderAccountCard(account, contratoNum) {
-            const statusClass = account.finalizada ? 'bg-success' : 'bg-primary';
             const progress = Number(account.progreso ?? 0);
             const progressText = Number.isFinite(progress) ? `${Math.round(progress)}%` : '0%';
+            const bloque = account.bloque_actual || 'N/A';
+            const responsable = account.responsable_actual || 'Sin asignar';
+            const esFinalizada = account.finalizada;
 
             return `
                 <button type="button"
                     class="text-start w-100 border-0 p-0 bg-transparent"
-                    onclick="showHistory(${account.id}, '${(contratoNum || '').replace(/'/g, "\\'")}', '${(account.id_tramite ?? account.numero_cuenta ?? account.id).toString().replace(/'/g, "\\'")}')">
-                    <div class="result-item" style="background:#fff;border-radius:14px;padding:14px 16px;border:1px solid rgba(15,23,42,.08);box-shadow:0 8px 18px rgba(15,23,42,.06);">
-                        <div class="d-flex justify-content-between align-items-start gap-3">
+                    onclick="showHistory(${account.id}, '${(contratoNum || '').replace(/'/g, "\\'")}', '${(account.id_tramite ?? account.numero_cuenta ?? account.id).toString().replace(/'/g, "\\'")}', '${(account.bloque_actual || '').replace(/'/g, "\\'")}', '${(responsable).replace(/'/g, "\\'")}', '${(account.estado_actual || '').replace(/'/g, "\\'")}')">
+                    <div class="account-card" style="background:#1a2744;border-radius:14px;padding:16px;border:1px solid #2a3a54;box-shadow:0 4px 12px rgba(0,0,0,0.2);transition:box-shadow .2s,transform .2s;cursor:pointer;">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
                             <div>
-                                <div class="fw-bold text-dark">Cuenta ${account.numero_cuenta ?? account.id}</div>
-                                <div class="text-muted small">ID trámite: ${account.id_tramite ?? account.id}</div>
+                                <div style="font-size:0.65rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">ID</div>
+                                <div style="font-size:1.05rem;font-weight:800;color:#e2e8f0;">Cuenta ${account.numero_cuenta ?? account.id}</div>
                             </div>
-                            <span class="badge ${statusClass}" style="border-radius:999px;">${account.estado_actual ?? 'En trámite'}</span>
+                            <span style="background:${esFinalizada ? '#059669' : '#2563eb'};color:#fff;border-radius:999px;font-size:0.65rem;font-weight:700;padding:4px 10px;white-space:nowrap;text-transform:uppercase;letter-spacing:0.3px;">${account.estado_actual ?? 'En trámite'}</span>
                         </div>
-                        <div class="mt-2 small text-muted">Inicio: ${account.fecha_inicio ?? 'N/A'}</div>
-                        <div class="mt-1 small text-muted">Actualización: ${account.ultima_actualizacion ?? 'N/A'}</div>
-                        <div class="mt-3">
-                            <div class="d-flex justify-content-between small mb-1">
-                                <span>Avance</span>
-                                <span class="fw-bold">${progressText}</span>
+                        <div style="display:flex;align-items:center;gap:8px;margin:10px 0 8px;color:#94a3b8;font-size:0.8rem;">
+                            <i class="fas fa-truck" style="color:#38bdf8;font-size:0.85rem;"></i>
+                            <span style="font-weight:600;">${bloque}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;color:#94a3b8;font-size:0.8rem;">
+                            <i class="fas fa-user-circle" style="font-size:0.9rem;"></i>
+                            <span>${responsable}</span>
+                        </div>
+                        <div style="display:flex;gap:16px;margin-bottom:10px;">
+                            <div>
+                                <div style="font-size:0.6rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Inicio</div>
+                                <div style="font-size:0.78rem;color:#cbd5e1;font-weight:600;">${account.fecha_inicio ?? 'N/A'}</div>
                             </div>
-                            <div class="progress" style="height:8px;border-radius:999px;">
-                                <div class="progress-bar" role="progressbar" style="width:${Math.max(0, Math.min(progress, 100))}%"></div>
+                            <div>
+                                <div style="font-size:0.6rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Actualización</div>
+                                <div style="font-size:0.78rem;color:#cbd5e1;font-weight:600;">${account.ultima_actualizacion ?? 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span style="font-size:0.7rem;color:#64748b;font-weight:600;">Avance</span>
+                                <span style="font-size:0.75rem;font-weight:800;color:#38bdf8;">${progressText}</span>
+                            </div>
+                            <div style="height:5px;border-radius:999px;background:#0f1724;overflow:hidden;">
+                                <div style="width:${Math.max(0, Math.min(progress, 100))}%;height:100%;border-radius:999px;background:linear-gradient(90deg,#0ea5e9,#06b6d4);"></div>
                             </div>
                         </div>
                     </div>
@@ -255,7 +288,7 @@
 
         function renderConsultationResults(data, resultsArea) {
             if (!data.cuentas || data.cuentas.length === 0) {
-                resultsArea.innerHTML = `<div class="text-warning small">No se encontraron cuentas asociadas.</div>`;
+                resultsArea.innerHTML = `<div style="color:#f87171;font-size:0.85rem;font-weight:600;">No se encontraron cuentas asociadas.</div>`;
                 return;
             }
 
@@ -266,7 +299,7 @@
             const cards = data.cuentas.map(account => renderAccountCard(account, data.numero_contrato)).join('');
 
             resultsArea.innerHTML = `
-                <div class="mb-3">
+                <div style="margin-bottom:12px;">
                     <div class="result-item">
                         <span class="result-label">Contratista</span>
                         <span class="result-value">${data.contratista}</span>
@@ -276,7 +309,7 @@
                         <span class="result-value">${data.numero_contrato}</span>
                     </div>
                 </div>
-                <div class="mb-2 fw-bold text-dark">${selectorTitle}</div>
+                <div style="margin-bottom:10px;font-size:0.8rem;font-weight:700;color:#38bdf8;">${selectorTitle}</div>
                 <div class="d-grid gap-3">
                     ${cards}
                 </div>
@@ -313,7 +346,7 @@
 
                     if (!response.ok || data.error) {
                         resultsArea.innerHTML =
-                            `<div class="text-warning small">${data.error || 'No se encontró la información'}</div>`;
+                            `<div style="color:#f87171;font-size:0.85rem;font-weight:600;">${data.error || 'No se encontró la información'}</div>`;
                     } else {
                         renderConsultationResults(data, resultsArea);
                     }
@@ -361,7 +394,7 @@
             }
         });
 
-        window.showHistory = function(cuentaId, contratoNum, cuentaNum = '') {
+        window.showHistory = function(cuentaId, contratoNum, cuentaNum = '', bloqueActual = '', responsableActual = '', estadoActual = '') {
             if (!historyModalInstance) {
                 const modalElement = document.getElementById("historyModal");
                 if (modalElement) {
@@ -375,6 +408,22 @@
             document.getElementById("historyContratoNum").textContent = contratoNum;
             const cuentaLabel = document.getElementById("historyCuentaNum");
             if (cuentaLabel) cuentaLabel.textContent = cuentaNum || `#${cuentaId}`;
+
+            const currentInfo = document.getElementById("historyCurrentInfo");
+            if (currentInfo) {
+                if (bloqueActual || responsableActual || estadoActual) {
+                    currentInfo.style.display = "block";
+                    currentInfo.innerHTML = `
+                        <div style="display:flex;flex-wrap:wrap;gap:12px;padding:12px 16px;margin:0 16px;background:#f0f7ff;border-radius:10px;border:1px solid #bfdbfe;">
+                            ${bloqueActual ? `<div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;"><i class="bi bi-grid-1x2-fill" style="color:#1D4ED8;"></i><span style="color:#64748b;font-weight:600;">Bloque:</span><span style="color:#0f172a;font-weight:700;">${bloqueActual}</span></div>` : ''}
+                            ${estadoActual ? `<div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;"><i class="bi bi-circle-fill" style="color:#10b981;font-size:0.5rem;"></i><span style="color:#64748b;font-weight:600;">Estado:</span><span style="color:#0f172a;font-weight:700;">${estadoActual}</span></div>` : ''}
+                            ${responsableActual ? `<div style="display:flex;align-items:center;gap:6px;font-size:0.8rem;"><i class="bi bi-person-circle" style="color:#6366f1;"></i><span style="color:#64748b;font-weight:600;">Responsable:</span><span style="color:#0f172a;font-weight:700;">${responsableActual}</span></div>` : ''}
+                        </div>`;
+                } else {
+                    currentInfo.style.display = "none";
+                }
+            }
+
             const spinner = document.getElementById("historySpinner");
             const content = document.getElementById("timelineContent");
             const empty = document.getElementById("historyEmpty");
@@ -430,6 +479,16 @@
                                 nombreUsuario = (pNombre + " " + pApellido).trim() || "Sin nombre";
                             }
 
+                            // Extraer el nombre del usuario al que se asignó/devolvió
+                            let asignadoA = "";
+                            if (esAsignacion) {
+                                const match = h.comentarios.match(/(?:Asignado a|Fue asignado a|Devuelto a):\s*(.+)/i);
+                                if (match) asignadoA = match[1].trim();
+                            }
+
+                            // Detectar si es devolución
+                            const esDevolucion = h.comentarios && h.comentarios.startsWith("Devuelto a:");
+
                             const usuarioHTML = `
                                 <span><i class="fas fa-user-circle me-1 text-primary"></i> ${nombreUsuario || "Sin registro"}</span>
                                 ${esAutomatismo ? `<span style="color:#6b7280;font-style:italic;font-size:0.75rem;margin-left:8px;"><i class="fas fa-robot me-1"></i>(Auto)</span>` : ""}
@@ -438,7 +497,6 @@
                             // Comentario con estilo especial si es asignación o devolución
                             let comentarioHTML = "";
                             if (esAsignacion) {
-                                const esDevolucion = h.comentarios.startsWith("Devuelto a:");
                                 comentarioHTML = `
                                     <div class="item-comment" style="background:${esDevolucion ? '#fef2f2' : '#eff6ff'}; border-left:3px solid ${esDevolucion ? '#ef4444' : '#2563eb'}; border-radius:6px; padding:8px 12px; margin-top:8px;">
                                         <i class="fas ${esDevolucion ? 'fa-undo' : 'fa-user-check'} me-2" style="color:${esDevolucion ? '#ef4444' : '#2563eb'};"></i>
@@ -461,16 +519,22 @@
                                 </div>
                                 <div class="item-right" style="${esAsignacion ? 'background:#f0f7ff;border:1px solid #bfdbfe;' : ''}">
                                     <div class="item-header">
-                                        <div class="item-title">${esAsignacion ? (h.comentarios.startsWith("Devuelto a:") ? '↩️ Devolución' : '👤 Asignación') : (h.bloque?.nombre ?? "Bloque")}</div>
-                                        ${!esAsignacion ? `<span class="badge ${badgeClass}" style="font-size: 0.7rem; border-radius: 6px;">${estadoDestino.nombre ?? "N/A"}</span>` : ''}
+                                        <div class="item-title">${h.bloque?.nombre ?? "Bloque"}</div>
+                                        ${!esAsignacion ? `<span class="badge ${badgeClass}" style="font-size: 0.7rem; border-radius: 6px; cursor: help;" title="${(h.estado_destino?.descripcion || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}">${estadoDestino.nombre ?? "N/A"}</span>` : ''}
                                     </div>
                                     ${!esAsignacion ? `
                                     <div class="item-transition">
-                                        <span class="text-muted small">Origen:</span> 
-                                        <span class="fw-bold">${h.estado_origen?.nombre ?? "Inicio"}</span> 
-                                        <i class="fas fa-long-arrow-alt-right mx-2 text-primary opacity-50"></i> 
-                                        <span class="text-muted small">Destino:</span> 
+                                        <span class="text-muted small">Origen:</span>
+                                        <span class="fw-bold">${h.estado_origen?.nombre ?? "Inicio"}</span>
+                                        <i class="fas fa-long-arrow-alt-right mx-2 text-primary opacity-50"></i>
+                                        <span class="text-muted small">Destino:</span>
                                         <span class="fw-bold">${estadoDestino.nombre ?? "N/A"}</span>
+                                    </div>` : ''}
+                                    ${esAsignacion ? `
+                                    <div class="item-transition" style="margin-top:4px;">
+                                        <i class="fas ${esDevolucion ? 'fa-undo text-danger' : 'fa-user-check text-primary'} me-2"></i>
+                                        <span class="text-muted small">${esDevolucion ? 'Devuelto a:' : 'Asignado a:'}</span>
+                                        <span class="fw-bold" style="color:${esDevolucion ? '#991b1b' : '#1d4ed8'};">${asignadoA}</span>
                                     </div>` : ''}
                                     <div class="item-meta">
                                         ${usuarioHTML}

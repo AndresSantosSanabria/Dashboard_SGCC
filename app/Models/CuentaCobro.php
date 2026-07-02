@@ -394,18 +394,34 @@ class CuentaCobro extends Model
     {
         $businessTime = app(\App\Services\BusinessTimeService::class);
         $timeline = $this->timeline_completa;
+
+        // FILTRAR SOLO EL CICLO ACTUAL: desde último "Inicio manual del ciclo"
+        // o retorno desde "Finalizada" hacia estado inicial
+        $marcaCorte = $timeline->first(function($evento) {
+            $comentarios = strtolower(data_get($evento, 'comentarios', ''));
+            $esInicioManual = str_contains($comentarios, 'inicio manual del ciclo');
+
+            $nombreOrigen = strtolower(data_get($evento, 'estado_origen.nombre', ''));
+            $nombreDestino = strtolower(data_get($evento, 'estado_destino.nombre', ''));
+            $esRetornoInicial = str_contains($nombreOrigen, 'finalizada') &&
+                                (str_contains($nombreDestino, 'sin trámite') ||
+                                 str_contains($nombreDestino, 'sin tramite') ||
+                                 str_contains($nombreDestino, 'radicado'));
+
+            return $esInicioManual || $esRetornoInicial;
+        });
+
+        if ($marcaCorte) {
+            $timeline = $timeline->filter(fn($e) => $e->fecha >= $marcaCorte->fecha)->values();
+        }
+
         $totalSegundos = 0;
 
         if ($timeline->isNotEmpty()) {
-            // SUMATORIA PURA: Cada nodo ya tiene sus tiempo_segundos en SEGUNDOS (sin normalización)
-            // La migración ya normalizó datos históricos. No aplicar normalización adicional
-            // para evitar multiplicaciones duplicadas (ej: 60 seg → 3,600 seg)
             $totalSegundos = (int) $timeline->sum(function ($evento) {
                 return (int) data_get($evento, 'tiempo_segundos', 0);
             });
         } else {
-            // Fallback mínimo para cuentas sin historial reconstruible
-            // Usar el tiempo del estado actual si existe (ya debería estar en segundos)
             $tiempoActual = (int) TaskTimeLog::getElapsedTimeForCurrentState($this);
             $totalSegundos = $tiempoActual;
         }
@@ -414,8 +430,6 @@ class CuentaCobro extends Model
             return '0s';
         }
 
-        // El total debe expresarse en tiempo hábil configurable, no en días calendario.
-        // Así se alinea con la jornada definida en HORARIO_LABORAL_INICIO / FIN.
         return $businessTime->formatInterval($totalSegundos);
     }
 

@@ -26,6 +26,8 @@
                 <button type="button" class="btn-close btn-close-white position-absolute" data-bs-dismiss="modal" aria-label="Close" style="top: 15px; right: 15px;"></button>
             </div>
             <div class="modal-body p-0 bg-white" style="max-height: 70vh; overflow-y: auto; overflow-x: hidden;">
+                <div id="historyCurrentInfo" style="display:none;"></div>
+
                 <div id="historySpinner" class="text-center py-5">
                     <div class="spinner-grow text-primary" role="status" style="width: 3rem; height: 3rem;">
                         <span class="visually-hidden">Cargando...</span>
@@ -60,7 +62,7 @@
 .timeline-item-premium {
     display: flex;
     position: relative;
-    margin-bottom: 30px;
+    margin-bottom: 24px;
 }
 
 .timeline-item-premium:last-child {
@@ -68,17 +70,24 @@
 }
 
 .item-left {
-    min-width: 100px;
+    min-width: 90px;
     text-align: right;
-    padding-right: 25px;
-    padding-top: 5px;
+    padding-right: 20px;
+    padding-top: 8px;
     flex-shrink: 0;
 }
 
+.item-date {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
 .item-time {
-    font-size: 0.75rem;
-    color: #6b7280;
-    font-weight: 600;
+    font-size: 0.7rem;
+    color: #94a3b8;
+    font-weight: 500;
+    margin-top: 2px;
 }
 
 .item-center {
@@ -86,26 +95,27 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-right: 25px;
+    margin-right: 20px;
     flex-shrink: 0;
 }
 
 .item-dot {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: #3b82f6;
-    border: 3px solid #bfdbfe;
+    border: 2.5px solid #dbeafe;
     z-index: 2;
     margin-top: 10px;
+    flex-shrink: 0;
 }
 
 .item-line {
     position: absolute;
-    top: 24px;
-    bottom: -30px;
+    top: 22px;
+    bottom: -24px;
     width: 2px;
-    background: #e5e7eb;
+    background: linear-gradient(to bottom, #e2e8f0, #f1f5f9);
     z-index: 1;
 }
 
@@ -115,112 +125,117 @@
 
 .item-right {
     flex: 1;
-    background: #f9fafb;
-    border-radius: 12px;
-    padding: 15px 20px;
-    border: 1px solid #f3f4f6;
-    transition: all 0.2s;
-    min-width: 0; /* Ensures content does not overflow flex container */
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 12px 16px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+    min-width: 0;
     word-wrap: break-word;
 }
 
 .item-right:hover {
-    background: #f3f4f6;
-    transform: translateX(5px);
+    background: #f1f5f9;
+    border-color: #cbd5e1;
 }
 
 .item-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     flex-wrap: wrap;
-    gap: 5px;
+    gap: 6px;
 }
 
 .item-title {
     font-weight: 700;
-    color: #111827;
-    font-size: 0.95rem;
+    color: #0f172a;
+    font-size: 0.82rem;
 }
 
 .item-transition {
-    font-size: 0.85rem;
-    color: #4b5563;
-    margin-bottom: 10px;
+    font-size: 0.78rem;
+    color: #475569;
+    margin-bottom: 8px;
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    gap: 4px;
+}
+
+.item-transition .fw-bold {
+    color: #1e293b;
 }
 
 .item-meta {
     display: flex;
-    gap: 15px;
-    font-size: 0.8rem;
-    color: #9ca3af;
+    gap: 12px;
+    font-size: 0.75rem;
+    color: #94a3b8;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .item-comment {
-    margin-top: 10px;
+    margin-top: 8px;
     padding: 8px 12px;
     background: #ffffff;
     border-left: 3px solid #3b82f6;
-    border-radius: 4px;
-    font-style: italic;
-    font-size: 0.85rem;
-    color: #374151;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    color: #334155;
     word-break: break-word;
+    line-height: 1.4;
 }
 
-/* Responsive adjustments for mobile */
+/* Responsive */
 @media (max-width: 768px) {
     .timeline-item-premium {
-        margin-bottom: 20px;
+        margin-bottom: 18px;
     }
-    
+
     .item-left {
-        min-width: 65px;
-        padding-right: 10px;
+        min-width: 60px;
+        padding-right: 8px;
     }
-    
+
     .item-center {
-        margin-right: 10px;
+        margin-right: 8px;
     }
-    
+
     .item-right {
-        padding: 12px 10px;
+        padding: 10px;
     }
-    
+
     .item-right:hover {
-        transform: none; /* Disable hover movement on mobile */
+        transform: none;
     }
-    
+
     .item-title {
-        font-size: 0.85rem;
+        font-size: 0.78rem;
     }
-    
+
     .item-transition {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
     }
-    
+
     .item-meta {
-        gap: 8px;
+        gap: 6px;
         flex-direction: column;
     }
-    
+
     .item-comment {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         padding: 6px 10px;
     }
-    
+
     .item-line {
-        bottom: -20px;
+        bottom: -18px;
     }
-    
-    /* Make total time badge hide text or shrink on very small screens */
+
     #historyTotalTimeBadge {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
     }
 }
 </style>

@@ -72,7 +72,7 @@ class CuentaCobroController extends Controller
     private function buildPublicAccountsPayload(Contrato $contrato): array
     {
         $cuentas = $contrato->cuentasCobro()
-            ->with(['estadoActual', 'bloqueActual'])
+            ->with(['estadoActual', 'bloqueActual', 'responsableActual'])
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->get()
@@ -86,6 +86,9 @@ class CuentaCobroController extends Controller
                     'estado_actual' => $cuenta->estadoActual?->nombre ?? 'En trámite',
                     'estado_tipo' => $cuenta->estadoActual?->tipo ?? null,
                     'bloque_actual' => $cuenta->bloqueActual?->nombre ?? 'N/A',
+                    'responsable_actual' => $cuenta->responsableActual
+                        ? trim(($cuenta->responsableActual->primer_nombre ?? '') . ' ' . ($cuenta->responsableActual->primer_apellido ?? ''))
+                        : 'Sin asignar',
                     'ultima_actualizacion' => optional($cuenta->updated_at)->format('d/m/Y H:i A'),
                     'finalizada' => (bool) $cuenta->finalizada,
                     'es_activa' => ! (bool) $cuenta->finalizada,
@@ -171,6 +174,7 @@ class CuentaCobroController extends Controller
                 'contratista',
                 'cuentasCobro.estadoActual',
                 'cuentasCobro.bloqueActual',
+                'cuentasCobro.responsableActual',
             ])
             ->latest('updated_at')
             ->first();
