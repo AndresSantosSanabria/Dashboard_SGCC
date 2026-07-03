@@ -412,7 +412,7 @@ class CuentaCobro extends Model
         });
 
         if ($marcaCorte) {
-            $timeline = $timeline->filter(fn($e) => $e->fecha >= $marcaCorte->fecha)->values();
+            $timeline = $timeline->filter(fn($e) => $e['fecha'] >= $marcaCorte['fecha'])->values();
         }
 
         $totalSegundos = 0;
