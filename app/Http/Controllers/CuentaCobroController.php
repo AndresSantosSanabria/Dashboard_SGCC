@@ -89,20 +89,11 @@ class CuentaCobroController extends Controller
             })
             ->values()
             ->map(function (CuentaCobro $cuenta) {
-                // La fecha de inicio real es cuando la cuenta salió de "Sin Trámite"
-                // (primer registro en historial_workflow donde estado_destino NO es sin trámite)
-                $historialCuenta = $cuenta->historialWorkflow ?? collect();
-                $primerMovimiento = $historialCuenta
-                    ->sortBy('fecha_transicion')
-                    ->first(function ($h) {
-                        $nombreDestino = strtolower($h->estadoDestino?->nombre ?? '');
-                        return ! str_contains($nombreDestino, 'sin trámite')
-                            && ! str_contains($nombreDestino, 'sin tramite');
-                    });
-
-                $fechaInicio = $primerMovimiento
-                    ? $primerMovimiento->fecha_transicion
-                    : ($cuenta->fecha_radicacion ?? $cuenta->created_at ?? now());
+                // Usar fecha_inicio_ciclo persistida (se setea al salir de "Sin Trámite")
+                $fechaInicio = $cuenta->fecha_inicio_ciclo
+                    ?? $cuenta->fecha_radicacion
+                    ?? $cuenta->created_at
+                    ?? now();
 
                 // Avance individual de la cuenta (no del contrato)
                 // Finalizada = 100%, en proceso = bloques completados / total bloques
@@ -279,17 +270,11 @@ class CuentaCobroController extends Controller
             })->values();
         }
 
-        // Fecha de inicio real: primer movimiento fuera de "Sin Trámite"
-        $primerMovimiento = $historial
-            ->sortBy('fecha_transicion')
-            ->first(function ($h) {
-                $nombreDestino = strtolower($h->estadoDestino?->nombre ?? '');
-                return ! str_contains($nombreDestino, 'sin trámite')
-                    && ! str_contains($nombreDestino, 'sin tramite');
-            });
-        $fechaInicioReal = $primerMovimiento
-            ? $primerMovimiento->fecha_transicion
-            : ($cuenta->fecha_radicacion ?? $cuenta->created_at ?? now());
+        // Usar fecha_inicio_ciclo persistida
+        $fechaInicioReal = $cuenta->fecha_inicio_ciclo
+            ?? $cuenta->fecha_radicacion
+            ?? $cuenta->created_at
+            ?? now();
 
         return response()->json([
             'success' => true,

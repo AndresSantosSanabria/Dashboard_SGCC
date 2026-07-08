@@ -97,8 +97,10 @@
                     $rp = $contrato->registrosPresupuestales?->first();
                     $ssVigente = $contratista?->seguridadSocialVigente;
                     $totalCuentas = $cuentasColl->count();
-                    $pagosTotales = $contrato->pagos_totales ?? 0;
-                    $facturasRadicadas = $contrato->facturas_radicadas ?? 0;
+                    $pagosTotales = $cuentaRef?->numero_pagos_totales ?? 0;
+                    // Facturas radicadas = cuentas finalizadas (las que ya completaron su ciclo)
+                    $facturasRadicadas = $cuentasColl->where('finalizada', true)->count();
+                    $diferenciaCuentas = $pagosTotales - $facturasRadicadas;
                     $pCuentas = $pagosTotales > 0 ? round(($facturasRadicadas / $pagosTotales) * 100, 2) : 0;
                 @endphp
                 <tr style="--row-index: {{ $index }};">
@@ -253,18 +255,22 @@
  
                     <td>{{ $cuentaRef?->ultima_factura_hacienda ?? 'N/A' }}</td>
                     <td>{{ $cuentaRef?->observacion_hacienda ?? 'N/A' }}</td>
-                    <td class="text-center">{{ $cuentaRef?->diferencia_cuentas ?? 0 }}</td>
+                    <td class="text-center">{{ $diferenciaCuentas }}</td>
                     <td class="text-center">
-                        @php $limiteCuentas = max($pagosTotales, 1); @endphp
-                        @if ($totalCuentas >= $limiteCuentas)
+                        @php 
+                            $limiteCuentas = max($pagosTotales, 1);
+                            $maxNumeroCuenta = (int) $cuentasColl->max(fn($c) => (int)$c->numero_cuenta);
+                            $nextCuenta = $maxNumeroCuenta + 1;
+                        @endphp
+                        @if ($nextCuenta > $limiteCuentas || $facturasRadicadas >= $limiteCuentas)
                             <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i> LÍMITE ({{ $limiteCuentas }})</span>
                         @else
                             @php $cuentaParaIniciar = $cuentaActiva ?? $cuentasColl->first(); @endphp
                             <button type="button" class="btn btn-sm fw-bold px-3 py-1 animate-in"
-                                onclick="startParallelAccount({{ $cuentaParaIniciar->id }}, '{{ $contrato->numero_contrato }}', {{ $totalCuentas + 1 }})"
-                                title="Iniciar Cuenta #{{ $totalCuentas + 1 }}"
+                                onclick="startParallelAccount({{ $cuentaParaIniciar->id }}, '{{ $contrato->numero_contrato }}', {{ $nextCuenta }})"
+                                title="Iniciar Cuenta #{{ $nextCuenta }}"
                                 style="border-radius: 10px; font-size: 0.7rem; background: #4f46e5; color: white; border: none; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);">
-                                <i class="bi bi-play-circle-fill me-1"></i> SIGUIENTE #{{ $totalCuentas + 1 }}
+                                <i class="bi bi-play-circle-fill me-1"></i> SIGUIENTE #{{ $nextCuenta }}
                             </button>
                         @endif
                     </td>

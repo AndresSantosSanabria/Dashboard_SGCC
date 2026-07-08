@@ -243,14 +243,21 @@
                         ->count() ?? 0;
                     $limiteCuentas = (int) ($cuenta->contrato?->cuentasCobro()
                         ->max('numero_pagos_totales') ?? 0) ?: 1;
-                    $puedeCrearParalela = $cuenta->contrato && $totalCuentasContrato < $limiteCuentas;
+                        
+                    $cuentasParaMax = $cuenta->contrato?->cuentasCobro()
+                        ->whereNull('deleted_at')
+                        ->get() ?? collect();
+                    $maxNumeroCuenta = (int) $cuentasParaMax->max(fn($c) => (int)$c->numero_cuenta);
+                    $nextCuenta = $maxNumeroCuenta + 1;
+
+                    $puedeCrearParalela = $cuenta->contrato && $nextCuenta <= $limiteCuentas && $totalCuentasContrato < $limiteCuentas;
                 @endphp
                 @if ($puedeCrearParalela)
                     <button type="button"
                         class="btn btn-warning px-4"
                         style="border-radius:12px;"
-                        onclick="startParallelAccount({{ $cuenta->id }}, '{{ $cuenta->contrato?->numero_contrato }}', {{ $totalCuentasContrato + 1 }})">
-                        <i class="bi bi-plus-circle me-1"></i> Iniciar cuenta paralela (#{{ $totalCuentasContrato + 1 }})
+                        onclick="startParallelAccount({{ $cuenta->id }}, '{{ $cuenta->contrato?->numero_contrato }}', {{ $nextCuenta }})">
+                        <i class="bi bi-plus-circle me-1"></i> Iniciar cuenta paralela (#{{ $nextCuenta }})
                     </button>
                 @elseif ($cuenta->contrato)
                     <span class="badge bg-secondary px-3 py-2">

@@ -104,6 +104,10 @@ class ImportService
         foreach ($row as $k => $v) {
             $cleanKey = strtoupper(trim(str_replace(["\n", "\r", "\t"], ' ', (string)$k)));
             
+            if ($v instanceof \DateTimeInterface) {
+                $v = $v->format('Y-m-d H:i:s');
+            }
+
             // CSV Injection Protection: Prefix with single quote if it starts with risky characters
             $value = (string)$v;
             if (preg_match('/^[=\+\-@]/', $value)) {
@@ -165,7 +169,9 @@ class ImportService
         ]);
 
         // 4. Cuenta Cobro logic (Simplified for this example, but should follow existing patterns)
-        $numeroCuenta = (string) $this->getCellValue($data, ['NUMERO DE CUENTA', 'N° CUENTA'], '1');
+        $numeroCuenta = (string) $this->getCellValue($data, [
+            'NUMERO DE CUENTA EN PROCESO DE CUENTAS', 'NUMERO DE CUENTA', 'N° CUENTA', 'N DE CUENTA', 'NO. CUENTA', 'NO CUENTA', 'CUENTA', '# CUENTA', 'Nº CUENTA'
+        ], '1');
         $cuentaExistente = CuentaCobro::where('contrato_id', $contrato->id)
             ->where('numero_cuenta', $numeroCuenta)
             ->first();
@@ -177,18 +183,40 @@ class ImportService
         $limite = (int) CuentaCobro::where('contrato_id', $contrato->id)
             ->max('numero_pagos_totales');
 
-        if ($totalCount >= $limite) {
+        if ($limite > 0 && $totalCount >= $limite) {
             throw new \RuntimeException("El contrato ya ha alcanzado el límite máximo de {$limite} cuentas de cobro (N° Pagos Totales).");
         }
 
-        $cuenta = CuentaCobro::updateOrCreate(
-            ['contrato_id' => $contrato->id, 'numero_cuenta' => $numeroCuenta],
-            [
-                'responsable_actual_id' => $user->id,
-                'finalizada' => strtoupper(trim($this->getCellValue($data, 'RADICADA EN HACIENDA', ''))) === 'SI',
-                // ... other fields
-            ]
-        );
+        $cuenta = CuentaCobro::firstOrNew([
+            'contrato_id' => $contrato->id,
+            'numero_cuenta' => $numeroCuenta
+        ]);
+
+        $cuenta->responsable_actual_id = $user->id;
+        $cuenta->finalizada = strtoupper(trim($this->getCellValue($data, 'RADICADA EN HACIENDA', ''))) === 'SI';
+        
+        $pagosTotales = (int) $this->getCellValue($data, [
+            'NUMERO DE PAGOS TOTALES', 'PAGOS TOTALES', 'N° PAGOS TOTALES', 'NUMERO PAGOS TOTALES', 'TOTAL PAGOS', 'CANTIDAD PAGOS', 'N DE PAGOS TOTALES', 'Nº PAGOS TOTALES'
+        ], 0);
+
+        if ($pagosTotales > 0) {
+            $cuenta->numero_pagos_totales = $pagosTotales;
+        }
+        
+        // Update valor_cobro if present, or set default to 0 for new records
+        $valorCobro = $this->parseAmount($this->getCellValue($data, ['VALOR COBRO', 'VALOR CUENTA', 'VALOR FACTURA', 'VALOR'], 0));
+        if (!$cuenta->exists || $valorCobro > 0) {
+            $cuenta->valor_cobro = $valorCobro;
+        }
+
+        if (!$cuenta->exists) {
+            $bloqueRad = BloqueWorkflow::where('codigo', 'REV1')->first();
+            $cuenta->bloque_actual_id = $bloqueRad?->id ?? 1;
+            // Trying to get estadoInicial, fallback to 1
+            $cuenta->estado_actual_id = $bloqueRad?->estadoInicial?->id ?? 1;
+        }
+        
+        $cuenta->save();
 
         if ($cuenta->wasRecentlyCreated) {
             $createdCount++;

@@ -843,6 +843,16 @@ class WorkflowController extends Controller
                 ->update(['bloque_completado' => true, 'fecha_completado_bloque' => now()]);
         }
 
+        // Persistir fecha_inicio_ciclo: el timestamp exacto en que la cuenta salió de "Sin Trámite"
+        // Solo se setea una vez (la primera vez que transiciona a un estado diferente)
+        if (! $cuenta->fecha_inicio_ciclo) {
+            $nombreDestino = strtolower($estadoDestino->nombre ?? '');
+            $esSinTramite = str_contains($nombreDestino, 'sin trámite')
+                || str_contains($nombreDestino, 'sin tramite');
+            if (! $esSinTramite) {
+                $cuenta->fecha_inicio_ciclo = now();
+            }
+        }
         // E. ACTUALIZACIÃ“N DEL MODELO:
         $cuenta->estado_actual_id = $estadoDestinoId;
         if ($comentario && ! str_starts_with($comentario, 'Automatismo:')) {
@@ -1182,16 +1192,20 @@ class WorkflowController extends Controller
 
         try {
             $nuevaCuenta = DB::transaction(function () use ($cuentaOrigen, $contrato) {
-                // Cuenta el total de registros existentes en cuentas_cobro para ese contrato_id.
-                $totalCount = CuentaCobro::where('contrato_id', $contrato->id)
+                // Bloqueo pesimista para evitar colisiones
+                $cuentasExistentes = CuentaCobro::where('contrato_id', $contrato->id)
                     ->lockForUpdate()
-                    ->pluck('id')
-                    ->count();
+                    ->get();
 
+                $maxNumeroCuenta = (int) $cuentasExistentes->max(function ($c) {
+                    return (int) $c->numero_cuenta;
+                });
+
+                $numeroCuentaNuevo = $maxNumeroCuenta + 1;
                 $limite = (int) ($cuentaOrigen->numero_pagos_totales ?? 0);
 
-                if ($totalCount >= $limite) {
-                    throw new \RuntimeException("El contrato ya ha alcanzado el límite máximo de {$limite} cuentas de cobro (N° Pagos Totales).");
+                if ($limite > 0 && $numeroCuentaNuevo > $limite) {
+                    throw new \RuntimeException("La cuenta a iniciar (#{$numeroCuentaNuevo}) supera el límite estipulado de {$limite} cuentas de cobro (N° Pagos Totales).");
                 }
 
                 $bloqueInicial = BloqueWorkflow::with('estadoInicial')
@@ -1204,7 +1218,7 @@ class WorkflowController extends Controller
                 }
 
                 $now = now();
-                $numeroCuenta = $totalCount + 1;
+                $numeroCuenta = $numeroCuentaNuevo;
 
                 $nuevaCuenta = CuentaCobro::withoutEvents(function () use ($cuentaOrigen, $contrato, $bloqueInicial, $estadoInicialBloque1, $numeroCuenta, $now) {
                     $cuenta = new CuentaCobro();

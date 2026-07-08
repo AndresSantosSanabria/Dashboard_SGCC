@@ -31,6 +31,7 @@ class CuentaCobro extends Model
         'numero_cuenta',
         'valor_cobro',
         'fecha_radicacion',
+        'fecha_inicio_ciclo',
         'numero_pagos_totales',
         'numero_facturas_radicadas',
         'porcentaje_cuentas',
@@ -61,6 +62,7 @@ class CuentaCobro extends Model
     protected $casts = [
         'valor_cobro' => 'decimal:2',
         'fecha_radicacion' => 'datetime',
+        'fecha_inicio_ciclo' => 'datetime',
         'numero_pagos_totales' => 'integer',
         'numero_facturas_radicadas' => 'integer',
         'porcentaje_cuentas' => 'decimal:2',
@@ -393,38 +395,26 @@ class CuentaCobro extends Model
     public function getTiempoTotalEjecucionAttribute(): string
     {
         $businessTime = app(\App\Services\BusinessTimeService::class);
-        $timeline = $this->timeline_completa;
 
-        // FILTRAR SOLO EL CICLO ACTUAL: desde último "Inicio manual del ciclo"
-        // o retorno desde "Finalizada" hacia estado inicial
-        $marcaCorte = $timeline->first(function($evento) {
-            $comentarios = strtolower(data_get($evento, 'comentarios', ''));
-            $esInicioManual = str_contains($comentarios, 'inicio manual del ciclo');
+        // Usar fecha_inicio_ciclo persistida (se setea una vez al salir de "Sin Trámite")
+        $inicio = $this->fecha_inicio_ciclo ?? $this->fecha_radicacion ?? $this->created_at;
 
-            $nombreOrigen = strtolower(data_get($evento, 'estado_origen.nombre', ''));
-            $nombreDestino = strtolower(data_get($evento, 'estado_destino.nombre', ''));
-            $esRetornoInicial = str_contains($nombreOrigen, 'finalizada') &&
-                                (str_contains($nombreDestino, 'sin trámite') ||
-                                 str_contains($nombreDestino, 'sin tramite') ||
-                                 str_contains($nombreDestino, 'radicado'));
-
-            return $esInicioManual || $esRetornoInicial;
-        });
-
-        if ($marcaCorte) {
-            $timeline = $timeline->filter(fn($e) => $e['fecha'] >= $marcaCorte['fecha'])->values();
+        if (! $inicio) {
+            return '0s';
         }
 
-        $totalSegundos = 0;
-
-        if ($timeline->isNotEmpty()) {
-            $totalSegundos = (int) $timeline->sum(function ($evento) {
-                return (int) data_get($evento, 'tiempo_segundos', 0);
-            });
+        // Si la cuenta ya está finalizada, usar la fecha del último bloque completado
+        if ($this->finalizada) {
+            $ultimoBloque = $this->estadosBloques()
+                ->whereNotNull('fecha_completado_bloque')
+                ->orderByDesc('fecha_completado_bloque')
+                ->first();
+            $fin = $ultimoBloque?->fecha_completado_bloque ?? now();
         } else {
-            $tiempoActual = (int) TaskTimeLog::getElapsedTimeForCurrentState($this);
-            $totalSegundos = $tiempoActual;
+            $fin = now();
         }
+
+        $totalSegundos = $businessTime->getWorkingSecondsBetween($inicio, $fin);
 
         if ($totalSegundos <= 0) {
             return '0s';
