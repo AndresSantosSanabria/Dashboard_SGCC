@@ -72,17 +72,56 @@ class CuentaCobroController extends Controller
     private function buildPublicAccountsPayload(Contrato $contrato): array
     {
         $cuentas = $contrato->cuentasCobro()
-            ->with(['estadoActual', 'bloqueActual', 'responsableActual'])
+            ->with([
+                'estadoActual',
+                'bloqueActual',
+                'responsableActual',
+                'historialWorkflow.estadoDestino',
+            ])
             ->orderByDesc('updated_at')
             ->orderByDesc('id')
             ->get()
+            ->filter(function (CuentaCobro $cuenta) {
+                // Excluir cuentas que aún están en "Sin Trámite" — no han iniciado ciclo
+                $estadoNombre = strtolower($cuenta->estadoActual?->nombre ?? '');
+                return ! str_contains($estadoNombre, 'sin trámite')
+                    && ! str_contains($estadoNombre, 'sin tramite');
+            })
+            ->values()
             ->map(function (CuentaCobro $cuenta) {
+                // La fecha de inicio real es cuando la cuenta salió de "Sin Trámite"
+                // (primer registro en historial_workflow donde estado_destino NO es sin trámite)
+                $historialCuenta = $cuenta->historialWorkflow ?? collect();
+                $primerMovimiento = $historialCuenta
+                    ->sortBy('fecha_transicion')
+                    ->first(function ($h) {
+                        $nombreDestino = strtolower($h->estadoDestino?->nombre ?? '');
+                        return ! str_contains($nombreDestino, 'sin trámite')
+                            && ! str_contains($nombreDestino, 'sin tramite');
+                    });
+
+                $fechaInicio = $primerMovimiento
+                    ? $primerMovimiento->fecha_transicion
+                    : ($cuenta->fecha_radicacion ?? $cuenta->created_at ?? now());
+
+                // Avance individual de la cuenta (no del contrato)
+                // Finalizada = 100%, en proceso = bloques completados / total bloques
+                if ((bool) $cuenta->finalizada) {
+                    $progreso = 100;
+                } else {
+                    $totalBloques = \App\Models\BloqueWorkflow::ordenados()->count();
+                    $bloqueActualOrden = $cuenta->bloqueActual?->orden ?? 1;
+                    $progreso = $totalBloques > 0
+                        ? round(($bloqueActualOrden / $totalBloques) * 100, 1)
+                        : 0;
+                }
+
                 return [
                     'id' => $cuenta->id,
                     'numero_cuenta' => $cuenta->numero_cuenta,
                     'id_tramite' => $cuenta->numero_radicado ?? $cuenta->id,
-                    'fecha_inicio' => optional($cuenta->fecha_radicacion ?? $cuenta->created_at)->format('d/m/Y'),
-                    'fecha_inicio_iso' => optional($cuenta->fecha_radicacion ?? $cuenta->created_at)?->toIso8601String(),
+                    'fecha_inicio' => optional($fechaInicio)->format('d/m/Y'),
+                    'fecha_inicio_iso' => optional($fechaInicio)?->toIso8601String(),
                     'estado_actual' => $cuenta->estadoActual?->nombre ?? 'En trámite',
                     'estado_tipo' => $cuenta->estadoActual?->tipo ?? null,
                     'bloque_actual' => $cuenta->bloqueActual?->nombre ?? 'N/A',
@@ -92,7 +131,7 @@ class CuentaCobroController extends Controller
                     'ultima_actualizacion' => optional($cuenta->updated_at)->format('d/m/Y H:i A'),
                     'finalizada' => (bool) $cuenta->finalizada,
                     'es_activa' => ! (bool) $cuenta->finalizada,
-                    'progreso' => $cuenta->porcentaje_cuentas,
+                    'progreso' => $progreso,
                     'resumen' => trim(sprintf(
                         'Cuenta %s | %s | %s',
                         $cuenta->numero_cuenta ?? 'N/A',
@@ -240,13 +279,25 @@ class CuentaCobroController extends Controller
             })->values();
         }
 
+        // Fecha de inicio real: primer movimiento fuera de "Sin Trámite"
+        $primerMovimiento = $historial
+            ->sortBy('fecha_transicion')
+            ->first(function ($h) {
+                $nombreDestino = strtolower($h->estadoDestino?->nombre ?? '');
+                return ! str_contains($nombreDestino, 'sin trámite')
+                    && ! str_contains($nombreDestino, 'sin tramite');
+            });
+        $fechaInicioReal = $primerMovimiento
+            ? $primerMovimiento->fecha_transicion
+            : ($cuenta->fecha_radicacion ?? $cuenta->created_at ?? now());
+
         return response()->json([
             'success' => true,
             'cuenta' => [
                 'id' => $cuenta->id,
                 'numero_cuenta' => $cuenta->numero_cuenta,
                 'id_tramite' => $cuenta->numero_radicado ?? $cuenta->id,
-                'fecha_inicio' => optional($cuenta->fecha_radicacion ?? $cuenta->created_at)?->format('d/m/Y'),
+                'fecha_inicio' => optional($fechaInicioReal)->format('d/m/Y'),
                 'estado_actual' => $cuenta->estadoActual?->nombre ?? 'En trámite',
                 'bloque_actual' => $cuenta->bloqueActual?->nombre ?? 'N/A',
             ],

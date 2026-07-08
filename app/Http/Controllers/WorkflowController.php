@@ -858,12 +858,15 @@ class WorkflowController extends Controller
 
         $ultimoBloqueId = BloqueWorkflow::orderBy('orden', 'desc')->value('id');
 
-        // FinalizaciÃ³n: Si llega al estado de Ã©xito del bloque final, la cuenta sale del radar operativo.
-        if ($estadoDestino->bloque_id == $ultimoBloqueId && ($estadoDestino->tipo === 'APROBADO' || $estadoDestino->tipo === 'FINAL' || $estadoDestino->es_final)) {
-            $cuenta->finalizada = true;
-            $cuenta->numero_facturas_radicadas++; // Incremento contable automÃ¡tico
-        } else {
-            $cuenta->finalizada = false;
+        // Finalización: Solo cuando la cuenta llega a un estado que sea APROBADO, FINAL o es_final=true
+        // dentro del bloque final. "Por Confirmar" (INICIAL) NO finaliza.
+        // Una vez finalizada, NUNCA se des-finaliza.
+        if ($estadoDestino->bloque_id == $ultimoBloqueId
+            && ($estadoDestino->tipo === 'APROBADO' || $estadoDestino->tipo === 'FINAL' || $estadoDestino->es_final)) {
+            if (! $cuenta->finalizada) {
+                $cuenta->finalizada = true;
+                $cuenta->numero_facturas_radicadas++; // Incremento contable automático
+            }
         }
 
         // GestiÃ³n de tiempos por bloque para analÃ­tica avanzada

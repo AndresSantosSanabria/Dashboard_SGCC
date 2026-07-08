@@ -258,15 +258,14 @@
                         @php $limiteCuentas = max($pagosTotales, 1); @endphp
                         @if ($totalCuentas >= $limiteCuentas)
                             <span class="badge bg-secondary"><i class="bi bi-lock me-1"></i> LÍMITE ({{ $limiteCuentas }})</span>
-                        @elseif ($cuentaActiva)
+                        @else
+                            @php $cuentaParaIniciar = $cuentaActiva ?? $cuentasColl->first(); @endphp
                             <button type="button" class="btn btn-sm fw-bold px-3 py-1 animate-in"
-                                onclick="startParallelAccount({{ $cuentaActiva->id }}, '{{ $contrato->numero_contrato }}', {{ $totalCuentas + 1 }})"
+                                onclick="startParallelAccount({{ $cuentaParaIniciar->id }}, '{{ $contrato->numero_contrato }}', {{ $totalCuentas + 1 }})"
                                 title="Iniciar Cuenta #{{ $totalCuentas + 1 }}"
                                 style="border-radius: 10px; font-size: 0.7rem; background: #4f46e5; color: white; border: none; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.2);">
                                 <i class="bi bi-play-circle-fill me-1"></i> SIGUIENTE #{{ $totalCuentas + 1 }}
                             </button>
-                        @else
-                            <span class="badge bg-success"><i class="bi bi-check-all me-1"></i> FINALIZADO</span>
                         @endif
                     </td>
                     @if ($canEditDashboard)
